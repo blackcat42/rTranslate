@@ -5,8 +5,7 @@
     "translators": [
         {
             "uid": "tr_google",
-            "name": "Google",
-            "path": ""
+            "name": "Google"
         },
         {
             "uid": "tr_bergamot",
@@ -15,22 +14,18 @@
         },
         {
             "uid": "tr_deepl",
-            "name": "DeepL",
-            "path": ""
+            "name": "DeepL"
         },
     ],
     "dictionaries": [
         {
             "uid": "dict_example_dsl",
-            "name": "Multitran",
-            "path": "",
+            "name": "Example dict",
             "dict_path": "dictionaries\\example.dsl"
         },
         {
             "uid": "dict_wiktionary_en",
             "name": "English Wiktionary",
-            "path": "",
-            "dict_path": "",
         }
     ],
     "tts_engines": [

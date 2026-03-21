@@ -78,8 +78,8 @@ struct Settings {
     pub text_bg_color: String,
     pub popup_opacity: f64,
 
-    pub translate_hotkey: String,
-    pub dict_hotkey: String,
+    pub translate_hotkey: Option<String>,
+    pub dict_hotkey: Option<String>,
 
     pub nodejs_unload_timeout: u64,
     pub lang_autodetect: bool,
@@ -90,20 +90,20 @@ struct Settings {
 struct TranslatorOption {
     pub uid: String,
     pub name: String,
-    pub path: String,
+    pub path: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct DictOption {
     pub uid: String,
     pub name: String,
-    pub path: String,
-    pub dict_path: String,
+    pub path: Option<String>,
+    pub dict_path: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TTSEngineOption {
     pub uid: String,
     pub name: String,
-    pub path: String,
+    pub path: Option<String>,
     pub voices: Vec<String>
 }
 #[derive(Debug, Deserialize, Serialize)]
@@ -196,19 +196,28 @@ fn main() {
         app_panic_message("GlobalHotKeyManager");
         panic!("Error: {}", e);
     });
-    let hotkey: HotKey = GLOBAL_SETTINGS.translate_hotkey.parse().unwrap_or_else(|e| {
-        app_panic_message("Failed to parse translate hotkey");
-        panic!("Error: {}", e);
-    });
-    let hotkey_dict: HotKey = GLOBAL_SETTINGS.dict_hotkey.parse().unwrap_or_else(|e| {
-        app_panic_message("Failed to parse dictionary hotkey");
-        panic!("Error: {}", e);
-    });
-    //let hotkey = HotKey::new(Some([Modifiers::SHIFT, Modifiers::ALT]), Code::KeyD);
-    let tr_hotkey_id = hotkey.id();
-    let dict_hotkey_id = hotkey_dict.id();
-    let _ = manager.register(hotkey);
-    let _ = manager.register(hotkey_dict);
+    let tr_hotkey_id: Option<u32> = if let Some(translate_hotkey) = &GLOBAL_SETTINGS.translate_hotkey {
+        if let Ok(hotkey) = translate_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey);
+            Some(hotkey.id())
+        } else {
+            app_panic_message("Failed to parse translate hotkey");
+            None
+        }
+    } else {
+        None
+    };
+    let dict_hotkey_id: Option<u32> = if let Some(dict_hotkey) = &GLOBAL_SETTINGS.dict_hotkey {
+        if let Ok(hotkey_dict) = dict_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey_dict);
+            Some(hotkey_dict.id())
+        } else {
+            app_panic_message("Failed to parse dict hotkey");
+            None
+        }
+    } else {
+        None
+    };
 
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
 
@@ -249,27 +258,24 @@ fn main() {
 
     
     for value in GLOBAL_SETTINGS.translators.iter() {
-        //TODO: if the missing json values can be parsed as Option<None>; if let Some(v) = value {}
-        if value.path.chars().count() > 0 {
-            //dbg!(value);
-            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), value.path.clone())));
+        if let Some(path) = &value.path && path.chars().count() > 0 {
+            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
         }
     }
     app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.dictionaries.iter() {
-        if value.dict_path.chars().count() > 0 {
-            //dbg!(value);
+        if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), value.dict_path.clone(), conn_dict_clone)));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
         }
     }
     app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.tts_engines.iter() {
-        if value.path.chars().count() > 0 {
+        if let Some(path) = &value.path && path.chars().count() > 0 {
             dbg!(value);
-            app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), value.path.clone())));
+            app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
         }
     }
     
@@ -450,7 +456,7 @@ fn main() {
             }
             Some(AppEvent::HotKey(e)) => {
                 //dbg!(e);
-                if e.state == HotKeyState::Released && e.id == tr_hotkey_id {
+                if e.state == HotKeyState::Released && Some(e.id) == tr_hotkey_id {
                     match get_selected_text() {
                         Ok(selected_text) => {
                             //TODO: if single word --> to dict
@@ -471,7 +477,7 @@ fn main() {
                             println!("An error occurred while getting the selected text");
                         }
                     }
-                } else if e.state == HotKeyState::Released && e.id == dict_hotkey_id {
+                } else if e.state == HotKeyState::Released && Some(e.id) == dict_hotkey_id {
                     match get_selected_text() {
                         Ok(selected_text) => {
                             app_view.clear_ui(true);
