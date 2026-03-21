@@ -1,0 +1,2 @@
+[build]
+target-dir = "../rTranslate_target" #bypass sublime-lsp bugs (cpu usage issues with chokidar file watcher on windows)
