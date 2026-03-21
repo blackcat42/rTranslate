@@ -1,0 +1,16 @@
+{
+  "name": "ttsexample",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "kokoro-js": "^1.2.1",
+    "@huggingface/transformers": "^3.5.1"
+  },
+  "type": "module"
+}

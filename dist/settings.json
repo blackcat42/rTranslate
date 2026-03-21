@@ -1,0 +1,72 @@
+{
+
+    //The following arrays determines the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting on an item will hide it from UI.
+    //WARN!: Setting the path field for items with the following uid's will override their built-in services: tr_google, tr_deepl, dict_wiktionary_en
+    "translators": [
+        {
+            "uid": "tr_google",
+            "name": "Google",
+            "path": ""
+        },
+        {
+            "uid": "tr_bergamot",
+            "name": "Bergamot",
+            "path": "bergamot\\app.cjs"
+        },
+        {
+            "uid": "tr_deepl",
+            "name": "DeepL",
+            "path": ""
+        },
+    ],
+    "dictionaries": [
+        {
+            "uid": "dict_example_dsl",
+            "name": "Multitran",
+            "path": "",
+            "dict_path": "dictionaries\\example.dsl"
+        },
+        {
+            "uid": "dict_wiktionary_en",
+            "name": "English Wiktionary",
+            "path": "",
+            "dict_path": "",
+        }
+    ],
+    "tts_engines": [
+        {
+            "uid": "kokoro",
+            "name": "Kokoro",
+            "path": "kokoro\\index.mjs",
+            "voices": ["af_heart", "af_nicole"]
+        }
+    ],
+    "prnn_sources": [
+        {
+            "uid": "prnn_wiki",
+            "name": "Wiktionary Pronunciations"
+        }
+    ],
+
+
+
+    "src_language": "en", //ISO 639_3 or ISO 639_1
+    "target_language": "ru", //ISO 639_3 or ISO 639_1
+
+    "default_translator": "tr_google",
+    "default_dict": "dict_example_dsl",
+
+    "translate_hotkey": "ctrl+KeyT", //"ctrl+KeyT",
+    "dict_hotkey": "ctrl+KeyD",
+
+    "ui_font_size": 12,
+    "win_bg_color": "#C0C0C0", //"#D6CFC6",
+    "win_bg2_color": "#C0C0C0",
+    "text_bg_color": "#F0F0F0",
+    "popup_opacity": 1.0, //0.0-1.0
+
+    "nodejs_unload_timeout": 120, //in seconds
+    "lang_autodetect": true,
+    "use_db": true,
+    "use_db_dict": true,
+}
