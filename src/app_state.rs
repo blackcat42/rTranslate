@@ -221,7 +221,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn translate(&mut self, fail_if_not_exist: bool) -> Result<()> {
+    pub fn translate(&mut self, fail_if_not_exist: bool, force: bool) -> Result<()> {
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
             self.app_sender.send(AppEvent::SetWaiting());
@@ -271,10 +271,19 @@ impl AppState {
 
         //self.app_sender.send(AppEvent::SetWaiting());
 
-        let transl = self.check_transl_cache(src_id, &self.selected_translator, src_lang.as_ref(), target_lang.as_ref());
+        let cached_transl = if force {
+            None
+        } else {
+            self.check_transl_cache(
+                src_id, 
+                &self.selected_translator, 
+                src_lang.as_ref(), 
+                target_lang.as_ref()
+            )
+        };
 
-        match transl {
-            Ok(t) => {
+        match cached_transl {
+            Some(t) => {
                 let tr_uid = self.selected_translator.clone();
                 let mut tr_name = "".to_string();
                 if let Some(tr) = self.translators.get(tr_uid.as_str()) {
@@ -291,7 +300,7 @@ impl AppState {
                     is_fav: Some(is_fav)
                 }));
             }
-            Err(_) => {
+            None => {
                 if fail_if_not_exist {
                     self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, false));
                     /*self.app_sender.send(AppEvent::UpdateUi(UIState {
@@ -325,7 +334,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn request_dict_entry(&mut self, fail_if_not_exist: bool) -> Result<()> {
+    pub fn request_dict_entry(&mut self, fail_if_not_exist: bool, force: bool) -> Result<()> {
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
             self.app_sender.send(AppEvent::SetWaiting());
@@ -364,10 +373,14 @@ impl AppState {
 
         //self.app_sender.send(AppEvent::SetWaiting());
 
-        let dict_entry = self.check_dict_cache(src_id, &self.selected_dict);
+        let dict_entry = if force {
+            None
+        } else {
+            self.check_dict_cache(src_id, &self.selected_dict)
+        };
 
         match dict_entry {
-            Ok(t) => {
+            Some(t) => {
                 let dict_uid = self.selected_dict.clone();
                 let mut dict_name = "".to_string();
                 if let Some(d) = self.dictionaries.get(dict_uid.as_str()) {
@@ -385,7 +398,7 @@ impl AppState {
                     is_fav: Some(is_fav),
                 }));
             }
-            Err(_) => {
+            None => {
                 if fail_if_not_exist {
                     self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, true));
                     return Err(anyhow!("no cached results for selected dictionary"));
@@ -560,10 +573,10 @@ impl AppState {
         }
     }
     
-    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, src_lang: &str, target_lang: &str) -> Result<String> {
+    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, src_lang: &str, target_lang: &str) -> Option<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
-            return Err(anyhow!("db support is off"));
+            return None;
         }
         if let Some(db) = db_ref {
             let transl = db.query_row(
@@ -578,21 +591,21 @@ impl AppState {
 
             match transl {
                 Ok(t) => {
-                    Ok(t)
+                    Some(t)
                 }
                 Err(_) => {
-                    Err(anyhow!("cached translation not found"))
+                    None
                 }
             }
         } else {
-            Err(anyhow!("cached translation not found"))
+            None
         }
     }
 
-    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str) -> Result<String> {
+    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str) -> Option<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
-            return Err(anyhow!("db support is off"));
+            return None;
         }
         if let Some(db) = db_ref {
             let transl = db.query_row(
@@ -607,14 +620,14 @@ impl AppState {
 
             match transl {
                 Ok(t) => {
-                    Ok(t)
+                    Some(t)
                 }
                 Err(_) => {
-                    Err(anyhow!("cached entry not found"))
+                    None
                 }
             }
         } else {
-            Err(anyhow!("cached dict entry not found"))
+            None
         }
     } 
 

@@ -208,7 +208,7 @@ impl AppView {
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::SetTranslator(qwe.uid.clone()));
-                    s.send(AppEvent::Translate());
+                    s.send(AppEvent::Translate(false));
                 }
             });
             translator_buttons.insert(qwe.uid.clone(), button);
@@ -290,7 +290,7 @@ impl AppView {
 
         
         let mut open_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"open.png").to_str().unwrap_or("")) {
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\open.png").to_str().unwrap_or("")) {
             open_button_dict.set_image(Some(image));
             open_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
@@ -350,7 +350,7 @@ impl AppView {
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::SetDict(qwe.uid.clone()));
-                    s.send(AppEvent::RequestDictEntry());
+                    s.send(AppEvent::RequestDictEntry(false));
                 }
             });
             dict_buttons.insert(qwe.uid.clone(), button);
@@ -444,7 +444,7 @@ impl AppView {
         run_transl_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::Translate());
+                    s.send(AppEvent::Translate(false));
                 }
         });
 
@@ -894,13 +894,13 @@ impl AppView {
         refresh_button.set_callback({
             let s = app_sender;
             move |_button| {
-                s.send(AppEvent::Translate());
+                s.send(AppEvent::Translate(true));
             }
         });
         refresh_button_dict.set_callback({
             let s = app_sender;
             move |_button| {
-                s.send(AppEvent::RequestDictEntry());
+                s.send(AppEvent::RequestDictEntry(true));
             }
         });
         open_button.set_callback({

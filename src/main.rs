@@ -376,8 +376,8 @@ fn main() {
                 app_view.clear_ui(true);
                 let _ = app_state.set_src_text(&src_text, false);
                 let _ = app_state.set_src_text(&src_text, true);
-                let _ = app_state.translate(true);
-                let _ = app_state.request_dict_entry(true);
+                let _ = app_state.translate(true, false);
+                let _ = app_state.request_dict_entry(true, false);
                 app_view.set_tts_browser_data(tts_arr);
                 app_view.set_dict_assets_browser_data(prnn_arr);
             }
@@ -489,7 +489,7 @@ fn main() {
                             if let Err(set_src_error) = app_state.set_src_text(&selected_text, false) {
                                 app_view.set_ready();
                                 app_view.set_status(set_src_error.to_string().as_str(), true, false);
-                            } else if let Err(tr_error) = app_state.translate(false) {
+                            } else if let Err(tr_error) = app_state.translate(false, false) {
                                 app_view.set_ready();
                                 app_view.set_status(tr_error.to_string().as_str(), true, false);
                             }
@@ -508,7 +508,7 @@ fn main() {
                             if let Err(set_src_error) = app_state.set_src_text(&selected_text, true) {
                                 app_view.set_ready();
                                 app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                            } else if let Err(dict_error) = app_state.request_dict_entry(false) {
+                            } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
                                 app_view.set_ready();
                                 app_view.set_status(dict_error.to_string().as_str(), true, true);
                             }                           
@@ -520,13 +520,13 @@ fn main() {
                     }
                 }
             }
-            Some(AppEvent::Translate()) => {
-                if let Err(error) = app_state.translate(false) {
+            Some(AppEvent::Translate(force)) => {
+                if let Err(error) = app_state.translate(false, force) {
                     println!("{}", error);
                 }
             }
-            Some(AppEvent::RequestDictEntry()) => {
-                if let Err(error) = app_state.request_dict_entry(false) {
+            Some(AppEvent::RequestDictEntry(force)) => {
+                if let Err(error) = app_state.request_dict_entry(false, force) {
                     println!("{}", error);
                 }
             }
@@ -537,7 +537,7 @@ fn main() {
                     if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
                         app_view.set_ready();
                         app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                    } else if let Err(dict_error) = app_state.request_dict_entry(false) {
+                    } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
                         app_view.set_ready();
                         app_view.set_status(dict_error.to_string().as_str(), true, true);
                 }
