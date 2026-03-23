@@ -185,7 +185,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn set_src_text(&mut self, text: String, is_dict: bool) -> Result<()> {
+    pub fn set_src_text(&mut self, text: &str, is_dict: bool) -> Result<()> {
         let text = text.replace("\r\n", "\n");
 
         //remove hardcoded line-breaks
@@ -193,7 +193,7 @@ impl AppState {
         //TODO custom regex?
         let request_limit = 4500; //TODO: limit from settings, statusbar
         let re = Regex::new(r"\n(?=[a-z])")?;
-        let text = re.replace_all(text.as_str(), "").to_string();
+        let text = re.replace_all(&text, "").to_string();
         let text = text.unicode_truncate(request_limit).0.trim().to_string();
 
         if text.chars().count() < 3 {
@@ -271,7 +271,7 @@ impl AppState {
 
         //self.app_sender.send(AppEvent::SetWaiting());
 
-        let transl = self.check_transl_cache(src_id, self.selected_translator.clone(), src_lang.clone(), target_lang.clone());                            
+        let transl = self.check_transl_cache(src_id, &self.selected_translator, src_lang.as_ref(), target_lang.as_ref());
 
         match transl {
             Ok(t) => {
@@ -364,7 +364,7 @@ impl AppState {
 
         //self.app_sender.send(AppEvent::SetWaiting());
 
-        let dict_entry = self.check_dict_cache(src_id, self.selected_dict.clone());
+        let dict_entry = self.check_dict_cache(src_id, &self.selected_dict);
 
         match dict_entry {
             Ok(t) => {
@@ -409,7 +409,7 @@ impl AppState {
     pub fn run_tts(&mut self) -> Result<()> {
         let text = self.src_text.clone();
         let (src_id, is_fav) = self.insert_src(text.as_str())?;
-        let tts_file = self.check_tts_cache(src_id, self.selected_tts_engine.clone(), self.selected_tts_voice.clone());
+        let tts_file = self.check_tts_cache(src_id, &self.selected_tts_engine, &self.selected_tts_voice);
         //15_kkr_af-heart.ogg
 
         match tts_file {
@@ -448,7 +448,7 @@ impl AppState {
         Ok(())
     }
     
-    pub fn check_tts_cache(&self, src_id: i64, selected_tts_engine: String, selected_tts_voice: String) -> Result<String> {
+    pub fn check_tts_cache(&self, src_id: i64, selected_tts_engine: &str, selected_tts_voice: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Err(anyhow!("db support is off"));
@@ -487,7 +487,7 @@ impl AppState {
     pub fn run_prnn(&mut self) -> Result<()> {
         let text = self.src_text_dict.clone();
         let (src_id, is_fav) = self.insert_src(text.as_str())?;
-        let tts_file = self.check_prnn_cache(src_id, self.selected_prnn_source.clone());
+        let tts_file = self.check_prnn_cache(src_id, &self.selected_prnn_source);
         //15_kkr_af-heart.ogg
 
         match tts_file {
@@ -524,7 +524,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn check_prnn_cache(&self, src_id: i64, selected_prnn_source: String) -> Result<String> {
+    pub fn check_prnn_cache(&self, src_id: i64, selected_prnn_source: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Err(anyhow!("db support is off"));
@@ -560,15 +560,12 @@ impl AppState {
         }
     }
     
-    pub fn check_transl_cache(&self, src_id: i64, selected_translator: String, src_lang: Lang, target_lang: Lang) -> Result<String> {
+    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, src_lang: &str, target_lang: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Err(anyhow!("db support is off"));
         }
         if let Some(db) = db_ref {
-            let selected_translator = selected_translator.as_str();
-            let src_lang = src_lang.as_ref();
-            let target_lang = target_lang.as_ref();
             let transl = db.query_row(
                 "SELECT text FROM transl 
                  WHERE src_id = ?1 AND transl_engine_uid = ?2 AND src = ?3 AND target = ?4",
@@ -592,13 +589,12 @@ impl AppState {
         }
     }
 
-    pub fn check_dict_cache(&self, src_id: i64, selected_dict: String) -> Result<String> {
+    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Err(anyhow!("db support is off"));
         }
         if let Some(db) = db_ref {
-            let selected_dict = selected_dict.as_str();
             let transl = db.query_row(
                 "SELECT text FROM dict 
                  WHERE src_id = ?1 AND dict_uid = ?2",
@@ -659,14 +655,12 @@ impl AppState {
         }
     }
 
-    pub fn insert_transl(&self, src_id: i64, selected_translator: &str, src: Lang, target:Lang, text: &str) -> Result<i64> {
+    pub fn insert_transl(&self, src_id: i64, selected_translator: &str, src: &str, target: &str, text: &str) -> Result<i64> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Ok(0);
         }
         if let Some(db) = db_ref {
-            let src = src.as_ref();
-            let target = target.as_ref();
             db.execute(
                 "REPLACE INTO transl (src_id, transl_engine_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![src_id, selected_translator, src, target, text],
@@ -737,14 +731,14 @@ impl AppState {
         }
     }
 
-    pub fn toggle_fav(&self, text: String, is_dict: bool) -> Result<()> {
+    pub fn toggle_fav(&self, text: &str, is_dict: bool) -> Result<()> {
         //let mut src_id = 0;
         /*if let Some(t) = text {
             src_id = self.insert_src(t.as_str())?.0;
         } else {
             src_id = self.insert_src(self.src_text.as_str())?.0;
         }*/
-        let src_id = self.insert_src(text.as_str())?.0;
+        let src_id = self.insert_src(text)?.0;
 
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
