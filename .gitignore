@@ -31,3 +31,4 @@ target
 *.sublime-project
 *.sublime-workspace
 /todo.txt
+/dist/settings.json

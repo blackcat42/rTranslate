@@ -15,8 +15,10 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use serde::{Deserialize, Serialize};
+use regex::Regex;
 
-use get_selected_text::get_selected_text;
+use get_selected_text::get_selected_text; //todo: high ram usage
+
 use global_hotkey::{
     GlobalHotKeyManager, 
     GlobalHotKeyEvent, 
@@ -114,6 +116,13 @@ struct PRNNSourceOption {
 
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
+    if !std::path::Path::new("settings.json").exists() {
+        std::fs::copy("settings.json.default", "settings.json").unwrap_or_else(|e| {
+            app_panic_message("Failed to open settings.json");
+            panic!("Error: {}", e);
+        });
+    }
+
     let settings_json = std::fs::read_to_string("settings.json").unwrap_or_else(|e| {
             app_panic_message("Failed to open settings.json");
             panic!("Error: {}", e);
@@ -256,8 +265,12 @@ fn main() {
 
     let mut app_view = AppView::new(app_sender);
 
-    
+    let re_uid = Regex::new(r"^\w+$").unwrap();
     for value in GLOBAL_SETTINGS.translators.iter() {
+        if !re_uid.is_match(&value.uid) {
+            app_panic_message("settings.json: Failed to parse uid");
+            panic!("Error");
+        }
         if let Some(path) = &value.path && path.chars().count() > 0 {
             app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
         }
@@ -265,6 +278,10 @@ fn main() {
     app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.dictionaries.iter() {
+        if !re_uid.is_match(&value.uid) {
+            app_panic_message("settings.json: Failed to parse uid");
+            panic!("Error");
+        }
         if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
@@ -273,6 +290,11 @@ fn main() {
     app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.tts_engines.iter() {
+        if !re_uid.is_match(&value.uid) {
+            app_panic_message("settings.json: Failed to parse uid");
+            panic!("Error");
+        }
+
         if let Some(path) = &value.path && path.chars().count() > 0 {
             dbg!(value);
             app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
@@ -352,8 +374,8 @@ fn main() {
             Some(AppEvent::UpdateTTSBrowser(src_text, tts_arr, prnn_arr)) => {
                 app_view.clear_ui(false);
                 app_view.clear_ui(true);
-                let _ = app_state.set_src_text(src_text.clone(), false);
-                let _ = app_state.set_src_text(src_text, true);
+                let _ = app_state.set_src_text(&src_text, false);
+                let _ = app_state.set_src_text(&src_text, true);
                 let _ = app_state.translate(true);
                 let _ = app_state.request_dict_entry(true);
                 app_view.set_tts_browser_data(tts_arr);
@@ -397,13 +419,13 @@ fn main() {
                 //let _ = app_state.set_fav(text);
                 match text {
                     Some(t) => {
-                        let _ = app_state.toggle_fav(t, is_dict);
+                        let _ = app_state.toggle_fav(&t, is_dict);
                     },
                     None => {
                         if is_dict {
-                            let _ = app_state.toggle_fav(app_view.src_dict.clone(), is_dict);
+                            let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
                         } else {
-                            let _ = app_state.toggle_fav(app_view.src.clone(), is_dict);
+                            let _ = app_state.toggle_fav(&app_view.src, is_dict);
                         }
                     }
                 };
@@ -411,7 +433,7 @@ fn main() {
             }
 
             Some(AppEvent::SaveTranslation((src_id, _src_text, translator, src, target, translation_text))) => {
-                let _ = app_state.insert_transl(src_id, translator.as_str(), src.clone(), target.clone(), translation_text.as_str());
+                let _ = app_state.insert_transl(src_id, translator.as_str(), src.as_ref(), target.as_ref(), translation_text.as_str());
                 let _ = app_state.update_history_browser();
                 
             }
@@ -464,7 +486,7 @@ fn main() {
                             app_view.clear_ui(false); //clear status, title and translation buffer
 
                             //app_view.set_waiting();
-                            if let Err(set_src_error) = app_state.set_src_text(selected_text, false) {
+                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, false) {
                                 app_view.set_ready();
                                 app_view.set_status(set_src_error.to_string().as_str(), true, false);
                             } else if let Err(tr_error) = app_state.translate(false) {
@@ -481,18 +503,15 @@ fn main() {
                     match get_selected_text() {
                         Ok(selected_text) => {
                             app_view.clear_ui(true);
-
+                            app_view.show_popup(true, true);
                             app_view.set_waiting();
-                            if let Err(set_src_error) = app_state.set_src_text(selected_text, true) {
+                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, true) {
                                 app_view.set_ready();
                                 app_view.set_status(set_src_error.to_string().as_str(), true, true);
                             } else if let Err(dict_error) = app_state.request_dict_entry(false) {
                                 app_view.set_ready();
                                 app_view.set_status(dict_error.to_string().as_str(), true, true);
-                            }
-
-                            app_view.show_popup(true, true);
-                           
+                            }                           
                         },
                         Err(_) => {
                             app_view.set_status("An error occurred while getting the selected text", true, true);
@@ -515,7 +534,7 @@ fn main() {
                 app_view.clear_ui(true);
 
                 app_view.set_waiting();
-                    if let Err(set_src_error) = app_state.set_src_text(app_view.src.clone(), true) {
+                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
                         app_view.set_ready();
                         app_view.set_status(set_src_error.to_string().as_str(), true, true);
                     } else if let Err(dict_error) = app_state.request_dict_entry(false) {

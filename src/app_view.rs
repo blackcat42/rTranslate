@@ -566,7 +566,7 @@ impl AppView {
 
         //TABS
         let mut col_left2 = group::Flex::default().row().with_pos(5, 0);
-        let mut tab = group::Tabs::default_fill();
+        let mut tab = group::Tabs::default().with_size(100, 50); //::default_fill not working in debug mode
 
         let history_tab = group::Flex::default_fill().with_label("Recent history\t").column();
         let mut history_browser_wrapper = group::Flex::default().row();
@@ -1192,7 +1192,7 @@ impl AppView {
                     str_f.push_str(&"C".repeat(chunc.text.len()));
                 } else if &chunc.color == "green" {
                     str_f.push_str(&"D".repeat(chunc.text.len()));
-                } else if &chunc.color == "blue" {
+                } else if &chunc.color == "blue" || &chunc.color == "darkblue" {
                     str_f.push_str(&"E".repeat(chunc.text.len()));
                 } else if &chunc.color == "teal" {
                     str_f.push_str(&"F".repeat(chunc.text.len()));

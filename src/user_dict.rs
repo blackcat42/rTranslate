@@ -30,6 +30,7 @@ pub struct DSLDict {
 
 //todo set app waiting status before open db
 //todo prevent sql injections from settings
+//TODO: multiple titles support (not allowed by spec, but widely used)
 
 impl DSLDict {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>, uid: String, name: String, dict_path: String, db: Rc<RefCell<Option<Connection>>>) -> Self {
@@ -120,6 +121,7 @@ impl DSLDict {
                     let mut line_num = 1;
                     let mut articles_num = 0;
                     let mut buffer: Vec<u8> = Vec::new();
+                    let mut bom_offset = 2;
 
                     let mut index_db = Connection::open("dictionary_index.db").unwrap();
                     let tx = index_db.transaction().unwrap();
@@ -133,13 +135,19 @@ impl DSLDict {
                         if line_num % 100 == 0 {
                             let pos_in_mb: f64 = position as f64 / 1048576_f64;
                             let status_str = format!("processed {:.2}/{} mb; articles indexed: {}", pos_in_mb, filesize_mb, articles_num);
-                            app_sender.send(AppEvent::SetStatus(status_str.as_str().into(), false, true));
+                            app_sender.send(AppEvent::SetStatus(status_str.as_str().into(), true, true));
                             app::awake();
                             app::redraw();
                         }
 
-                        if line_num == 1 && buffer.len() >= 2 && buffer[0] != 0xFF && buffer[1] != 0xFE {
-                            break; //not a utf-16le with BOM
+                        if line_num == 1 && buffer[0] != 0xFF && buffer[1] != 0xFE {
+                            bom_offset = 0; //utf-16le w/o BOM or not a utf-16le
+                            if buffer.len() >= (10 + bom_offset) 
+                               && buffer[0 + bom_offset] != 0x23 
+                               && buffer[2 + bom_offset] != 0x4E { 
+                                break;
+                            }
+                            //23 00  4E 00  41 00  4D 00  45 00 (#NAME)
                         }
                         if bytes_read == 0 {
                             let _ = tx.execute(
@@ -150,7 +158,7 @@ impl DSLDict {
                         }
                         
                         if line_num == 1 {
-                            buffer.remove(0); //remove bom (first byte)
+                            buffer.remove(0); //remove bom (first byte) todo:
                         }
                         if buffer.len() < 1 {
                             continue;
@@ -178,6 +186,7 @@ impl DSLDict {
                     }
                     tx.commit().unwrap();
                     is_running.store(false, Ordering::SeqCst);
+                    app_sender.send(AppEvent::SetStatus("Dictionary index created. Please retry request or make a new one.".into(), true, true));
                 }
             });
         };
@@ -200,6 +209,7 @@ impl Dictionary for DSLDict {
         if self.is_running.load(Ordering::SeqCst) {
             return;
         }
+        let text = text.to_lowercase();
         
         let db_ref = self.db.borrow();
         if db_ref.is_none() {
@@ -326,6 +336,7 @@ fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> 
     let mut reader = BufReader::new(file);
     let mut buffer: Vec<u8> = Vec::new();
     let mut line_num = 0;
+    let mut is_title = true;
 
     let mut result_string = "".to_string();
 
@@ -348,7 +359,14 @@ fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> 
         let utf16_vec = convert_u8_to_u16(buffer.clone());
         match String::from_utf16(&utf16_vec) {
             Ok(decoded_string) => {
-                if line_num > 0 && !decoded_string.starts_with("\t") && !decoded_string.starts_with(" ") {
+                println!("{}", decoded_string);
+                if is_title && (decoded_string.starts_with("\t") || decoded_string.starts_with(" ")) {
+                    is_title = false;
+                }
+                if !is_title && !decoded_string.starts_with("\t") && !decoded_string.starts_with(" ") {
+                    break;
+                }
+                if line_num > 150 {
                     break;
                 }
                 result_string.push_str(&decoded_string);

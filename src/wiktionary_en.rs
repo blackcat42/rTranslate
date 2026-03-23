@@ -82,7 +82,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> 
         .build();
     let agent: Agent = config.into();
     let json_data: String = agent.get(req_string)
-        .query("title", selected_text)
+        .query("title", selected_text.to_lowercase())
         .call()?
         .body_mut()
         .read_to_string()?;

@@ -15,7 +15,7 @@ ureq = "=3.1.4"
 image = "0.25.9"
 tray-icon = "0.21.1"
 mouse_position = "=0.1.4"
-get-selected-text = "=0.1.6"
+get-selected-text = "=0.1.6" #todo: high ram usage
 unicode-truncate = "2.0.1"
 global-hotkey = "0.7.0"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
