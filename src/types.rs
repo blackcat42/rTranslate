@@ -193,7 +193,7 @@ pub enum Lang {
     #[strum(serialize = "hye", to_string = "hy")] Hy,
 }
 
-
+//todo: whatlang::Lang::from_code("eng").unwrap().eng_name()
 #[allow(unreachable_patterns)]
 #[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
 pub enum LangNames {
@@ -285,7 +285,8 @@ pub trait Translator {
         selected_text: String, //TODO get this from db if exist
         src_lang: Lang,
         target_lang: Lang,
-        is_fav: bool
+        is_fav: bool,
+        is_lang_detected: bool
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();

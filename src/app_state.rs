@@ -235,6 +235,7 @@ impl AppState {
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
 
+        let mut is_lang_detected = true;
         if GLOBAL_SETTINGS.lang_autodetect {
             //DETECT LANGUAGE
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
@@ -249,10 +250,12 @@ impl AppState {
                     src_lang = lng;
                 }
                 
-                let qwe = format!("src lang detected as {}", info.lang().code());
+                let qwe = format!("Language detected as {}", info.lang().eng_name());
                 self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, false));
+                is_lang_detected = true;
             } else {
-                self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, false));
+                is_lang_detected = false;
+                //self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, false));
             }
 
             /*if selected_text.chars().count() > 55 {
@@ -321,7 +324,8 @@ impl AppState {
                         selected_text, 
                         src_lang.clone(), 
                         target_lang.clone(),
-                        is_fav
+                        is_fav,
+                        is_lang_detected
                     );
                 } else {
                     //self.app_sender.send(AppEvent::SetStatus("selected translation service is not exist".into(), true));

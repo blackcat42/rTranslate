@@ -53,7 +53,7 @@ impl Translator for NT {
             let _ = self.tx.send(None);
         }
     }
-    fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang, is_fav: bool) {
+    fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang, is_fav: bool, _is_lang_detected: bool) {
         println!("new src or target lang: {}", (self.src_lang != src_lang || self.target_lang != target_lang));
         println!("old lng: {} new lng: {}", self.src_lang.as_ref(), src_lang.as_ref());
 

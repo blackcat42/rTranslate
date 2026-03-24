@@ -29,7 +29,7 @@ impl Translator for GT {
         "Google".to_string()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_fav: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_fav: bool, is_lang_detected: bool) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -39,7 +39,7 @@ impl Translator for GT {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
 
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone());
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
                     match transl_result {
                         Ok(t_text) => {
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), "tr_google".to_string(), src_lang.clone(), target_lang.clone(), t_text.clone())));
@@ -70,11 +70,15 @@ impl Translator for GT {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> Result<String> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<String> {
     let mut response = "".to_string();
 
-    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang.as_ref(), target_lang.as_ref());
-    //let req_string = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&dt=t&tl=ru".to_string();
+    let src_lang = if is_lang_detected {
+        src_lang.as_ref()
+    } else {
+        "auto"
+    };
+    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang, target_lang.as_ref());
     println!("{}", req_string);
     let config = Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(5)))
