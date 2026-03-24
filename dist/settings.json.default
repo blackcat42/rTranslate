@@ -54,7 +54,8 @@
     "default_dict": "dict_wiktionary_en",
 
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
-    "dict_hotkey": "ctrl+KeyD",
+    "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
+    "single_word_to_dict": true, //if selected text contains no spaces, send it to the dictionary
 
     "ui_font_size": 12,
     "win_bg_color": "#C0C0C0", //"#D6CFC6",
@@ -63,7 +64,15 @@
     "popup_opacity": 1.0, //0.0-1.0
 
     "nodejs_unload_timeout": 120, //in seconds
+    "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
+
+    "source_text_max_length": 4500, //Source text will be truncated to this size. The recommend value is 5000 or less (google translate api limit).
+    "transl_request_min_length": 3,
+    "dict_request_max_length": 100,
+
     "lang_autodetect": true,
-    "use_db": true,
-    "use_db_dict": true,
+
+    //sqlite is required for history and user dictionaries support; default as true; disabling is not recommended
+    /*"use_db": true,
+    "use_db_dict": true,*/
 }

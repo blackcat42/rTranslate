@@ -61,6 +61,7 @@ use app_view::{AppView};
 use std::sync::{LazyLock};
 
 
+fn default_as_true() -> bool { true }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Settings {
@@ -82,10 +83,20 @@ struct Settings {
 
     pub translate_hotkey: Option<String>,
     pub dict_hotkey: Option<String>,
+    pub single_word_to_dict: bool,
 
     pub nodejs_unload_timeout: u64,
+    pub http_throttling: f64,
+
+    pub source_text_max_length: usize, //TODO: chunking
+    pub transl_request_min_length: usize,
+    pub dict_request_max_length: usize,
+
     pub lang_autodetect: bool,
+
+    #[serde(default = "default_as_true")]
     pub use_db: bool,
+    #[serde(default = "default_as_true")]
     pub use_db_dict: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
@@ -476,22 +487,42 @@ fn main() {
                     app_view.show_popup(true, false);
                 }
             }
-            Some(AppEvent::HotKey(e)) => {
+            Some(AppEvent::HotKey(e)) => 'hotkey_arm: {
                 //dbg!(e);
-                if e.state == HotKeyState::Released && Some(e.id) == tr_hotkey_id {
+                if e.state == HotKeyState::Released {
+                    let mut is_dict: bool;
+                    if Some(e.id) == tr_hotkey_id {
+                        is_dict = false;
+                    } else if Some(e.id) == dict_hotkey_id {
+                        is_dict = true;
+                    } else {
+                        break 'hotkey_arm;
+                    }
                     match get_selected_text() {
                         Ok(selected_text) => {
-                            //TODO: if single word --> to dict
-                            app_view.show_popup(false, true);
-                            app_view.clear_ui(false); //clear status, title and translation buffer
-
-                            //app_view.set_waiting();
-                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, false) {
+                            if !selected_text.trim().contains(' ') 
+                               && !is_dict 
+                               && GLOBAL_SETTINGS.single_word_to_dict {
+                                is_dict = true;
+                            }
+                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {
                                 app_view.set_ready();
-                                app_view.set_status(set_src_error.to_string().as_str(), true, false);
-                            } else if let Err(tr_error) = app_state.translate(false, false) {
-                                app_view.set_ready();
-                                app_view.set_status(tr_error.to_string().as_str(), true, false);
+                                app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
+                            } else {
+                                app_view.show_popup(is_dict, true);
+                                app_view.clear_ui(is_dict); //clear status, title and translation buffer
+                                if is_dict {
+                                    app_view.set_waiting();
+                                }
+                                if !is_dict {
+                                    if let Err(tr_error) = app_state.translate(false, false) {
+                                        app_view.set_ready();
+                                        app_view.set_status(tr_error.to_string().as_str(), true, false);
+                                    }
+                                } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
+                                    app_view.set_ready();
+                                    app_view.set_status(dict_error.to_string().as_str(), true, true);
+                                }
                             }
                         },
                         Err(_) => {
@@ -499,7 +530,7 @@ fn main() {
                             println!("An error occurred while getting the selected text");
                         }
                     }
-                } else if e.state == HotKeyState::Released && Some(e.id) == dict_hotkey_id {
+                } /*else if e.state == HotKeyState::Released && Some(e.id) == dict_hotkey_id {
                     match get_selected_text() {
                         Ok(selected_text) => {
                             app_view.clear_ui(true);
@@ -518,7 +549,7 @@ fn main() {
                             println!("An error occurred while getting the selected text");
                         }
                     }
-                }
+                }*/
             }
             Some(AppEvent::Translate(force)) => {
                 if let Err(error) = app_state.translate(false, force) {

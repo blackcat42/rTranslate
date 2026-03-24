@@ -5,6 +5,7 @@ use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use anyhow::Result;
+use super::GLOBAL_SETTINGS;
 
 pub struct GT {
     is_running: Arc<AtomicBool>,
@@ -58,7 +59,7 @@ impl Translator for GT {
                             app_sender.send(AppEvent::SetStatus("translation failed (https req error)".into(), true, false));
                         }
                     }
-                    thread::sleep(Duration::from_secs(5)); //throttling TODO: settings
+                    thread::sleep(Duration::from_millis((GLOBAL_SETTINGS.http_throttling * 1000.0) as u64));
                     is_running.store(false, Ordering::SeqCst);
                 }
             });

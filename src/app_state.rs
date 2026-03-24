@@ -186,20 +186,8 @@ impl AppState {
     }
 
     pub fn set_src_text(&mut self, text: &str, is_dict: bool) -> Result<()> {
-        let text = text.replace("\r\n", "\n");
-
-        //remove hardcoded line-breaks
-        //TODO more accurate??? Optionable
-        //TODO custom regex?
-        let request_limit = 4500; //TODO: limit from settings, statusbar
-        let re = Regex::new(r"\n(?=[a-z])")?;
-        let text = re.replace_all(&text, "").to_string();
-        let text = text.unicode_truncate(request_limit).0.trim().to_string();
-
-        if text.chars().count() < 3 {
-            return Err(anyhow!("source text is too short"));
-        }
-        let (src_id, is_fav) = self.insert_src(text.as_str())?;
+        
+        let (text, src_id, is_fav) = self.insert_src(text)?;
 
         if is_dict {
             self.src_text_dict = text;
@@ -227,10 +215,10 @@ impl AppState {
             self.app_sender.send(AppEvent::SetWaiting());
         }
         let selected_text = self.src_text.clone();
-        if selected_text.chars().count() < 3 {
+        if selected_text.chars().count() < GLOBAL_SETTINGS.transl_request_min_length {
             return Err(anyhow!("source text is too short"));
         }
-        let (src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props
+        let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props
 
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
@@ -255,6 +243,8 @@ impl AppState {
                 is_lang_detected = true;
             } else {
                 is_lang_detected = false;
+                //TODO!: if not forced, check cache for any existing translation; get last entry
+
                 //self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, false));
             }
 
@@ -345,10 +335,10 @@ impl AppState {
         }
         
         let selected_text = self.src_text_dict.clone();
-        if selected_text.chars().count() > 100 {
+        if selected_text.chars().count() > GLOBAL_SETTINGS.dict_request_max_length {
             return Err(anyhow!("source text is too long"));
         }
-        let (src_id, is_fav) = self.insert_src(selected_text.as_str())?;
+        let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?;
 
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
@@ -424,8 +414,8 @@ impl AppState {
     }
     
     pub fn run_tts(&mut self) -> Result<()> {
-        let text = self.src_text.clone();
-        let (src_id, is_fav) = self.insert_src(text.as_str())?;
+        //let text = self.src_text.clone();
+        let (text, src_id, is_fav) = self.insert_src(&self.src_text)?;
         let tts_file = self.check_tts_cache(src_id, &self.selected_tts_engine, &self.selected_tts_voice);
         //15_kkr_af-heart.ogg
 
@@ -502,8 +492,8 @@ impl AppState {
     }
 
     pub fn run_prnn(&mut self) -> Result<()> {
-        let text = self.src_text_dict.clone();
-        let (src_id, is_fav) = self.insert_src(text.as_str())?;
+        //let text = self.src_text_dict.clone();
+        let (text, src_id, is_fav) = self.insert_src(&self.src_text)?;
         let tts_file = self.check_prnn_cache(src_id, &self.selected_prnn_source);
         //15_kkr_af-heart.ogg
 
@@ -708,11 +698,24 @@ impl AppState {
         }
     }
 
-    pub fn insert_src(&self, text: &str) -> Result<(i64, bool)> {
+    pub fn insert_src(&self, text: &str) -> Result<(String, i64, bool)> {
+        let text = text.replace("\r\n", "\n");
+
+        //remove hardcoded line-breaks
+        //TODO more accurate??? Optionable
+        //TODO custom regex?
+        let request_limit = GLOBAL_SETTINGS.source_text_max_length; //TODO: chunking, statusbar
+        let re = Regex::new(r"\n(?=[a-z])")?;
+        let text = re.replace_all(&text, "").to_string();
+        let text = text.unicode_truncate(request_limit).0.trim().to_string();
+
+        if text.chars().count() < 1 {
+            return Err(anyhow!("source text is too short"));
+        }
 
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
-            return Ok((0, false));
+            return Ok((text, 0, false));
         }
 
         if let Some(db) = db_ref {
@@ -732,7 +735,7 @@ impl AppState {
             match src_id {
                 Ok((id, fav)) => {
                     println!("cached src found");
-                    Ok((id, fav))
+                    Ok((text, id, fav))
                 }
                 Err(_) => {
                     db.execute(
@@ -740,11 +743,11 @@ impl AppState {
                         params![text, hash],
                     )?;
                     println!("src inserted");
-                    Ok((db.last_insert_rowid(), false)) //TODO: RETURNING clause
+                    Ok((text, db.last_insert_rowid(), false)) //TODO: RETURNING clause
                 }
             } 
         } else {
-            Ok((0, false))
+            Ok((text, 0, false))
         }
     }
 
@@ -755,7 +758,7 @@ impl AppState {
         } else {
             src_id = self.insert_src(self.src_text.as_str())?.0;
         }*/
-        let src_id = self.insert_src(text)?.0;
+        let src_id = self.insert_src(text)?.1;
 
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
