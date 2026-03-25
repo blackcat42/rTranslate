@@ -65,10 +65,15 @@
 
     "nodejs_unload_timeout": 120, //in seconds
     "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
+    "http_request_timeout": 5, //in seconds
 
     "source_text_max_length": 4500, //Source text will be truncated to this size. The recommend value is 5000 or less (google translate api limit).
     "transl_request_min_length": 3,
     "dict_request_max_length": 100,
+
+    "history_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
+    "audio_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
+    "clear_audio_cache_at_startup": false, //if false - deleting db entries will not affect audio cache files ("tts_cache" folder)
 
     "lang_autodetect": true,
 

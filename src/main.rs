@@ -14,6 +14,8 @@ use std::io::BufReader;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use anyhow::{anyhow, Result};
+
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 
@@ -29,7 +31,7 @@ use global_hotkey::{
 
 use std::str::FromStr;
 
-use rusqlite::{Connection};
+use rusqlite::{params, params_from_iter, Connection};
 
 use tray_icon::{
     menu::{
@@ -55,13 +57,17 @@ mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
-use types::{AppEvent, UIState, UIStateDict};
+use types::{AppEvent, UIState, UIStateDict, TranslSource};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
 
 
+
+//SETTINGS
 fn default_as_true() -> bool { true }
+fn default_as_false() -> bool { false } //explicit is better
+fn default_as_minus_one() -> i32 { -1 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Settings {
@@ -87,10 +93,18 @@ struct Settings {
 
     pub nodejs_unload_timeout: u64,
     pub http_throttling: f64,
+    pub http_request_timeout: u64,
 
     pub source_text_max_length: usize, //TODO: chunking
     pub transl_request_min_length: usize,
     pub dict_request_max_length: usize,
+
+    #[serde(default = "default_as_minus_one")]
+    pub history_max_entries: i32,
+    #[serde(default = "default_as_false")]
+    pub clear_audio_cache_at_startup: bool,
+    #[serde(default = "default_as_minus_one")]
+    pub audio_max_entries: i32,
 
     pub lang_autodetect: bool,
 
@@ -124,7 +138,6 @@ struct PRNNSourceOption {
     pub uid: String,
     pub name: String,
 }
-
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     if !std::path::Path::new("settings.json").exists() {
@@ -211,6 +224,12 @@ fn main() {
     };
     let conn_dict_wrapper = Rc::new(RefCell::new(conn_dict));
 
+    if GLOBAL_SETTINGS.history_max_entries >= 0 && conn.is_some() {
+        clear_history(&conn);
+    }
+    if GLOBAL_SETTINGS.clear_audio_cache_at_startup && conn.is_some() {
+        clear_audio_cache(&conn);
+    }
     //HOTKEYS
     let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
         app_panic_message("GlobalHotKeyManager");
@@ -648,4 +667,146 @@ pub fn screen_center() -> (i32, i32) {
         (app::screen_size().0 / 2.0) as i32,
         (app::screen_size().1 / 2.0) as i32,
     )
+}
+
+fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
+    let audio_max_entries = GLOBAL_SETTINGS.audio_max_entries;
+    if !GLOBAL_SETTINGS.clear_audio_cache_at_startup || audio_max_entries < 0 {
+        return Ok(());
+    }
+    if let Some(db) = conn {
+        let count: i32 = db.query_row(
+            "SELECT COUNT(*) FROM tts 
+             INNER JOIN src 
+             ON tts.src_id = src.id 
+             WHERE src.fav = FALSE",
+            params![],
+            |row| row.get(0),
+        )?;
+        if audio_max_entries >= count {
+            return Ok(());
+        }
+        let limit_del = count - audio_max_entries;
+    
+        let mut data_pr = db.prepare(
+            "SELECT tts.src_id, tts.path FROM tts 
+             INNER JOIN src 
+             ON tts.src_id = src.id 
+             WHERE src.fav = FALSE 
+             ORDER BY tts.src_id ASC 
+             LIMIT :limit
+             
+            "
+        )?;
+
+        let mut ids: Vec<u32> = vec![];
+        let mut data = data_pr.query(&[(":limit", &limit_del)]).unwrap();
+
+        while let Some(row) = data.next()? {
+            let id: u32 = row.get(0)?;
+            let path: String = row.get(1)?;
+            //println!("ID: {}", &id);
+            //println!("PATH: {}", &path);
+            ids.push(id);
+        }
+        delete_audio_files_by_ids(conn, ids);
+    }
+    Ok(())
+}
+
+
+fn clear_history(conn: &Option<Connection>) -> Result<()> {
+    
+    let history_max_entries = GLOBAL_SETTINGS.history_max_entries;
+    if let Some(db) = conn {
+        //println!("clear_history");
+
+        let count: i32 = db.query_row(
+            "SELECT COUNT(*) FROM src WHERE src.fav = FALSE",
+            params![],
+            |row| row.get(0),
+        )?;
+        if history_max_entries >= count || history_max_entries < 0 {
+            return Ok(());
+        }
+
+        let limit_del = count - history_max_entries;
+        //println!("limit_del {}", limit_del);
+
+        let mut data_pr = db.prepare(
+            "SELECT id FROM src 
+             WHERE src.fav = FALSE ORDER BY id ASC LIMIT :limit"
+        )?;
+
+        let mut ids: Vec<u32> = vec![];
+        let mut data = data_pr.query(&[(":limit", &limit_del)])?;
+        while let Some(row) = data.next()? {
+            let id: u32 = row.get(0)?;
+            ids.push(id);
+        }
+
+        let _ = delete_audio_files_by_ids(conn, ids.clone());
+
+        let placeholders: String = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
+        let query = format!("DELETE FROM src WHERE id IN ({})", placeholders);
+        let rows = db.execute(
+            &query,
+            params_from_iter(ids.iter()),
+        )?;
+        println!("clear_history; rows deleted {}", rows);
+
+        Ok(())
+
+        /*let rows = db.execute(
+            "DELETE FROM src 
+             WHERE id IN (
+               SELECT id 
+               FROM src 
+               WHERE src.fav = FALSE 
+               ORDER BY id ASC 
+               LIMIT ?1
+             )
+            ",
+            params![limit_del],
+        )?;*/           
+    } else {
+        Err(anyhow!("db"))
+    }
+}
+
+
+fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result<()> {
+    let placeholders: String = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
+    if let Some(db) = conn {
+        if GLOBAL_SETTINGS.clear_audio_cache_at_startup {
+            let paths: Vec<String> = db
+                .prepare(&format!("SELECT path FROM tts WHERE src_id IN ({})", placeholders))
+                .unwrap()
+                .query_map(params_from_iter(ids.iter()), |row| row.get(0)).unwrap()
+                .map(|path| path.unwrap())
+                .collect();
+
+            for path in paths {
+                let audio_path = format!(r"tts_cache\{path}.ogg");
+                let working_dir = std::env::current_dir()?;
+                let file = working_dir.join(&audio_path);
+                if let Ok(exist) = file.try_exists() && exist {
+                    //println!("File to delete: {}", &file.display());
+                    match std::fs::remove_file(&file) {
+                        Ok(_) => {
+                            println!("File deleted: {}", &file.display());
+                        },
+                        Err(e) => {
+                            eprintln!("Error deleting file: {} ({})", &file.display(), e);
+                        }
+                    }
+                }
+            }
+            //println!("IDs: {:?}", ids);
+            //println!("paths: {:?}", paths);
+        }
+        Ok(())
+    } else {
+        Err(anyhow!("db"))
+    }
 }

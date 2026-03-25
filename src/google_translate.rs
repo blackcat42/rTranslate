@@ -82,7 +82,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
     let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang, target_lang.as_ref());
     println!("{}", req_string);
     let config = Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(5)))
+        .timeout_global(Some(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout)))
         .build();
     let agent: Agent = config.into();
     let json_data: String = agent.get(req_string)

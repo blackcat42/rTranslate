@@ -79,7 +79,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> 
     let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();
     println!("{}", req_string);
     let config = Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(5)))
+        .timeout_global(Some(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout)))
         .build();
     let agent: Agent = config.into();
     let json_data: String = agent.get(req_string)
