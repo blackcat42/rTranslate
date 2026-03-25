@@ -225,10 +225,10 @@ fn main() {
     let conn_dict_wrapper = Rc::new(RefCell::new(conn_dict));
 
     if GLOBAL_SETTINGS.history_max_entries >= 0 && conn.is_some() {
-        clear_history(&conn);
+        let _ = clear_history(&conn);
     }
     if GLOBAL_SETTINGS.clear_audio_cache_at_startup && conn.is_some() {
-        clear_audio_cache(&conn);
+        let _ = clear_audio_cache(&conn);
     }
     //HOTKEYS
     let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
@@ -700,7 +700,7 @@ fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
         )?;
 
         let mut ids: Vec<u32> = vec![];
-        let mut data = data_pr.query(&[(":limit", &limit_del)]).unwrap();
+        let mut data = data_pr.query(&[(":limit", &limit_del)])?;
 
         while let Some(row) = data.next()? {
             let id: u32 = row.get(0)?;
@@ -709,7 +709,7 @@ fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
             //println!("PATH: {}", &path);
             ids.push(id);
         }
-        delete_audio_files_by_ids(conn, ids);
+        let _ = delete_audio_files_by_ids(conn, ids);
     }
     Ok(())
 }
@@ -779,14 +779,13 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
     let placeholders: String = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
     if let Some(db) = conn {
         if GLOBAL_SETTINGS.clear_audio_cache_at_startup {
-            let paths: Vec<String> = db
-                .prepare(&format!("SELECT path FROM tts WHERE src_id IN ({})", placeholders))
-                .unwrap()
-                .query_map(params_from_iter(ids.iter()), |row| row.get(0)).unwrap()
-                .map(|path| path.unwrap())
+            let paths: Vec<Option<String>> = db
+                .prepare(&format!("SELECT path FROM tts WHERE src_id IN ({})", placeholders))?
+                .query_map(params_from_iter(ids.iter()), |row| row.get(0))?
+                .map(|path| path.ok())
                 .collect();
 
-            for path in paths {
+            for path in paths.into_iter().flatten() {
                 let audio_path = format!(r"tts_cache\{path}.ogg");
                 let working_dir = std::env::current_dir()?;
                 let file = working_dir.join(&audio_path);
