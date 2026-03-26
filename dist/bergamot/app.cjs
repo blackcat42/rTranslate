@@ -111,7 +111,7 @@ async function onRuntimeInitialized() {
     } catch (error) {
       console.error('Error:', error);
       //process.stdout.write('Error reading file');
-      process.exit(1);
+      process.exit(73);
     }
   }));
 

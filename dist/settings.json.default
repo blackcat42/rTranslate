@@ -18,6 +18,11 @@
             "uid": "tr_deepl",
             "name": "DeepL"
         },
+        /*{
+            "uid": "tr_node_example",
+            "name": "Example",
+            "path": "example_translator\\index.cjs"
+        },*/
     ],
     "dictionaries": [
         {

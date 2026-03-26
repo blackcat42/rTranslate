@@ -14,7 +14,7 @@ use std::sync::mpsc::{Receiver, };
 
 use std::io::{BufRead, BufReader};
 use std::convert::AsRef;
-
+use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
 
 //TODO: catch thread panics
@@ -102,9 +102,16 @@ impl Translator for NT {
                         service_name
                     );
                     match brgmt_thread.join() {
-                        Ok(_value) => {
+                        Ok(value) => {
                             println!("Thread returned");
-                            s2.send(AppEvent::SetReady());
+                            match value {
+                                Ok(_) => {
+                                    s2.send(AppEvent::SetReady());
+                                },
+                                Err(e) => {
+                                    s2.send(AppEvent::SetStatus(e.to_string().into(), true, false));
+                                }
+                            }
                         },
                         Err(_e) => {
                             s2.send(AppEvent::SetReady());
@@ -150,7 +157,7 @@ fn run_node_thread(
     entry_point: String,
     service_uid: String,
     service_name: String
-) -> thread::JoinHandle<()> {
+) -> thread::JoinHandle<Result<()>> {
     //TODO: catch thread panics
     
     let working_dir = env::current_dir().unwrap();
@@ -296,12 +303,18 @@ fn run_node_thread(
             drop(stdin);
             let status = child.wait().expect("failed to wait on child");
             //stdout_thread.join().expect("failed to join stdout thread");
-            if status.code().expect("nodejs error") == 1 {
-                s.send(AppEvent::SetReady());
-                panic!("nodejs error");    
+            let exit_code = status.code().unwrap();
+            if exit_code == 1 {
+                //s.send(AppEvent::SetReady());
+                panic!("nodejs thread panic");
+            } else if exit_code == 73 {
+                return Err(anyhow!("Error: unsupported language"));
+            } else if exit_code == 53 {
+                return Err(anyhow!("Service error"));
             }
             println!("Child process exited with status: {}", status);
             println!("nodejs_thread stopping");
+            Ok(())
         }
     })
 }
