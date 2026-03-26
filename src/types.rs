@@ -43,9 +43,9 @@ pub enum AppEvent {
     SetStatus(Box<str>, bool, bool),
     
     //TODO:
-    UpdateUi(UIState),
+    UpdateUi(UIState, bool),
     //UpdateUiSrc(String, bool),
-    UpdateUiDict(UIStateDict),
+    UpdateUiDict(UIStateDict, bool),
     //SetUiFavState(bool),
 
 
@@ -285,7 +285,6 @@ pub trait Translator {
         selected_text: String, //TODO get this from db if exist
         src_lang: Lang,
         target_lang: Lang,
-        is_fav: bool,
         is_lang_detected: bool
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
@@ -302,7 +301,6 @@ pub trait Dictionary {
         selected_text: String, //TODO get this from db if exist
         src_lang: Lang,
         target_lang: Lang,
-        is_fav: bool
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();
@@ -327,7 +325,7 @@ pub struct TranslationRequest {
 
 #[derive(Debug)]
 pub struct UIState {
-    pub src_text: Option<String>,
+    pub src_text: String,
     pub tr_uid: Option<String>,
     pub translator: Option<String>, 
     pub src: Option<Lang>, 
@@ -339,7 +337,7 @@ pub struct UIState {
 #[derive(Debug)]
 pub struct UIStateDict {
     pub src_id: Option<i64>,
-    pub src_text_dict: Option<String>,
+    pub src_text_dict: String,
     pub dict_uid: Option<String>,
     pub dict_name: Option<String>, 
     //pub src: Lang, 

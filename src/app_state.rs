@@ -35,6 +35,7 @@ use super::GLOBAL_SETTINGS;
 pub struct AppState {
     pub app_sender: fltk::app::Sender<AppEvent>,
 
+    pub src_id: i64, //todo u32
     pub src_text: String,
     pub src_text_dict: String,
 
@@ -188,13 +189,25 @@ impl AppState {
     pub fn set_src_text(&mut self, text: &str, is_dict: bool) -> Result<()> {
         
         let (text, src_id, is_fav) = self.insert_src(text)?;
+        self.src_id = src_id;
 
         if is_dict {
             self.src_text_dict = text;
+            let state = UIStateDict {
+                src_id: None,
+                src_text_dict: self.src_text_dict.clone(),
+                dict_uid: None,
+                dict_name: None,
+                //src: src_lang.clone(), 
+                //target: target_lang.clone(), 
+                dict_text: None,
+                is_fav: Some(is_fav),
+            };
+            self.app_sender.send(AppEvent::UpdateUiDict(state, true));
         } else {
             self.src_text = text;
             let state = UIState {
-                src_text: Some(self.src_text.clone()),
+                src_text: self.src_text.clone(),
                 tr_uid: None,
                 translator: None, 
                 src: None, 
@@ -202,7 +215,7 @@ impl AppState {
                 translation_text: None,
                 is_fav: Some(is_fav)
             };
-            self.app_sender.send(AppEvent::UpdateUi(state));
+            self.app_sender.send(AppEvent::UpdateUi(state, true));
         }
         
 
@@ -218,7 +231,7 @@ impl AppState {
         if selected_text.chars().count() < GLOBAL_SETTINGS.transl_request_min_length {
             return Err(anyhow!("source text is too short"));
         }
-        let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props
+        //let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props
 
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
@@ -268,7 +281,7 @@ impl AppState {
             None
         } else {
             self.check_transl_cache(
-                src_id, 
+                self.src_id, 
                 &self.selected_translator, 
                 src_lang.as_ref(), 
                 target_lang.as_ref()
@@ -284,42 +297,29 @@ impl AppState {
                 }
 
                 self.app_sender.send(AppEvent::UpdateUi(UIState {
-                    src_text: Some(selected_text),
+                    src_text: selected_text,
                     tr_uid: Some(tr_uid), 
                     translator: Some(tr_name), 
                     src: Some(src_lang.clone()), 
                     target: Some(target_lang.clone()), 
                     translation_text: Some(t),
-                    is_fav: Some(is_fav)
-                }));
+                    is_fav: None
+                }, false));
             }
             None => {
                 if fail_if_not_exist {
-                    self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, false));
-                    /*self.app_sender.send(AppEvent::UpdateUi(UIState {
-                        src_text: selected_text,
-                        tr_uid: None, 
-                        translator: None, 
-                        src: None, 
-                        target: None, 
-                        translation_text: None,
-                        is_fav
-                    }));*/
-                    //self.app_sender.send(AppEvent::SetStatus("no cached results for selected translator and/or lang-pair; click \"refresh\" to run the translation, or select a different source".into(), false));
-                    //self.app_sender.send(AppEvent::SetReady());
+                    //self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, false));
                     return Err(anyhow!("no cached results"));
                 } else if let Some(translator) = self.translators.get_mut(self.selected_translator.as_str()) {
                     translator.translate(
-                        src_id, 
+                        self.src_id, 
                         selected_text, 
                         src_lang.clone(), 
                         target_lang.clone(),
-                        is_fav,
                         is_lang_detected
                     );
                 } else {
                     //self.app_sender.send(AppEvent::SetStatus("selected translation service is not exist".into(), true));
-                    //self.app_sender.send(AppEvent::SetReady());
                     return Err(anyhow!("selected translation service is not exist"));
                 }
             }
@@ -338,7 +338,7 @@ impl AppState {
         if selected_text.chars().count() > GLOBAL_SETTINGS.dict_request_max_length {
             return Err(anyhow!("source text is too long"));
         }
-        let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?;
+        //let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?;
 
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
@@ -358,19 +358,18 @@ impl AppState {
                 //let lng = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
                 //self.selected_src = lng;
 
-                let qwe = format!("src lang detected as {}", info.lang().code());
+                let qwe = format!("Language detected as {}", info.lang().code());
                 self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, true));
             } else {
                 self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, true));
             }
         }
 
-        //self.app_sender.send(AppEvent::SetWaiting());
 
         let dict_entry = if force {
             None
         } else {
-            self.check_dict_cache(src_id, &self.selected_dict)
+            self.check_dict_cache(self.src_id, &self.selected_dict)
         };
 
         match dict_entry {
@@ -382,27 +381,26 @@ impl AppState {
                 }
 
                 self.app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
-                    src_id: Some(src_id),
-                    src_text_dict: Some(selected_text),
+                    src_id: Some(self.src_id),
+                    src_text_dict: selected_text,
                     dict_uid: Some(dict_uid), 
                     dict_name: Some(dict_name), 
                     //src: src_lang.clone(), 
                     //target: target_lang.clone(), 
                     dict_text: Some(t),
-                    is_fav: Some(is_fav),
-                }));
+                    is_fav: None,
+                }, false));
             }
             None => {
                 if fail_if_not_exist {
-                    self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, true));
+                    //self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, true));
                     return Err(anyhow!("no cached results for selected dictionary"));
                 } else if let Some(dict) = self.dictionaries.get_mut(self.selected_dict.as_str()) {
                     dict.translate(
-                        src_id,
+                        self.src_id,
                         selected_text,
                         src_lang.clone(),
-                        target_lang.clone(),
-                        is_fav
+                        target_lang.clone()
                     );
                 } else {
                     return Err(anyhow!("selected dict service is not exist"));
@@ -783,7 +781,7 @@ impl AppState {
 
             if !is_dict {
                 let state = UIState {
-                    src_text: None,
+                    src_text: text.to_string(),
                     tr_uid: None,
                     translator: None, 
                     src: None, 
@@ -791,11 +789,11 @@ impl AppState {
                     translation_text: None,
                     is_fav: Some(!is_fav)
                 };
-                self.app_sender.send(AppEvent::UpdateUi(state));
+                self.app_sender.send(AppEvent::UpdateUi(state, false));
             } else {
                 let state = UIStateDict {
                     src_id: None,
-                    src_text_dict: None,
+                    src_text_dict: text.to_string(),
                     dict_uid: None,
                     dict_name: None,
                     //src: src_lang.clone(), 
@@ -803,7 +801,7 @@ impl AppState {
                     dict_text: None,
                     is_fav: Some(!is_fav),
                 };
-                self.app_sender.send(AppEvent::UpdateUiDict(state));
+                self.app_sender.send(AppEvent::UpdateUiDict(state, false));
             }
             
             //self.app_sender.send(AppEvent::SetUiFavState(!is_fav));

@@ -204,7 +204,7 @@ impl Dictionary for DSLDict {
         self.name.clone()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, _src_lang: Lang,_target_lang: Lang, is_fav: bool) {
+    fn translate(&mut self, src_id: i64, text: String, _src_lang: Lang,_target_lang: Lang) {
 
         if self.is_running.load(Ordering::SeqCst) {
             return;
@@ -213,6 +213,7 @@ impl Dictionary for DSLDict {
         
         let db_ref = self.db.borrow();
         if db_ref.is_none() {
+            self.app_sender.send(AppEvent::SetReady());
             self.app_sender.send(AppEvent::SetStatus("An error occurred while opening the database file".into(), true, true));
             return;
         }
@@ -243,6 +244,7 @@ impl Dictionary for DSLDict {
             match choice {
                 Some(0) => {
                     // User clicked "No"
+                    self.app_sender.send(AppEvent::SetReady());
                     self.app_sender.send(AppEvent::SetStatus("index not found".into(), true, true));
                     return;
                 }
@@ -288,14 +290,16 @@ impl Dictionary for DSLDict {
                         offset = row.1 as u64;
                     }
                     Err(e) => {
-
-                        println!("cached src not found {}", e);
+                        //app_sender.send(AppEvent::SetReady());
+                        println!("{}", e);
                     }
                 } 
 
             //get offset by title
             
             if offset == 0 {
+                app_sender.send(AppEvent::SetReady());
+                app_sender.send(AppEvent::SetStatus("not found".into(), true, true));
                 return;
                 //return anyhow!("error");
             }
@@ -305,17 +309,18 @@ impl Dictionary for DSLDict {
                     app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), self.get_uid(), t_text.clone() )));
                     app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                         src_id: Some(src_id),
-                        src_text_dict: Some(text.clone()),
+                        src_text_dict: text.clone(),
                         dict_uid: Some(self.get_uid()), 
                         dict_name: Some(self.get_name()),
                         //src: src_lang.clone(), 
                         //target: target_lang.clone(), 
                         dict_text: Some(t_text),
-                        is_fav: Some(is_fav)
-                    }));
+                        is_fav: None
+                    }, false));
 
                 }
                 Err(_e) => {
+                    app_sender.send(AppEvent::SetReady());
                     app_sender.send(AppEvent::SetStatus("error".into(), true, true));
                 }
             };

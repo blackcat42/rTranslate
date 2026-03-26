@@ -12,6 +12,7 @@
 //TODO: source language -> english -> target language
 
 const fs = require('fs');
+const readline = require('readline');
 
 // Read wasm binary into a blob
 const wasmBinary = fs.readFileSync('./bergamot-translator-worker.wasm');
@@ -162,12 +163,19 @@ async function onRuntimeInitialized() {
 
   // Construct std::vector<std::string> inputs; This is our batch!
 
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
   let count = 0;
-  process.stdin.on("data", data => {
+  rl.on('line', (data) => {
     const input = new Module.VectorString();
     const options = new Module.VectorResponseOptions();
     options.push_back({qualityScores: false, alignment: false, html: false});
     data = data.toString();
+    data = data.replace('<ENDOFLINE>', '\n');
     //if (count < 1) return;
 
     input.push_back(data);

@@ -975,9 +975,12 @@ impl AppView {
     }
 
     pub fn set_waiting(&mut self) {
+        //TODO: is_dict
         self.is_processing.store(true, Ordering::Relaxed);
-        self.txt_popup.set_buffer(self.waiting_buf.clone()); //TODO
+        self.txt_popup.set_buffer(self.waiting_buf.clone());
         self.txt_main.set_buffer(self.waiting_buf.clone());
+        self.txt_popup_dict.set_buffer(self.waiting_buf.clone());
+        self.txt_dict_main.set_buffer(self.waiting_buf.clone());
         self.run_anim();
     }
 
@@ -1023,34 +1026,22 @@ impl AppView {
     pub fn update_ui(
         &mut self,
         state: UIState,
-        //text: String, 
-        //tr_uid: String, 
-        //translator: String, 
-        //src: Lang, 
-        //target: Lang, 
-        //translation_text: String,
-        //is_fav: bool,
+        is_new_source: bool
     ) {
         
         let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
-        //let src_text = src_text.unwrap_or("".to_string());
-        //let tr_uid = tr_uid.unwrap_or("".to_string());
-        //let translator = translator.unwrap_or("".to_string());
-        //let src = src.unwrap_or(Lang::En);
-        //let target = target.unwrap_or(Lang::En);
-        //let translation_text = translation_text.unwrap_or("".to_string());
-        //let is_fav = is_fav.unwrap_or(false);
-        //dbg!(tr_uid.clone());
-        //dbg!(translator.clone());
+
+        if is_new_source {  
+            self.src_buf.set_text(format!("{}\n", &src_text).as_str()); //new line is req bc fltk widget bug
+            self.src = src_text;
+        } else if src_text != self.src {
+            return;
+        }
 
         if let Some(uid) = tr_uid && let Some(ref name) = translator {
             self.set_translator(name, &uid);
         }
         
-        if let Some(text) = src_text {
-            self.src_buf.set_text(format!("{}\n", &text).as_str()); //new line is req bc fltk widget bug
-            self.src = text;
-        }
         if let Some(t_text) = translation_text {
             self.translation_buf.set_text(format!("{}\n", &t_text).as_str());
             self.set_ready();
@@ -1084,60 +1075,22 @@ impl AppView {
         //println!("update_ui is_fav: {}", is_fav);
     }
 
-    /*pub fn update_ui_src(&mut self, text: String, is_fav: bool) {
-        self.src_buf.set_text(format!("{}\n", &text).as_str()); //new line is req bc fltk widget bug
-        self.src = text;
-        let working_dir = std::env::current_dir().unwrap();
-        if is_fav {
-            if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
-                self.fav_button.set_image(Some(image));
-                //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-            }
-        } else {
-            if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-                self.fav_button.set_image(Some(image));
-                //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-            }
-        }
-        app::redraw();
-        app::awake();
-    }*/
+    pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
 
-    /*pub fn set_fav(&mut self, is_fav: bool) {
-        let working_dir = std::env::current_dir().unwrap();
-        if is_fav {
-            if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
-                self.fav_button.set_image(Some(image));
-                //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-            }
-        } else {
-            if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-                self.fav_button.set_image(Some(image));
-                //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-            }
-        }
-        
-        app::redraw();
-        app::awake();
-
-        println!("update_ui is_fav: {}", is_fav);
-    }*/
-
-    pub fn update_ui_dict(&mut self, state: UIStateDict, ) {
-        //src_id: i64, src_text: String, dict_uid: String, dict_name: String, dict_text: String, is_fav: bool
         let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, dict_text, is_fav} = state;
+
+        if is_new_source {  
+            self.src_dict_buf.set_text(format!("{}\n", &src_text_dict).as_str()); //new line is req bc fltk widget bug
+            self.src_dict = src_text_dict;
+        } else if src_text_dict != self.src_dict {
+            return;
+        }
 
         let _ = src_id;
         
         if let Some(uid) = dict_uid && let Some(ref name) = dict_name {
             self.set_dict(name, &uid);
         }
-
-        if let Some(t) = src_text_dict {
-            self.src_dict_buf.set_text(format!("{}\n", &t).as_str()); //new line is req bc fltk widget bug
-            self.src_dict = t;
-        }
-
 
         if let Some(dict_text) = dict_text {
             self.set_ready();
@@ -1302,6 +1255,7 @@ impl AppView {
         self.status_frame_main.set_label(text);
         if is_error {
             self.set_error(text, is_dict);
+            //TODO: check src_text
         }
         app::awake();
     }

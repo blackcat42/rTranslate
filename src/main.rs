@@ -262,6 +262,7 @@ fn main() {
 
     let mut app_state = AppState {
         app_sender,
+        src_id: 0,
         src_text: "".to_string(),
         src_text_dict: "".to_string(),
         selected_translator: GLOBAL_SETTINGS.default_translator.clone(),
@@ -374,20 +375,12 @@ fn main() {
 
             //TODO: get ui_state from database by given src- and translation id's (single source of truth)
             //or use global object (?) if db is not supported
-            Some(AppEvent::UpdateUi(state)) => {
-                //let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
-                app_view.update_ui(state);
+            Some(AppEvent::UpdateUi(state, is_new_source)) => {
+                app_view.update_ui(state, is_new_source);
             }
-            /*Some(AppEvent::UpdateUiSrc(text, is_fav)) => {
-                app_view.update_ui_src(text, is_fav);
-            }*/
-            Some(AppEvent::UpdateUiDict(state)) => {
-                //let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, dict_text, is_fav} = state;
-                app_view.update_ui_dict(state);
+            Some(AppEvent::UpdateUiDict(state, is_new_source)) => {
+                app_view.update_ui_dict(state, is_new_source);
             }
-            /*Some(AppEvent::SetUiFavState(f)) => {
-                app_view.set_fav(f);
-            }*/
 
             Some(AppEvent::SetWaiting()) => {
                 app_view.set_waiting();
@@ -525,14 +518,13 @@ fn main() {
                                 is_dict = true;
                             }
                             if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {
-                                app_view.set_ready();
                                 app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
                             } else {
                                 app_view.show_popup(is_dict, true);
                                 app_view.clear_ui(is_dict); //clear status, title and translation buffer
-                                if is_dict {
+                                /*if is_dict {
                                     app_view.set_waiting();
-                                }
+                                }*/
                                 if !is_dict {
                                     if let Err(tr_error) = app_state.translate(false, false) {
                                         app_view.set_ready();

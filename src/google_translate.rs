@@ -30,7 +30,7 @@ impl Translator for GT {
         "Google".to_string()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_fav: bool, is_lang_detected: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -45,14 +45,14 @@ impl Translator for GT {
                         Ok(t_text) => {
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), "tr_google".to_string(), src_lang.clone(), target_lang.clone(), t_text.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
-                                src_text: Some(text.clone()),
+                                src_text: text.clone(),
                                 tr_uid: Some("tr_google".to_string()), 
                                 translator: Some(name), 
                                 src: Some(src_lang.clone()), 
                                 target: Some(target_lang.clone()), 
                                 translation_text: Some(t_text),
-                                is_fav: Some(is_fav)
-                            }));
+                                is_fav: None
+                            }, false));
                         }
                         Err(_e) => {
                             app_sender.send(AppEvent::SetReady());

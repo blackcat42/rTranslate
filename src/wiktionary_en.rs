@@ -31,7 +31,7 @@ impl Dictionary for WDEn {
         "English Wiktionary".to_string()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_fav: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -48,18 +48,21 @@ impl Dictionary for WDEn {
 
                             app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                                 src_id: Some(src_id),
-                                src_text_dict: Some(text.clone()),
+                                src_text_dict: text.clone(),
                                 dict_uid: Some("dict_wiktionary_en".to_string()), 
                                 dict_name: Some(name), 
                                 //src: src_lang.clone(), 
                                 //target: target_lang.clone(), 
                                 dict_text: Some(t_text),
-                                is_fav: Some(is_fav)
-                            }));
+                                is_fav: None
+                            }, false));
 
                         }
-                        Err(_e) => {
-                            app_sender.send(AppEvent::SetStatus("translation failed (https req error)".into(), true, true));
+                        Err(e) => {
+                            app_sender.send(AppEvent::SetReady());
+                            let error_str = format!(r"Error: {e}");
+                            app_sender.send(AppEvent::SetStatus(error_str.into(), true, true));
+                            //TODO?: if Err(Error::StatusCode(404)) --> SaveDictEntry("not found")
                         }
                     }
                     thread::sleep(Duration::from_millis((GLOBAL_SETTINGS.http_throttling * 1000.0) as u64));
@@ -67,6 +70,7 @@ impl Dictionary for WDEn {
                 }
             });
         } else {
+            self.app_sender.send(AppEvent::SetReady());
             self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, true));
         }
     }
