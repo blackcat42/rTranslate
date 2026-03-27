@@ -10,12 +10,13 @@ use super::GLOBAL_SETTINGS;
 pub struct GT {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
+    name: String
 }
 
 impl GT {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender}
+        Self {is_running, app_sender, name}
     }
 }
 impl Translator for GT {
@@ -27,7 +28,7 @@ impl Translator for GT {
         "tr_google".to_string()
     }
     fn get_name(&self) -> String {
-        "Google".to_string()
+        self.name.clone()
     }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {

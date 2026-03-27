@@ -1,7 +1,7 @@
 {
 
-    //The following arrays determines the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting on an item will hide it from UI.
-    //WARN!: Setting the path field for items with the following uid's will override their built-in services: tr_google, tr_deepl, dict_wiktionary_en, prnn_wiki
+    //The following arrays determine the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting out an item will hide it from UI.
+    //WARN!: Setting the path field for items with the following uids will override their built-in services: tr_google, tr_deepl, dict_wiktionary_en, prnn_wiki
 
     //"uid" can only contain alphabetical characters, digits and underscores
     "translators": [

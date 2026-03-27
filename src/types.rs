@@ -31,8 +31,8 @@ pub enum AppEvent {
     SavePRNN((i64, String, String)),
     ToggleFav(Option<String>, bool),
 
-    Translate(bool),
-    RequestDictEntry(bool),
+    Translate(bool, bool, bool),
+    RequestDictEntry(bool, bool, bool),
     SendToDict(),
     TTString(),
     PRNNString(),
@@ -309,10 +309,12 @@ pub trait Dictionary {
 }
 pub trait TTSEngine {
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<String>;
+    fn get_name(&self) -> String;
 }
 
 pub trait PRNNService {
     fn generate(&self, text: String, src_id: i64) -> Result<()>;
+    fn get_name(&self) -> String;
 }
 
 #[derive(Debug)]

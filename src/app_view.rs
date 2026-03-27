@@ -42,8 +42,8 @@ use super::GLOBAL_SETTINGS;
 pub struct AppView {
     //app_sender: fltk::app::Sender<AppEvent>,
 
-    src_buf: text::TextBuffer,
-    src_dict_buf: text::TextBuffer,
+    pub src_buf: text::TextBuffer,
+    pub src_dict_buf: text::TextBuffer,
     translation_buf: text::TextBuffer,
     dict_buf: text::TextBuffer,
     waiting_buf: text::TextBuffer,
@@ -75,12 +75,15 @@ pub struct AppView {
     dict_buttons: HashMap<String, fltk::button::RadioButton>,
     fav_button: button::Button,
     fav_button_dict: button::Button,
+    fav_button_main: button::Button,
 
 
     lang_choice_from: fltk::menu::Choice,
     lang_choice_to: fltk::menu::Choice,
     dict_choice: fltk::menu::Choice,
     transl_choice: fltk::menu::Choice,
+    tts_choice: fltk::menu::Choice,
+    prnn_choice: fltk::menu::Choice,
 }
 
 pub struct BLWCoords {
@@ -173,7 +176,7 @@ impl AppView {
         flex.set_spacing(7);
 
         /////TEXTAREA
-        let src_buf = text::TextBuffer::default();
+        let mut src_buf = text::TextBuffer::default();
         let translation_buf = text::TextBuffer::default();
         let waiting_buf = text::TextBuffer::default();
         let error_buf = text::TextBuffer::default();
@@ -208,7 +211,7 @@ impl AppView {
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::SetTranslator(qwe.uid.clone()));
-                    s.send(AppEvent::Translate(false));
+                    s.send(AppEvent::Translate(false, false, false));
                 }
             });
             translator_buttons.insert(qwe.uid.clone(), button);
@@ -227,7 +230,7 @@ impl AppView {
         flex2.fixed(&flex_status_bar_wrapper, 15);
         flex_status_bar_wrapper.end();*/
         
-        flex.fixed(&flex2, 45);
+        flex.fixed(&flex2, 31);
         flex2.end();
         /////-----END FLEX INNER (TRANSLATION BUTTONS)-----/////
         //flex2.auto_layout();
@@ -350,7 +353,7 @@ impl AppView {
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::SetDict(qwe.uid.clone()));
-                    s.send(AppEvent::RequestDictEntry(false));
+                    s.send(AppEvent::RequestDictEntry(false, false, false));
                 }
             });
             dict_buttons.insert(qwe.uid.clone(), button);
@@ -359,17 +362,8 @@ impl AppView {
         flex_buttons_dict.end();
         flex2_dict.fixed(&flex_buttons_wrapper_dict, 25);
         flex_buttons_wrapper_dict.end();
-
-        /*let flex_status_bar_wrapper_dict = group::Flex::default().column();
-        let mut status_bar_dict = group::Flex::default().row();
-        let mut status_frame_dict = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
-        status_frame_dict.set_label_size(GLOBAL_SETTINGS.ui_font_size);
-        status_bar_dict.fixed(&status_frame_dict, 1);
-        status_bar_dict.end();
-        flex2_dict.fixed(&flex_status_bar_wrapper_dict, 15);
-        flex_status_bar_wrapper_dict.end();*/
         
-        flex_dict.fixed(&flex2_dict, 45);
+        flex_dict.fixed(&flex2_dict, 31);
         flex2_dict.end();
         /////-----END FLEX INNER (DICT BUTTONS)-----/////
         
@@ -391,21 +385,26 @@ impl AppView {
 
         ////////////////////---------------BEGIN MAIN WIN---------------/////////////////////        
         let mut main_win = window::Window::default().with_size(800, 600).with_label("rTranslate");
+        let mut main_flex_wrapper = group::Flex::new(0,0,800,600,None);
+        main_flex_wrapper.set_type(group::FlexType::Column);
+        let mut main_flex_wrapper_inner = group::Flex::default().row();
 
-        let mut main_flex = group::Flex::new(0,0,400,600,None);
-        main_flex.set_type(group::FlexType::Column);
+        let mut main_flex_left = group::Flex::new(0,0,400,585,None);
+        main_flex_left.set_type(group::FlexType::Column);
 
-        let mut col_left1 = group::Flex::default().column();
+        let mut main_src_txt_wrapper = group::Flex::default().column();
         let mut main_src_txt = text::TextEditor::default().with_label("Source:").with_align(fltk::enums::Align::TopLeft);
         main_src_txt.set_buffer(src_buf.clone());
         main_src_txt.wrap_mode(text::WrapMode::AtBounds, 0);
+        /*src_buf.add_modify_callback(|pos, inserted, deleted, restyled, text| {
+            
+        });*/
+        main_src_txt_wrapper.set_pad(5);
+        main_src_txt_wrapper.set_margins(5,25,5,5);
+        main_src_txt_wrapper.end();
 
-        col_left1.set_pad(5);
-        col_left1.set_margins(5,35,5,5);
-        col_left1.end();
-
-        let mut col_left15 = group::Flex::default().column();
-        let mut col0_row1 = group::Flex::default().row();
+        let mut main_controls_left = group::Flex::default().column();
+        let mut col_left_row_lng = group::Flex::default().row();
         let mut lang_choice_from = fltk::menu::Choice::default().with_size(30, 10).with_label("From:").with_align(fltk::enums::Align::TopLeft);
 
         for lng in Lang::iter() {
@@ -418,13 +417,12 @@ impl AppView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetSrcLang(lng.clone()));
+                        s.send(AppEvent::Translate(true, false, false));
                     }
                 },
             ); 
         }
-
-        //let col0_row1_tr_but1 = button::Button::default().with_label("@<->").with_size(20, 20);
-
+        //let col_left_row1_tr_but1 = button::Button::default().with_label("@<->").with_size(20, 20);
         let mut lang_choice_to = fltk::menu::Choice::default().with_size(30, 10).with_label("To:").with_align(fltk::enums::Align::TopLeft);
         for lng in Lang::iter() {
             let name = LangNames::from_str(lng.as_ref()).unwrap();
@@ -436,26 +434,49 @@ impl AppView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetTargetLang(lng.clone()));
+                        s.send(AppEvent::Translate(true, false, false));
                     }
                 },
             );
         }
+        
+        col_left_row_lng.set_margins(0,15,0,15);
+        main_controls_left.fixed(&col_left_row_lng, 55);
+        col_left_row_lng.end();
+
+        let mut col_left_row_tr = group::Flex::default().row();
+
+        let mut transl_choice = fltk::menu::Choice::default().with_size(30, 10).with_label("Translate with:").with_align(fltk::enums::Align::TopLeft);
+
+        for transl_ch in GLOBAL_SETTINGS.translators.iter() {
+            transl_choice.add(
+                &*transl_ch.name,
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetTranslator(transl_ch.uid.clone()));
+                        s.send(AppEvent::Translate(true, false, false));
+                    }
+                },
+            );
+        }
+
         let mut run_transl_btn_main = button::Button::default().with_label("Translate").with_size(20, 20);
         run_transl_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::Translate(false));
+                    s.send(AppEvent::Translate(false, false, true));
                 }
         });
+        col_left_row_tr.fixed(&run_transl_btn_main, 150);
 
-        //let _col0_row1_tr_chk = button::CheckButton::default().with_label("force (ignore cache)");
-        //col0_row1.fixed(&col0_row1_tr_but1, 25);
-        col0_row1.set_margins(0,15,0,15);
-        col_left15.fixed(&col0_row1, 55);
-        col0_row1.end();
+        col_left_row_tr.set_margins(0,15,0,0);
+        main_controls_left.fixed(&col_left_row_tr, 40);
+        col_left_row_tr.end();
 
-        let mut col0_row2 = group::Flex::default().row();
-        //let _col0_row2_tr_but1 = button::Button::default().with_label("bergamot").with_size(20, 10);
+        let mut col_left_row_dict = group::Flex::default().row();
         let mut dict_choice = fltk::menu::Choice::default().with_size(30, 10).with_label("Dictionary:").with_align(fltk::enums::Align::TopLeft);
 
         for dict_ch in GLOBAL_SETTINGS.dictionaries.iter() {
@@ -467,39 +488,31 @@ impl AppView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetDict(dict_ch.uid.clone()));
+                        s.send(AppEvent::RequestDictEntry(true, false, false));
                     }
                 },
             );
         }
+        let mut run_dict_btn_main = button::Button::default().with_label("Send to Dictionary").with_size(20, 20);
+        run_dict_btn_main.set_callback({
+                let s = app_sender;
+                move |_b| {
+                    s.send(AppEvent::SendToDict());
+                }
+        });
+        col_left_row_dict.fixed(&run_dict_btn_main, 150);
 
-        let mut transl_choice = fltk::menu::Choice::default().with_size(30, 10).with_label("Translator:").with_align(fltk::enums::Align::TopLeft);
+        col_left_row_dict.set_margins(0,15,0,0);
+        main_controls_left.fixed(&col_left_row_dict, 40);
+        col_left_row_dict.end();
 
-        for transl_ch in GLOBAL_SETTINGS.translators.iter() {
-            transl_choice.add(
-                &*transl_ch.name,
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Normal,
-                {
-                    let s = app_sender;
-                    move |_b| {
-                        s.send(AppEvent::SetTranslator(transl_ch.uid.clone()));
-                    }
-                },
-            );
-        }
-
-        col0_row2.set_margins(0,15,0,15);
-        col_left15.fixed(&col0_row2, 55);
-        col0_row2.end();
-
-        //let mut col1_row1 = group::Flex::default().row().with_label("TTS").with_align(fltk::enums::Align::TopLeft);
-        let mut col1_row1 = group::Flex::default().row();
-        let mut col1_row1_tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("TTS engine/voice:").with_align(fltk::enums::Align::TopLeft);
+        let mut col_left_row_tts = group::Flex::default().row();
+        let mut tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("TTS engine/voice:").with_align(fltk::enums::Align::TopLeft);
 
         for qwe in GLOBAL_SETTINGS.tts_engines.iter() {
             for tts_voice in qwe.voices.iter() {
                 let name = format!("{}-{}", &*qwe.name, tts_voice);
-                col1_row1_tts_choice.add(
+                tts_choice.add(
                     &name,
                     fltk::enums::Shortcut::None,
                     fltk::menu::MenuFlag::Normal,
@@ -511,29 +524,26 @@ impl AppView {
                     },
                 );
             }
-            
         }
 
-        let mut _col1_row1_tts_but = button::Button::default().with_label("Generate and play");
+        let mut _col1_row1_tts_but = button::Button::default().with_size(10, 10).with_label("Play");
+        /*if let Ok(image) = PngImage::load(working_dir.join(r"icons\play.png").to_str().unwrap_or("")) {
+            _col1_row1_tts_but.set_image(Some(image));
+            _col1_row1_tts_but.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
+        }*/
         _col1_row1_tts_but.set_callback({
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::TTString());
                 }
         });
-        //let _col1_row1_tts_chk = button::CheckButton::default().with_label("force (ignore cache)");
-        col1_row1.set_margins(0,15,0,0);
-        col_left15.fixed(&col1_row1, 40);
-        col1_row1.end();
+    
 
-
-
-        let mut col1_row2 = group::Flex::default().row();
-        let mut col1_row2_tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("Pronunciation service:").with_align(fltk::enums::Align::TopLeft);
+        let mut prnn_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("Pronunciation:").with_align(fltk::enums::Align::TopLeft);
 
         for qwe in GLOBAL_SETTINGS.prnn_sources.iter() {
             let name = format!("{}", &*qwe.name);
-            col1_row2_tts_choice.add(
+            prnn_choice.add(
                 &name,
                 fltk::enums::Shortcut::None,
                 fltk::menu::MenuFlag::Normal,
@@ -546,26 +556,50 @@ impl AppView {
             );
         }
 
-        let mut _col1_row2_prnn_but = button::Button::default().with_label("Play"); //todo: icon
+        let mut _col1_row2_prnn_but = button::Button::default().with_size(10, 10).with_label("Play");
+        /*if let Ok(image) = PngImage::load(working_dir.join(r"icons\play.png").to_str().unwrap_or("")) {
+            _col1_row2_prnn_but.set_image(Some(image));
+            _col1_row2_prnn_but.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
+        }*/
         _col1_row2_prnn_but.set_callback({
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::PRNNString());
                 }
         });
-        //let _col1_row1_tts_chk = button::CheckButton::default().with_label("force (ignore cache)");
-        col1_row2.set_margins(0,15,0,0);
-        col_left15.fixed(&col1_row2, 40);
-        col1_row2.end();
+        
+        col_left_row_tts.fixed(&_col1_row1_tts_but, 55); //25
+        col_left_row_tts.fixed(&_col1_row2_prnn_but, 55);
+
+        col_left_row_tts.set_margins(0,15,0,0);
+        main_controls_left.fixed(&col_left_row_tts, 40);
+        col_left_row_tts.end();
 
 
+        let mut col_left_row_fav = group::Flex::default().row();
+        let mut fav_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Add to favorites");
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
+            fav_button_main.set_image(Some(image));
+            fav_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
+        }
+        let mut refresh_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Refresh transl./dict.");
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
+            refresh_button_main.set_image(Some(image));
+            refresh_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
+        }
+        col_left_row_fav.fixed(&fav_button_main, 135);
+        col_left_row_fav.fixed(&refresh_button_main, 150);
+        col_left_row_fav.set_margins(0,15,0,0);
+        main_controls_left.fixed(&col_left_row_fav, 40);
+        col_left_row_fav.end();
 
-        col_left15.set_margins(5,15,5,5);
-        main_flex.fixed(&col_left15, 240);
-        col_left15.end();
+
+        main_controls_left.set_margins(5,15,5,5);
+        main_flex_left.fixed(&main_controls_left, 240);
+        main_controls_left.end();
 
         //TABS
-        let mut col_left2 = group::Flex::default().row().with_pos(5, 0);
+        let mut col_main_tabs = group::Flex::default().row().with_pos(5, 0);
         let mut tab = group::Tabs::default().with_size(100, 50); //::default_fill not working in debug mode
 
         let history_tab = group::Flex::default_fill().with_label("Recent history\t").column();
@@ -578,7 +612,7 @@ impl AppView {
         history_browser_wrapper.end();
         history_tab.end();
 
-        let fav_tab = group::Flex::default_fill().with_label("Fav\t").column();
+        let fav_tab = group::Flex::default_fill().with_label("Favorites\t").column();
         let mut fav_browser_wrapper = group::Flex::default().row();
         let mut fav_browser = browser::HoldBrowser::new(0, 20, 200, 200, None);
         fav_browser.set_column_widths(&[100, 100]);
@@ -591,75 +625,54 @@ impl AppView {
         tab.end();
         tab.auto_layout();
 
-        main_flex.fixed(&col_left2, 200);
-        col_left2.set_pad(5);
-        col_left2.set_margins(5,25,5,35);
-        col_left2.end();
+        main_flex_left.fixed(&col_main_tabs, 200);
+        col_main_tabs.set_pad(5);
+        col_main_tabs.set_margins(5,25,5,10);
+        col_main_tabs.end();
         //TABS END
 
-        main_flex.end();
+        main_flex_left.end();
 
-        let mut main_flex2 = group::Flex::new(400,0,400,600,None);
-        main_flex2.set_type(group::FlexType::Column);
-        let mut transl_tab = group::Flex::default_fill().with_label("Translator/TTS\t").column();
-
-        let mut col1 = group::Flex::default().column();
+        //SECOND COLUMN
+        let mut main_flex_right = group::Flex::new(400,0,400,585,None);
+        main_flex_right.set_type(group::FlexType::Column);
+        
         let mut main_transl_txt = text::TextDisplay::default().with_label("Translation:").with_align(fltk::enums::Align::TopLeft);
         main_transl_txt.set_buffer(translation_buf.clone());
         main_transl_txt.wrap_mode(text::WrapMode::AtBounds, 0);
+        //main_transl_txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
 
         let mut main_dict_txt = text::TextDisplay::default().with_label("Dictionary entry:").with_align(fltk::enums::Align::TopLeft);
         main_dict_txt.set_buffer(dict_buf.clone());
         main_dict_txt.wrap_mode(text::WrapMode::AtBounds, 0);
+        //main_dict_txt.above_of(&dict_assets_browser, 20);
+        //main_dict_txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
+        main_flex_right.fixed(&main_dict_txt, 125);
 
-        col1.set_pad(20);
-        col1.set_margins(5,35,5,5);
-        col1.end();
-
-        let mut col12 = group::Flex::default().column();
         let mut dict_assets_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label("Pronunciations (cached), click to play:").with_align(fltk::enums::Align::TopLeft);
         dict_assets_browser.set_column_widths(&[100, 100]);
         dict_assets_browser.set_column_char('\t');
+        main_flex_right.fixed(&dict_assets_browser, 125);
 
         let mut tts_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label("TTS (cached), click to play:").with_align(fltk::enums::Align::TopLeft);
         tts_browser.set_column_widths(&[100, 100]);
         tts_browser.set_column_char('\t');
+        main_flex_right.fixed(&tts_browser, 125);
 
-        transl_tab.fixed(&col12, 300);
-        col12.set_pad(20);
-        col12.set_margins(5,25,5,35);
-        col12.end();
+        main_flex_right.set_pad(20);
+        main_flex_right.set_margins(5,25,5,10);
 
-        transl_tab.end();
+        main_flex_right.end();
+        //SECOND COLUMN END
 
-        /*let mut dict_tab = group::Flex::default_fill().with_label("Dictionary\t").column();
-        let mut col = group::Flex::default().row();
-        
-        let mut main_dict_txt = text::TextDisplay::default();
-        main_dict_txt.set_buffer(dict_buf.clone());
-        main_dict_txt.wrap_mode(text::WrapMode::AtBounds, 0);
-
-        dict_tab.fixed(&col, 250);
-        col.set_pad(5);
-        col.set_margin(5);
-        col.end();
-        dict_tab.end();*/
-
-
-        //tab.end();
-        //tab.auto_layout();
+        main_flex_wrapper_inner.end();
 
         //TODO: status bar
-        let flex_status_bar_wrapper_main = group::Flex::default().column();
-        let mut status_bar_main = group::Flex::default().row();
-        let mut status_frame_main = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
+        let mut status_frame_main = Frame::default().with_label("").with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left);
         status_frame_main.set_label_size(GLOBAL_SETTINGS.ui_font_size);
-        status_bar_main.fixed(&status_frame_main, 1);
-        status_bar_main.end();
-        main_flex2.fixed(&flex_status_bar_wrapper_main, 15);
-        flex_status_bar_wrapper_main.end();
-
-        main_flex2.end();
+        main_flex_wrapper.fixed(&status_frame_main, 15);
+        
+        main_flex_wrapper.end();
 
         main_win.make_resizable(true);
         main_win.set_border(true);
@@ -866,6 +879,12 @@ impl AppView {
                 s.send(AppEvent::ToggleFav(None, true));
             }
         });
+        fav_button_main.set_callback({
+            let s = app_sender;
+            move |_| {
+                s.send(AppEvent::ToggleFav(None, false));
+            }
+        });
         tts_button.set_callback({
             let s = app_sender;
             move |_| {
@@ -894,13 +913,20 @@ impl AppView {
         refresh_button.set_callback({
             let s = app_sender;
             move |_button| {
-                s.send(AppEvent::Translate(true));
+                s.send(AppEvent::Translate(false, true, false));
             }
         });
         refresh_button_dict.set_callback({
             let s = app_sender;
             move |_button| {
-                s.send(AppEvent::RequestDictEntry(true));
+                s.send(AppEvent::RequestDictEntry(false, true, false));
+            }
+        });
+        refresh_button_main.set_callback({
+            let s = app_sender;
+            move |_button| {
+                s.send(AppEvent::Translate(true, true, false));
+                s.send(AppEvent::RequestDictEntry(true, true, false));
             }
         });
         open_button.set_callback({
@@ -966,11 +992,14 @@ impl AppView {
             dict_buttons,
             fav_button,
             fav_button_dict,
+            fav_button_main,
 
             lang_choice_from,
             lang_choice_to,
             dict_choice,
             transl_choice,
+            tts_choice,
+            prnn_choice,
         }
     }
 
@@ -1011,6 +1040,7 @@ impl AppView {
     }
 
     pub fn clear_ui(&mut self, is_dict: bool) {
+        println!("clear_ui");
         self.set_status("", false, false);
         if !is_dict {
             self.title_frame.set_label("");
@@ -1028,7 +1058,7 @@ impl AppView {
         state: UIState,
         is_new_source: bool
     ) {
-        
+        println!("update_ui");
         let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
 
         if is_new_source {  
@@ -1058,12 +1088,16 @@ impl AppView {
             let working_dir = std::env::current_dir().unwrap();
             if is_fav {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
-                    self.fav_button.set_image(Some(image));
+                    self.fav_button.set_image(Some(image.clone()));
+                    self.fav_button_main.set_image(Some(image));
+                    self.fav_button_main.set_label("Remove from fav.");
                     //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             } else {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-                    self.fav_button.set_image(Some(image));
+                    self.fav_button.set_image(Some(image.clone()));
+                    self.fav_button_main.set_image(Some(image));
+                    self.fav_button_main.set_label("Add to favorites");
                     //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             }
@@ -1076,7 +1110,7 @@ impl AppView {
     }
 
     pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
-
+        println!("update_ui {is_new_source}");
         let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, dict_text, is_fav} = state;
 
         if is_new_source {  
@@ -1292,6 +1326,17 @@ impl AppView {
             } else {
                 value.set(false);
             }
+        }
+    }
+    pub fn set_tts_engine(&mut self, tts: &str, voice: &str) {
+        let name = format!("{}-{}", tts, voice);
+        if let Some(item) = self.tts_choice.find_item(&name) {
+            self.tts_choice.set_item(&item);
+        }
+    }
+    pub fn set_prnn_service(&mut self, prnn: &str) {
+        if let Some(item) = self.prnn_choice.find_item(prnn) {
+            self.prnn_choice.set_item(&item);
         }
     }
 

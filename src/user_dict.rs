@@ -209,6 +209,9 @@ impl Dictionary for DSLDict {
         if self.is_running.load(Ordering::SeqCst) {
             return;
         }
+        let orig_text = text.clone();
+
+        //TODO: from settings
         let text = text.to_lowercase();
         
         let db_ref = self.db.borrow();
@@ -275,7 +278,7 @@ impl Dictionary for DSLDict {
             let pattern = format!("{}%", text);
             let index = db.query_row(
                     &q,
-                    params![&pattern, &text.to_lowercase()], //text
+                    params![&pattern, &text], //text
                     |row| {
                         let title = row.get(0).unwrap_or("".to_string());
                         let offset = row.get(1).unwrap_or(0_i64);
@@ -306,10 +309,10 @@ impl Dictionary for DSLDict {
             let transl_result = send_tr_request(&self.dict_path, offset);
             match transl_result {
                 Ok(t_text) => {
-                    app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), self.get_uid(), t_text.clone() )));
+                    app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid(), t_text.clone() )));
                     app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                         src_id: Some(src_id),
-                        src_text_dict: text.clone(),
+                        src_text_dict: orig_text.clone(),
                         dict_uid: Some(self.get_uid()), 
                         dict_name: Some(self.get_name()),
                         //src: src_lang.clone(), 
@@ -317,7 +320,7 @@ impl Dictionary for DSLDict {
                         dict_text: Some(t_text),
                         is_fav: None
                     }, false));
-
+                    app_sender.send(AppEvent::SetReady());
                 }
                 Err(_e) => {
                     app_sender.send(AppEvent::SetReady());
@@ -364,7 +367,7 @@ fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> 
         let utf16_vec = convert_u8_to_u16(buffer.clone());
         match String::from_utf16(&utf16_vec) {
             Ok(decoded_string) => {
-                println!("{}", decoded_string);
+                //println!("{}", decoded_string);
                 if is_title && (decoded_string.starts_with("\t") || decoded_string.starts_with(" ")) {
                     is_title = false;
                 }

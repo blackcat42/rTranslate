@@ -37,6 +37,9 @@ impl NTTS {
 }
 
 impl TTSEngine for NTTS {
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<String> {
         if self.is_running.load(Ordering::SeqCst) {
             self.s.send(AppEvent::SetStatus("error: tts service is still running".into(), true, false));

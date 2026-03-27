@@ -8,18 +8,23 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub struct WP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
+    name: String,
 }
 
 use anyhow::{Result};
 
 impl WP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender}
+        Self { is_running, app_sender, name}
     }
 }
 
 impl PRNNService for WP {
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    
     fn generate(&self, text: String, src_id: i64) -> Result<()> {
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({

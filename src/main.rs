@@ -57,7 +57,7 @@ mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
-use types::{AppEvent, UIState, UIStateDict, TranslSource};
+use types::{AppEvent, UIState, UIStateDict, TranslSource, LangNames};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
@@ -265,23 +265,11 @@ fn main() {
         src_id: 0,
         src_text: "".to_string(),
         src_text_dict: "".to_string(),
-        selected_translator: GLOBAL_SETTINGS.default_translator.clone(),
-        selected_dict: GLOBAL_SETTINGS.default_dict.clone(),
-        selected_tts_voice: GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse selected_tts_voice");
-                panic!("Error");
-            }).voices.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse selected_tts_voice");
-                panic!("Error");
-            }).clone(),
-        selected_tts_engine: GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse selected_tts_engine");
-                panic!("Error");
-            }).uid.clone(),
-        selected_prnn_source: GLOBAL_SETTINGS.prnn_sources.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse selected_prnn_source");
-                panic!("Error");
-            }).uid.clone(),
+        selected_translator: "".to_string(),
+        selected_dict: "".to_string(),
+        selected_tts_voice: "".to_string(),
+        selected_tts_engine: "".to_string(),
+        selected_prnn_source: "".to_string(),
         selected_src: types::Lang::from_str(&GLOBAL_SETTINGS.src_language).unwrap_or(types::Lang::En),
         selected_target: types::Lang::from_str(&GLOBAL_SETTINGS.target_language).unwrap_or(types::Lang::Ru),
 
@@ -304,9 +292,11 @@ fn main() {
         }
         if let Some(path) = &value.path && path.chars().count() > 0 {
             app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
+        } else if value.uid == "tr_google" {
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone())));
         }
     }
-    app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
+    //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.dictionaries.iter() {
         if !re_uid.is_match(&value.uid) {
@@ -316,9 +306,11 @@ fn main() {
         if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
+        } else if value.uid == "dict_wiktionary_en" {
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone())));
         }
     }
-    app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
+    //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.tts_engines.iter() {
         if !re_uid.is_match(&value.uid) {
@@ -332,20 +324,46 @@ fn main() {
         }
     }
     
-    //for value in GLOBAL_SETTINGS.prnn_sources.iter() {
-        /*if value.path.chars().count() > 0 {
-            dbg!(value);
-            app_state.prnn_sources.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), value.path.clone())));
-        }*/
-    //}
-    app_state.prnn_sources.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender)));
+    for value in GLOBAL_SETTINGS.prnn_sources.iter() {
+        /*if let Some(path) = &value.path && path.chars().count() > 0 {
+            //
+        } else*/ 
+        if value.uid == "prnn_wiki" {
+            app_state.prnn_sources.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone())));
+        }
+    }
+    //app_state.prnn_sources.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));
 
     let _ = app_state.update_history_browser();
     let _ = app_state.update_fav_browser();
 
-    let lang_from = types::LangNames::from_str(&GLOBAL_SETTINGS.src_language).unwrap_or(types::LangNames::En);
-    let lang_to = types::LangNames::from_str(&GLOBAL_SETTINGS.target_language).unwrap_or(types::LangNames::Ru);
-    app_view.set_lang(lang_from.as_ref(), lang_to.as_ref());
+
+
+    app_view.set_lang(
+        LangNames::from_str(app_state.selected_src.as_ref()).unwrap_or(LangNames::En).as_ref(), 
+        LangNames::from_str(app_state.selected_target.as_ref()).unwrap_or(LangNames::En).as_ref()
+    );
+    app_sender.send(AppEvent::SetTranslator(GLOBAL_SETTINGS.default_translator.clone()));
+    app_sender.send(AppEvent::SetDict(GLOBAL_SETTINGS.default_dict.clone()));
+    app_sender.send(AppEvent::SetTTSEngine(
+        GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse selected_tts_engine");
+                panic!("Error");
+            }).uid.clone(),
+        GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
+            app_panic_message("Failed to parse selected_tts_voice");
+            panic!("Error");
+        }).voices.get(0).unwrap_or_else(|| {
+            app_panic_message("Failed to parse selected_tts_voice");
+            panic!("Error");
+        }).clone()
+    ));
+    app_sender.send(AppEvent::SetPRNNEngine(
+        GLOBAL_SETTINGS.prnn_sources.get(0).unwrap_or_else(|| {
+            app_panic_message("Failed to parse selected_prnn_source");
+            panic!("Error");
+        }).uid.clone()
+    ));
 
     //HOTKEYS
     //TODO: github.com/iholston/win-hotkeys; github.com/obv-mikhail/InputBot
@@ -431,11 +449,23 @@ fn main() {
                 }
             }
             Some(AppEvent::SetTTSEngine(tts, voice)) => {
-                app_state.selected_tts_engine = tts;
-                app_state.selected_tts_voice = voice;
+                app_state.selected_tts_engine = tts.clone();
+                app_state.selected_tts_voice = voice.clone();
+
+                if let Some(tts_struct) = app_state.tts_engines.get(tts.as_str()) {
+                    let tts_name = tts_struct.get_name();
+                    app_view.set_tts_engine(&tts_name, &voice);
+                }
+                
             }
             Some(AppEvent::SetPRNNEngine(prnn)) => {
-                app_state.selected_prnn_source = prnn;
+                app_state.selected_prnn_source = prnn.clone();
+
+                if let Some(prnn_struct) = app_state.prnn_sources.get(prnn.as_str()) {
+                    let prnn_name = prnn_struct.get_name();
+                    app_view.set_prnn_service(&prnn_name);
+                }
+                
             }
 
             Some(AppEvent::ToggleFav(text, is_dict)) => {
@@ -522,16 +552,14 @@ fn main() {
                             } else {
                                 app_view.show_popup(is_dict, true);
                                 app_view.clear_ui(is_dict); //clear status, title and translation buffer
-                                /*if is_dict {
-                                    app_view.set_waiting();
-                                }*/
+
                                 if !is_dict {
                                     if let Err(tr_error) = app_state.translate(false, false) {
-                                        app_view.set_ready();
+                                        app_sender.send(AppEvent::SetReady());
                                         app_view.set_status(tr_error.to_string().as_str(), true, false);
                                     }
                                 } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                                    app_view.set_ready();
+                                    app_sender.send(AppEvent::SetReady());
                                     app_view.set_status(dict_error.to_string().as_str(), true, true);
                                 }
                             }
@@ -541,47 +569,44 @@ fn main() {
                             println!("An error occurred while getting the selected text");
                         }
                     }
-                } /*else if e.state == HotKeyState::Released && Some(e.id) == dict_hotkey_id {
-                    match get_selected_text() {
-                        Ok(selected_text) => {
-                            app_view.clear_ui(true);
-                            app_view.show_popup(true, true);
-                            app_view.set_waiting();
-                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, true) {
-                                app_view.set_ready();
-                                app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                            } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                                app_view.set_ready();
-                                app_view.set_status(dict_error.to_string().as_str(), true, true);
-                            }                           
-                        },
-                        Err(_) => {
-                            app_view.set_status("An error occurred while getting the selected text", true, true);
-                            println!("An error occurred while getting the selected text");
-                        }
-                    }
-                }*/
-            }
-            Some(AppEvent::Translate(force)) => {
-                if let Err(error) = app_state.translate(false, force) {
-                    println!("{}", error);
                 }
             }
-            Some(AppEvent::RequestDictEntry(force)) => {
-                if let Err(error) = app_state.request_dict_entry(false, force) {
-                    println!("{}", error);
+            Some(AppEvent::Translate(fail_if_not_exist, force, check_buf)) => 'translate_arm: {
+                app_view.clear_ui(false);
+                if check_buf && (app_view.src_buf.text() != app_view.src) {
+                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
+                        app_view.set_status(set_src_error.to_string().as_str(), true, false);
+                        break 'translate_arm;
+                    }
+                }
+                if let Err(error) = app_state.translate(fail_if_not_exist, force) {
+                    app_sender.send(AppEvent::SetReady());
+                    app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), false, false));
+                    //app_view.set_status(error.to_string().as_str(), true, false);
+                }
+            }
+            Some(AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf)) => 'request_dict_arm: {
+                app_view.clear_ui(true);
+                if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
+                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_dict_buf.text(), true) {
+                        app_view.set_status(set_src_error.to_string().as_str(), true, true);
+                        break 'request_dict_arm;
+                    }
+                }
+                if let Err(error) = app_state.request_dict_entry(fail_if_not_exist, force) {
+                    app_sender.send(AppEvent::SetReady());
+                    app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), false, true));
+                    //app_view.set_status(error.to_string().as_str(), true, true);
                 }
             }
             Some(AppEvent::SendToDict()) => {
                 app_view.clear_ui(true);
-
-                app_view.set_waiting();
-                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
-                        app_view.set_ready();
-                        app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                    } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                        app_view.set_ready();
-                        app_view.set_status(dict_error.to_string().as_str(), true, true);
+                if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
+                    app_sender.send(AppEvent::SetReady());
+                    app_view.set_status(set_src_error.to_string().as_str(), true, true);
+                } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
+                    app_sender.send(AppEvent::SetReady());
+                    app_view.set_status(dict_error.to_string().as_str(), true, true);
                 }
             }
 

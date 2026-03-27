@@ -10,14 +10,15 @@ use super::GLOBAL_SETTINGS;
 pub struct WDEn {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
+    name: String
 }
 
 
 
 impl WDEn {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender}
+        Self {is_running, app_sender, name}
     }
 }
 impl Dictionary for WDEn {
@@ -28,7 +29,8 @@ impl Dictionary for WDEn {
         "dict_wiktionary_en".to_string()
     }
     fn get_name(&self) -> String {
-        "English Wiktionary".to_string()
+        //"English Wiktionary".to_string()
+        self.name.clone()
     }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {

@@ -307,7 +307,7 @@ impl AppState {
                 }, false));
             }
             None => {
-                if fail_if_not_exist {
+                if fail_if_not_exist && !force {
                     //self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, false));
                     return Err(anyhow!("no cached results"));
                 } else if let Some(translator) = self.translators.get_mut(self.selected_translator.as_str()) {
@@ -392,7 +392,7 @@ impl AppState {
                 }, false));
             }
             None => {
-                if fail_if_not_exist {
+                if fail_if_not_exist && !force {
                     //self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, true));
                     return Err(anyhow!("no cached results for selected dictionary"));
                 } else if let Some(dict) = self.dictionaries.get_mut(self.selected_dict.as_str()) {
