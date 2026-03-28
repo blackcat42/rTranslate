@@ -28,12 +28,16 @@ pub struct DSLDict {
     db: Rc<RefCell<Option<Connection>>>,
 }
 
-//todo set app waiting status before open db
-//todo prevent sql injections from settings
 //TODO: multiple titles support (not allowed by spec, but widely used)
 
 impl DSLDict {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>, uid: String, name: String, dict_path: String, db: Rc<RefCell<Option<Connection>>>) -> Self {
+
+        let re_uid = Regex::new(r"^\w+$").unwrap();
+        if !re_uid.is_match(&uid) {
+            //app_panic_message("settings.json: Failed to parse uid");
+            panic!("settings.json: Failed to parse uid");
+        }
 
         let is_running = Arc::new(AtomicBool::new(false));
 

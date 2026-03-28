@@ -147,6 +147,11 @@ impl AppView {
             tts_button.set_image(Some(image));
             tts_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        /*let mut qsettings_button = button::Button::new(51, 5, 18, 18, "");
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
+            qsettings_button.set_image(Some(image));
+            qsettings_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
+        }*/
         let mut dict_button = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\dict.png").to_str().unwrap_or("")) {
             dict_button.set_image(Some(image));
@@ -164,6 +169,7 @@ impl AppView {
         flex_titlebar.fixed(&refresh_button, 18);
         flex_titlebar.fixed(&tts_button, 18);
         flex_titlebar.fixed(&dict_button, 18);
+        //flex_titlebar.fixed(&qsettings_button, 18);
         flex_titlebar.fixed(&open_button, 18);
 
         frame.fixed(&flex_titlebar, 20);
@@ -220,15 +226,6 @@ impl AppView {
         flex_buttons.end();
         flex2.fixed(&flex_buttons_wrapper, 25);
         flex_buttons_wrapper.end();
-
-        /*let flex_status_bar_wrapper = group::Flex::default().column();
-        let mut status_bar = group::Flex::default().row();
-        let mut status_frame = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
-        status_frame.set_label_size(GLOBAL_SETTINGS.ui_font_size);
-        status_bar.fixed(&status_frame, 1);
-        status_bar.end();
-        flex2.fixed(&flex_status_bar_wrapper, 15);
-        flex_status_bar_wrapper.end();*/
         
         flex.fixed(&flex2, 31);
         flex2.end();
@@ -303,10 +300,6 @@ impl AppView {
         flex_titlebar_dict.fixed(&prnn_button_dict, 18);
         flex_titlebar_dict.fixed(&refresh_button_dict, 18);
         flex_titlebar_dict.fixed(&open_button_dict, 18);
-        /*flex_titlebar_dict.fixed(&title_frame_dict, 1);
-        flex_titlebar_dict.fixed(&fav_button_dict, 18);
-        flex_titlebar_dict.fixed(&refresh_button, 18);
-        flex_titlebar_dict.fixed(&open_button, 18);*/
 
         frame_dict.fixed(&flex_titlebar_dict, 20);
         flex_titlebar_dict.end();
@@ -320,8 +313,6 @@ impl AppView {
         /////TEXTAREA
         let src_dict_buf = text::TextBuffer::default();
         let dict_buf = text::TextBuffer::default();
-        //let mut status_buf = text::TextBuffer::default();
-        //let waiting_buf = text::TextBuffer::default();
 
         let mut txt_dict = text::TextDisplay::default();
         txt_dict.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
@@ -582,13 +573,13 @@ impl AppView {
             fav_button_main.set_image(Some(image));
             fav_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         }
-        let mut refresh_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Refresh transl./dict.");
+        let mut refresh_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Refresh");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
             refresh_button_main.set_image(Some(image));
             refresh_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         }
         col_left_row_fav.fixed(&fav_button_main, 135);
-        col_left_row_fav.fixed(&refresh_button_main, 150);
+        col_left_row_fav.fixed(&refresh_button_main, 100);
         col_left_row_fav.set_margins(0,15,0,0);
         main_controls_left.fixed(&col_left_row_fav, 40);
         col_left_row_fav.end();
@@ -693,12 +684,14 @@ impl AppView {
         win_popup.set_opacity(GLOBAL_SETTINGS.popup_opacity); //This should be called on a shown window
         win_popup_dict.set_opacity(GLOBAL_SETTINGS.popup_opacity); //0.8
         //fltk bug? panic or high cpu usage when we trying to hide the windows. spawning a new thread and hiding them inside it works
+        //TODO: should be called after app's event loop run?
         std::thread::spawn({
             let win_popup = win_popup.clone();
             let win_popup_dict = win_popup_dict.clone();
             move || {
                 win_popup.platform_hide();
                 win_popup_dict.platform_hide(); //doesn't work and causing cpu utilization issue, w/o spawning separate thread
+                app::awake();
             }
         });
 
@@ -1029,14 +1022,7 @@ impl AppView {
             self.txt_popup_dict.set_buffer(self.error_buf.clone());
             self.txt_dict_main.set_buffer(self.error_buf.clone());
         }
-        
-
         //TODO: red highlight
-
-        /*self.is_processing.store(true, Ordering::Relaxed);
-        self.txt_popup.set_buffer(self.waiting_buf.clone());
-        self.txt_main.set_buffer(self.waiting_buf.clone());
-        self.run_anim();*/
     }
 
     pub fn clear_ui(&mut self, is_dict: bool) {
@@ -1052,7 +1038,6 @@ impl AppView {
     }
     
 
-    #[allow(clippy::too_many_arguments)]
     pub fn update_ui(
         &mut self,
         state: UIState,
@@ -1091,22 +1076,18 @@ impl AppView {
                     self.fav_button.set_image(Some(image.clone()));
                     self.fav_button_main.set_image(Some(image));
                     self.fav_button_main.set_label("Remove from fav.");
-                    //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             } else {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
                     self.fav_button.set_image(Some(image.clone()));
                     self.fav_button_main.set_image(Some(image));
                     self.fav_button_main.set_label("Add to favorites");
-                    //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             }
         }
         
         app::redraw();
         app::awake();
-
-        //println!("update_ui is_fav: {}", is_fav);
     }
 
     pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
@@ -1129,7 +1110,6 @@ impl AppView {
         if let Some(dict_text) = dict_text {
             self.set_ready();
             let text_chuncs = dsl_parse(&dict_text);
-            //dbg!(&qqq);
             //teal, red, green, blue, indigo
             let mut sbuf = fltk::text::TextBuffer::default();
             let style_a = fltk::text::StyleTableEntry {
@@ -1217,19 +1197,16 @@ impl AppView {
             if is_fav {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
                     self.fav_button_dict.set_image(Some(image));
-                    //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             } else {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
                     self.fav_button_dict.set_image(Some(image));
-                    //self.fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
                 }
             }
         }
 
         app::redraw();
         app::awake();
-        //println!("update_ui_dict is_fav: {}", is_fav);
     }
 
 
@@ -1291,6 +1268,7 @@ impl AppView {
             self.set_error(text, is_dict);
             //TODO: check src_text
         }
+        app::redraw();
         app::awake();
     }
 
@@ -1306,8 +1284,7 @@ impl AppView {
         if let Some(item) = self.transl_choice.find_item(name) {
             self.transl_choice.set_item(&item);
         }
-        //println!("true ----- {}", uid);
-        //println!("set_translator ----- {}", uid); 
+        
         for (key, value) in &mut self.translator_buttons{
             if key == uid {
                 value.set(true);

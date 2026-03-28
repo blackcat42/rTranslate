@@ -187,7 +187,8 @@ impl AppState {
     }
 
     pub fn set_src_text(&mut self, text: &str, is_dict: bool) -> Result<()> {
-        
+
+        self.app_sender.send(AppEvent::ClearUi(is_dict));
         let (text, src_id, is_fav) = self.insert_src(text)?;
         self.src_id = src_id;
 
@@ -223,6 +224,9 @@ impl AppState {
     }
 
     pub fn translate(&mut self, fail_if_not_exist: bool, force: bool) -> Result<()> {
+
+        self.app_sender.send(AppEvent::ClearUi(false));
+
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
             self.app_sender.send(AppEvent::SetWaiting());
@@ -329,6 +333,8 @@ impl AppState {
     }
 
     pub fn request_dict_entry(&mut self, fail_if_not_exist: bool, force: bool) -> Result<()> {
+        
+        self.app_sender.send(AppEvent::ClearUi(true));
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
             self.app_sender.send(AppEvent::SetWaiting());

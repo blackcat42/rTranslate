@@ -399,6 +399,9 @@ fn main() {
             Some(AppEvent::UpdateUiDict(state, is_new_source)) => {
                 app_view.update_ui_dict(state, is_new_source);
             }
+            Some(AppEvent::ClearUi(is_dict)) => {
+                app_view.clear_ui(is_dict);
+            }
 
             Some(AppEvent::SetWaiting()) => {
                 app_view.set_waiting();
@@ -413,8 +416,6 @@ fn main() {
                 app_view.update_fav_browser(state);
             }
             Some(AppEvent::UpdateTTSBrowser(src_text, tts_arr, prnn_arr)) => {
-                app_view.clear_ui(false);
-                app_view.clear_ui(true);
                 let _ = app_state.set_src_text(&src_text, false);
                 let _ = app_state.set_src_text(&src_text, true);
                 let _ = app_state.translate(true, false);
@@ -551,7 +552,7 @@ fn main() {
                                 app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
                             } else {
                                 app_view.show_popup(is_dict, true);
-                                app_view.clear_ui(is_dict); //clear status, title and translation buffer
+                                //app_view.clear_ui(is_dict); //clear status, title and translation buffer
 
                                 if !is_dict {
                                     if let Err(tr_error) = app_state.translate(false, false) {
@@ -572,7 +573,7 @@ fn main() {
                 }
             }
             Some(AppEvent::Translate(fail_if_not_exist, force, check_buf)) => 'translate_arm: {
-                app_view.clear_ui(false);
+                //app_view.clear_ui(false);
                 if check_buf && (app_view.src_buf.text() != app_view.src) {
                     if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
                         app_view.set_status(set_src_error.to_string().as_str(), true, false);
@@ -586,7 +587,7 @@ fn main() {
                 }
             }
             Some(AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf)) => 'request_dict_arm: {
-                app_view.clear_ui(true);
+                //app_view.clear_ui(true);
                 if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
                     if let Err(set_src_error) = app_state.set_src_text(&app_view.src_dict_buf.text(), true) {
                         app_view.set_status(set_src_error.to_string().as_str(), true, true);
@@ -600,7 +601,7 @@ fn main() {
                 }
             }
             Some(AppEvent::SendToDict()) => {
-                app_view.clear_ui(true);
+                //app_view.clear_ui(true);
                 if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
                     app_sender.send(AppEvent::SetReady());
                     app_view.set_status(set_src_error.to_string().as_str(), true, true);

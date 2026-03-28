@@ -47,6 +47,7 @@ pub enum AppEvent {
     //UpdateUiSrc(String, bool),
     UpdateUiDict(UIStateDict, bool),
     //SetUiFavState(bool),
+    ClearUi(bool),
 
 
     UpdateHistoryBrowserView(Vec<TranslSource>),
