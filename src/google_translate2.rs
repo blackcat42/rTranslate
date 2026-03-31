@@ -110,21 +110,32 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         println!("{}", req_body);
         let mut headers = header::HeaderMap::new();
         headers.insert("Host", header::HeaderValue::from_static("translate-pa.googleapis.com"));
-        headers.insert("X-Goog-API-Key", header::HeaderValue::from_static("AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520"));
-        headers.insert("Content-Type", header::HeaderValue::from_static("application/json+protobuf"));
+        let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
+        match api_key {
+            Some(api_key) => {
+                let api_key = header::HeaderValue::from_str(&api_key).unwrap();
+                headers.insert("X-Goog-API-Key", api_key);
+                headers.insert("Content-Type", header::HeaderValue::from_static("application/json+protobuf"));
 
-        let client = wreq::Client::builder()
-            .emulation(Emulation::Chrome137)
-            .default_headers(headers)
-            .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
-            .build()?;
-        let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
+                let client = wreq::Client::builder()
+                    .emulation(Emulation::Chrome137)
+                    .default_headers(headers)
+                    .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
+                    .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
+                    .build()?;
+                let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
 
-        println!("{}", resp);
-        Ok(resp)
+                println!("{}", resp);
+                Ok(resp)
+            }
+            None => {
+                Err(anyhow!("error"))
+            }
+        }
+        
     });
 
+    //TODO!: [3,"API key not valid. Please pass a valid API key.",[["",["","",[["",""]]]],["",["",""]]]]
     match result {
         Ok(json_data) => {
             let value: Value = serde_json::from_str(json_data.as_str())?;

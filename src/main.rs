@@ -78,6 +78,8 @@ struct Settings {
     pub tts_engines: Vec<TTSEngineOption>,
     pub prnn_sources: Vec<PRNNSourceOption>,
 
+    pub google_translate_api_key: Option<String>,
+
     pub src_language: String,
     pub target_language: String,
 
