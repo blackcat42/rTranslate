@@ -1,7 +1,7 @@
 [package]
 name = "rTranslate"
 version = "0.0.1"
-authors = ["blackcat <gapchenko42@gmail.com>"]
+authors = ["sergey gapchenko <gapchenko42@gmail.com>"]
 edition = "2024"
 publish = false
 
@@ -11,7 +11,7 @@ fltk = "^1.5"
 #fltk-anchor = "0.2.0"
 anyhow = "1.0.100"
 #fltk = "1.5.10"
-ureq = "=3.1.4"
+#ureq = "=3.1.4"
 image = "0.25.9"
 tray-icon = "0.21.1"
 mouse_position = "=0.1.4"
@@ -37,6 +37,10 @@ fltk-theme = "0.7"
 #fltk-richtext = "0.1.1"
 #windows = { version = "0.58.0", features = ["Win32_UI_WindowsAndMessaging"] }
 
+tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread"] }
+wreq = "5.3.0"
+wreq-util = "2.2.6"
+
 #[target.'cfg(target_os = "windows")'.dependencies]
 #native-windows-gui = { version = "1.0.10", default-features=false, features=["tray-notification", "message-window", "menu", "cursor"] }
 
@@ -46,7 +50,7 @@ winres = "0.1.12"
 
 [profile.release]
 strip = true
-codegen-units = 1
+#codegen-units = 1
 #panic = "abort"
 lto = true
-
+opt-level = "z"

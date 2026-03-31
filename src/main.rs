@@ -49,6 +49,7 @@ use tray_icon::{
 
 mod nodejs_translator;
 mod google_translate;
+mod google_translate2;
 mod wiktionary_en;
 mod prnn_wiki;
 mod nodejs_tts;
@@ -61,6 +62,7 @@ use types::{AppEvent, UIState, UIStateDict, TranslSource, LangNames};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
+use std::sync::{OnceLock};
 
 
 
@@ -157,6 +159,8 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
         });
     settings
 });
+
+static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 
 fn main() {
 
@@ -293,7 +297,9 @@ fn main() {
         if let Some(path) = &value.path && path.chars().count() > 0 {
             app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
         } else if value.uid == "tr_google" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone())));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone())));
+        } else if value.uid == "tr_google2" {
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT::new(app_sender, value.name.clone(), value.uid.clone())));
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
@@ -307,7 +313,7 @@ fn main() {
             let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
         } else if value.uid == "dict_wiktionary_en" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone())));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone())));
         }
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));

@@ -18,6 +18,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::sync::{Arc};
 use fltk::{app, dialog, };
+use regex::Regex;
 
 pub struct DSLDict {
     is_running: Arc<AtomicBool>,

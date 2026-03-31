@@ -7,7 +7,13 @@
     "translators": [
         {
             "uid": "tr_google",
-            "name": "Google"
+            "name": "Google",
+            //"use_proxy": false
+        },
+        {
+            "uid": "tr_google2",
+            "name": "Google2",
+            //"use_proxy": false
         },
         {
             "uid": "tr_bergamot",
@@ -16,7 +22,8 @@
         },
         {
             "uid": "tr_deepl",
-            "name": "DeepL"
+            "name": "DeepL",
+            //"use_proxy": false
         },
         /*{
             "uid": "tr_node_example",
@@ -50,7 +57,15 @@
         }
     ],
 
+    /*"proxy": { //not impl yet
+        "protocol": "http", //"http", "https", "soks4", "soks4a", "soks5"
+        "host": "127.0.0.1",
+        "port": 8080,
+        "username": "",
+        "password": ""
+    }*/
 
+    
 
     "src_language": "en", //ISO 639_3 or ISO 639_1
     "target_language": "ru", //ISO 639_3 or ISO 639_1
