@@ -229,7 +229,7 @@ impl AppState {
 
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
-            self.app_sender.send(AppEvent::SetWaiting(false));
+            self.app_sender.send(AppEvent::SetWaiting(Some("translate".to_string()), false));
         }
         let selected_text = self.src_text.clone();
         if selected_text.chars().count() < GLOBAL_SETTINGS.transl_request_min_length {
@@ -311,7 +311,7 @@ impl AppState {
                 }, false));
             }
             None => {
-                if fail_if_not_exist && !force {
+                if fail_if_not_exist {
                     //self.app_sender.send(AppEvent::SetStatus("no cached results".into(), true, false));
                     return Err(anyhow!("no cached results"));
                 } else if let Some(translator) = self.translators.get_mut(self.selected_translator.as_str()) {
@@ -337,7 +337,7 @@ impl AppState {
         self.app_sender.send(AppEvent::ClearUi(true));
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
-            self.app_sender.send(AppEvent::SetWaiting(true));
+            self.app_sender.send(AppEvent::SetWaiting(None, true));
         }
         
         let selected_text = self.src_text_dict.clone();
@@ -429,27 +429,18 @@ impl AppState {
             }
             Err(_) => {
                 if text.chars().count() < 2 {
-                    self.app_sender.send(AppEvent::SetStatus("TTS error: text is too short".into(), true, false));
+                    self.app_sender.send(AppEvent::SetStatus("TTS error: text is too short".into(), false, false));
                     return Err(anyhow!("TTS error: text is too short"));
                 }
 
                 //self.set_waiting();
-                self.app_sender.send(AppEvent::SetWaiting(false));
+                self.app_sender.send(AppEvent::SetWaiting(None, false));
                 if let Some(engine) = self.tts_engines.get_mut(self.selected_tts_engine.clone().as_str()) {
                     let a = engine.generate(
                         text.clone(), 
                         src_id, 
                         self.selected_tts_voice.clone()
                     );
-                    //TODO: async, non-blocking
-                    if let Ok(filename) = a {
-                        let _ = self.insert_tts(
-                            src_id, 
-                            self.selected_tts_engine.as_str(), 
-                            self.selected_tts_voice.as_str()
-                        );
-                        self.app_sender.send(AppEvent::TTSPlay(filename));
-                    }
                 } else {
                     println!("error");
                 }
@@ -507,12 +498,12 @@ impl AppState {
             }
             Err(_) => {
                 if text.chars().count() < 1 {
-                    self.app_sender.send(AppEvent::SetStatus("TTS error: text is too short".into(), true, true));
+                    self.app_sender.send(AppEvent::SetStatus("TTS error: text is too short".into(), false, true));
                     return Err(anyhow!("TTS error: text is too short"));
                 }
 
                 //self.set_waiting();
-                self.app_sender.send(AppEvent::SetWaiting(true));
+                self.app_sender.send(AppEvent::SetWaiting(None, true));
                 if let Some(engine) = self.prnn_sources.get_mut(self.selected_prnn_source.clone().as_str()) {
                     let _ = engine.generate(
                         text.clone(), 
@@ -629,10 +620,10 @@ impl AppState {
         }
     } 
 
-    pub fn insert_tts(&self, src_id: i64, tts_engine: &str, tts_voice: &str) -> Result<i64> {
+    pub fn insert_tts(&self, src_id: i64, tts_engine: &str, tts_voice: &str, filename: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
-            return Ok(0);
+            return Ok(filename.to_string());
         }
         if let Some(db) = db_ref {
             let zxc = src_id.clone().to_string();
@@ -642,9 +633,10 @@ impl AppState {
                 params![src_id, path, tts_engine, tts_voice],
             )?;
             println!("tts inserted/replaced");
-            Ok(db.last_insert_rowid())//TODO: RETURNING clause
+            //Ok(db.last_insert_rowid())//TODO: RETURNING clause
+            Ok(filename.to_string())
         } else {
-            Ok(0)
+            Ok(filename.to_string())
         }
     }
     pub fn insert_prnn(&self, src_id: i64, prnn_source: &str, filename: &str) -> Result<i64> {

@@ -13,6 +13,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::ffi::OsString;
 
 use anyhow::{anyhow, Result};
 
@@ -200,7 +201,10 @@ fn main() {
     if let Err(err) = tray_menu.append(&tray_menu_popup_dict_window) {
         println!("{err:?}");
     }
-
+    let tray_menu_settings = MenuItem::new("Settings", true, None);
+    if let Err(err) = tray_menu.append(&tray_menu_settings) {
+        println!("{err:?}");
+    }
     let tray_menu_exit = MenuItem::new("Exit", true, None);
     if let Err(err) = tray_menu.append(&tray_menu_exit) {
         println!("{err:?}");
@@ -411,8 +415,8 @@ fn main() {
                 app_view.clear_ui(is_dict);
             }
 
-            Some(AppEvent::SetWaiting(is_dict)) => {
-                app_view.set_waiting(is_dict);
+            Some(AppEvent::SetWaiting(text, is_dict)) => {
+                app_view.set_waiting(text, is_dict);
             }
             Some(AppEvent::SetReady(error, is_dict)) => {
                 app_view.set_ready(error, is_dict);
@@ -511,6 +515,9 @@ fn main() {
             Some(AppEvent::SetStatus(text, is_error, is_dict)) => {
                 app_view.set_status(&text, is_error, is_dict);
             }
+            Some(AppEvent::Message(text)) => {
+                app_panic_message(&text);
+            }
 
             Some(AppEvent::TrayIcon(e)) => {
                 match e {
@@ -525,17 +532,17 @@ fn main() {
             }
             Some(AppEvent::TrayMenuEvent(e)) => {
                 println!("{:?}", e);
-                let exit_id = tray_menu_exit.id();
-                let main_window_id = tray_menu_main_window.id();
 
-                if e.id == exit_id {
+                if e.id == tray_menu_exit.id() {
                     std::process::exit(0);
-                } else if e.id == main_window_id {
+                } else if e.id == tray_menu_main_window.id() {
                     app_view.main_win.show();
                 } else if e.id == tray_menu_popup_window.id() {
                     app_view.show_popup(false, false);
                 } else if e.id ==  tray_menu_popup_dict_window.id() {
                     app_view.show_popup(true, false);
+                } else if e.id ==  tray_menu_settings.id() {
+                    open_settings();
                 }
             }
             Some(AppEvent::HotKey(e)) => 'hotkey_arm: {
@@ -625,6 +632,17 @@ fn main() {
             Some(AppEvent::PRNNString()) => {
                 let _ = app_state.run_prnn();
             }
+            Some(AppEvent::TTSave(src_id, tts_engine, tts_voice, filename)) => {
+                let file = app_state.insert_tts(
+                    src_id, 
+                    &tts_engine, 
+                    &tts_voice,
+                    &filename
+                );
+                if let Ok(file) = file {
+                    app_sender.send(AppEvent::TTSPlay(file));
+                }
+            }
             Some(AppEvent::TTSPlay(filename)) => {
                 app_view.set_ready(None, false);
 
@@ -693,6 +711,21 @@ pub fn screen_center() -> (i32, i32) {
         (app::screen_size().0 / 2.0) as i32,
         (app::screen_size().1 / 2.0) as i32,
     )
+}
+fn open_settings() {
+    let path = std::path::Path::new("settings.json");
+    if !path.exists() {
+        return
+    }
+
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("cmd").args([OsString::from("/C"), OsString::from("start"), path.to_path_buf().into_os_string()]).spawn().ok();
+
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(path.to_path_buf().into_os_string()).spawn().ok();
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open").arg(path.to_path_buf().into_os_string()).spawn().ok();
 }
 
 fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {

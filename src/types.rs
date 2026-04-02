@@ -36,11 +36,13 @@ pub enum AppEvent {
     SendToDict(),
     TTString(),
     PRNNString(),
+    TTSave(i64, String, String, String),
     TTSPlay(String),
 
-    SetWaiting(bool),
+    SetWaiting(Option<String>, bool),
     SetReady(Option<String>, bool),
     SetStatus(Box<str>, bool, bool),
+    Message(Box<str>),
     
     //TODO:
     UpdateUi(UIState, bool),
@@ -309,7 +311,7 @@ pub trait Dictionary {
     fn get_name(&self) -> String;
 }
 pub trait TTSEngine {
-    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<String>;
+    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> ();
     fn get_name(&self) -> String;
 }
 

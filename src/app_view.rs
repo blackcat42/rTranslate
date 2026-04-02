@@ -296,6 +296,7 @@ impl AppView {
         }
 
         flex_titlebar_dict.fixed(&close_button_dict, 18);
+        flex_titlebar_dict.fixed(&title_frame_dict, 1);
         flex_titlebar_dict.fixed(&fav_button_dict, 18);
         flex_titlebar_dict.fixed(&prnn_button_dict, 18);
         flex_titlebar_dict.fixed(&refresh_button_dict, 18);
@@ -996,7 +997,7 @@ impl AppView {
         }
     }
 
-    pub fn set_waiting(&mut self, is_dict: bool) {
+    pub fn set_waiting(&mut self, text: Option<String>, is_dict: bool) {
         self.is_processing.store(true, Ordering::Relaxed);
         if !is_dict {
             self.txt_popup.set_buffer(self.waiting_buf.clone());
@@ -1005,7 +1006,7 @@ impl AppView {
             self.txt_popup_dict.set_buffer(self.waiting_buf.clone());
             self.txt_dict_main.set_buffer(self.waiting_buf.clone());
         }
-        self.run_anim();
+        self.run_anim(text);
     }
 
     pub fn set_ready(&mut self, error: Option<String>, is_dict: bool) {
@@ -1219,9 +1220,17 @@ impl AppView {
     }
 
 
-    fn run_anim(&mut self) {
-        let arr = [".  ", ".. ", "...", " ..", "  .", "   "];
-        //let arr = ["/", "--", "\\", "|", "/", "--"];
+    fn run_anim(&mut self, text: Option<String>) {
+        let arr = if text.is_some() {
+            [".  ", ".. ", "...", " ..", "  .", "   "]
+        } else {
+            ["/", "--", "\\", "|", "/", "--"]
+        };
+        let mut txt: String = "".to_string();
+        if let Some(t) = text {
+            txt = t;
+        }
+
         let is_processing_clone = Arc::clone(&self.is_processing);
         let mut txt_buf_clone = self.waiting_buf.clone();
         std::thread::spawn({
@@ -1233,7 +1242,7 @@ impl AppView {
                     if is_processing_n > 4 {
                         is_processing_n = 0;
                     }
-                    txt_buf_clone.set_text(format!("translating{}", arr[is_processing_n]).as_str());
+                    txt_buf_clone.set_text(format!("{txt}{}", arr[is_processing_n]).as_str());
                     app::awake();
                     thread::sleep(Duration::from_millis(100));
                 }
@@ -1274,7 +1283,7 @@ impl AppView {
         //self.status_frame_dict.set_label(text);
         self.status_frame_main.set_label(text);
         if is_error {
-            //self.set_error(text, is_dict);
+            self.set_error(text, is_dict);
             //TODO: check src_text
         }
         app::redraw();

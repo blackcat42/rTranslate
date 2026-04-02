@@ -2,6 +2,7 @@ use crate::types::{AppEvent, PRNNService};
 use std::{thread, time::Duration};
 use std::sync::{Arc };
 use std::sync::atomic::{AtomicBool, Ordering};
+use super::GLOBAL_SETTINGS;
 
 //#[allow(dead_code)]
 //#[allow(clippy::upper_case_acronyms)]
@@ -42,15 +43,17 @@ impl PRNNService for WP {
                             }
                         }
                         Err(_e) => {
-                            app_sender.send(AppEvent::SetStatus("tts error".into(), true, true));
+                            app_sender.send(AppEvent::Message("tts error".into()));
+                            //app_sender.send(AppEvent::SetStatus("tts error".into(), false, true));
                         }
                     }
-                    thread::sleep(Duration::from_secs(5)); //throttling TODO: settings
+                    thread::sleep(Duration::from_millis((GLOBAL_SETTINGS.http_throttling * 1000.0) as u64));
                     is_running.store(false, Ordering::SeqCst);
                 }
             });
         } else {
-            self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, true));
+            self.app_sender.send(AppEvent::Message("tts error: rate limit".into()));
+            //self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), false, true));
         }
         Ok(())
     }
