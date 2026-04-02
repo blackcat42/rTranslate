@@ -301,7 +301,7 @@ fn main() {
         } else if value.uid == "tr_google" {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone())));
         } else if value.uid == "tr_google2" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone())));
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
@@ -411,11 +411,11 @@ fn main() {
                 app_view.clear_ui(is_dict);
             }
 
-            Some(AppEvent::SetWaiting()) => {
-                app_view.set_waiting();
+            Some(AppEvent::SetWaiting(is_dict)) => {
+                app_view.set_waiting(is_dict);
             }
-            Some(AppEvent::SetReady()) => {
-                app_view.set_ready();
+            Some(AppEvent::SetReady(error, is_dict)) => {
+                app_view.set_ready(error, is_dict);
             }
             Some(AppEvent::UpdateHistoryBrowserView(state)) => {
                 app_view.update_history_browser(state);
@@ -564,12 +564,12 @@ fn main() {
 
                                 if !is_dict {
                                     if let Err(tr_error) = app_state.translate(false, false) {
-                                        app_sender.send(AppEvent::SetReady());
-                                        app_view.set_status(tr_error.to_string().as_str(), true, false);
+                                        app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
+                                        //app_view.set_status(tr_error.to_string().as_str(), true, false);
                                     }
                                 } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                                    app_sender.send(AppEvent::SetReady());
-                                    app_view.set_status(dict_error.to_string().as_str(), true, true);
+                                    app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
+                                    //app_view.set_status(dict_error.to_string().as_str(), true, true);
                                 }
                             }
                         },
@@ -589,8 +589,8 @@ fn main() {
                     }
                 }
                 if let Err(error) = app_state.translate(fail_if_not_exist, force) {
-                    app_sender.send(AppEvent::SetReady());
-                    app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), false, false));
+                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), false));
+                    //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, false));
                     //app_view.set_status(error.to_string().as_str(), true, false);
                 }
             }
@@ -603,19 +603,19 @@ fn main() {
                     }
                 }
                 if let Err(error) = app_state.request_dict_entry(fail_if_not_exist, force) {
-                    app_sender.send(AppEvent::SetReady());
-                    app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), false, true));
+                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
+                    //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, true));
                     //app_view.set_status(error.to_string().as_str(), true, true);
                 }
             }
             Some(AppEvent::SendToDict()) => {
                 //app_view.clear_ui(true);
                 if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
-                    app_sender.send(AppEvent::SetReady());
-                    app_view.set_status(set_src_error.to_string().as_str(), true, true);
+                    app_sender.send(AppEvent::SetReady(Some(set_src_error.to_string()), false));
+                    //app_view.set_status(set_src_error.to_string().as_str(), true, true);
                 } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                    app_sender.send(AppEvent::SetReady());
-                    app_view.set_status(dict_error.to_string().as_str(), true, true);
+                    app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
+                    //app_view.set_status(dict_error.to_string().as_str(), true, true);
                 }
             }
 
@@ -626,7 +626,7 @@ fn main() {
                 let _ = app_state.run_prnn();
             }
             Some(AppEvent::TTSPlay(filename)) => {
-                app_view.set_ready();
+                app_view.set_ready(None, false);
 
                 let audio_path = format!(r"tts_cache\{filename}.ogg");
 

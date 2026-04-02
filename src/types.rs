@@ -38,8 +38,8 @@ pub enum AppEvent {
     PRNNString(),
     TTSPlay(String),
 
-    SetWaiting(),
-    SetReady(),
+    SetWaiting(bool),
+    SetReady(Option<String>, bool),
     SetStatus(Box<str>, bool, bool),
     
     //TODO:

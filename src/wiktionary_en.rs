@@ -68,9 +68,9 @@ impl Dictionary for WDEn {
 
                         }
                         Err(e) => {
-                            app_sender.send(AppEvent::SetReady());
+                            app_sender.send(AppEvent::SetReady(Some(e.to_string()), true));
                             let error_str = format!(r"Error: {e}");
-                            app_sender.send(AppEvent::SetStatus(error_str.into(), true, true));
+                            //app_sender.send(AppEvent::SetStatus(error_str.into(), true, true));
                             //TODO?: if Err(Error::StatusCode(404)) --> SaveDictEntry("not found")
                         }
                     }
@@ -79,8 +79,8 @@ impl Dictionary for WDEn {
                 }
             });
         } else {
-            self.app_sender.send(AppEvent::SetReady());
-            self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, true));
+            self.app_sender.send(AppEvent::SetReady(Some("error: rate limit".to_string()), true));
+            //self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, true));
         }
     }
 }

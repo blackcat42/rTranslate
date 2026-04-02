@@ -229,7 +229,7 @@ impl AppState {
 
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
-            self.app_sender.send(AppEvent::SetWaiting());
+            self.app_sender.send(AppEvent::SetWaiting(false));
         }
         let selected_text = self.src_text.clone();
         if selected_text.chars().count() < GLOBAL_SETTINGS.transl_request_min_length {
@@ -337,7 +337,7 @@ impl AppState {
         self.app_sender.send(AppEvent::ClearUi(true));
         //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
-            self.app_sender.send(AppEvent::SetWaiting());
+            self.app_sender.send(AppEvent::SetWaiting(true));
         }
         
         let selected_text = self.src_text_dict.clone();
@@ -434,7 +434,7 @@ impl AppState {
                 }
 
                 //self.set_waiting();
-                self.app_sender.send(AppEvent::SetWaiting());
+                self.app_sender.send(AppEvent::SetWaiting(false));
                 if let Some(engine) = self.tts_engines.get_mut(self.selected_tts_engine.clone().as_str()) {
                     let a = engine.generate(
                         text.clone(), 
@@ -512,7 +512,7 @@ impl AppState {
                 }
 
                 //self.set_waiting();
-                self.app_sender.send(AppEvent::SetWaiting());
+                self.app_sender.send(AppEvent::SetWaiting(true));
                 if let Some(engine) = self.prnn_sources.get_mut(self.selected_prnn_source.clone().as_str()) {
                     let _ = engine.generate(
                         text.clone(), 

@@ -221,8 +221,8 @@ impl Dictionary for DSLDict {
         
         let db_ref = self.db.borrow();
         if db_ref.is_none() {
-            self.app_sender.send(AppEvent::SetReady());
-            self.app_sender.send(AppEvent::SetStatus("An error occurred while opening the database file".into(), true, true));
+            self.app_sender.send(AppEvent::SetReady(Some("An error occurred while opening the database file".to_string()), true));
+            //self.app_sender.send(AppEvent::SetStatus("An error occurred while opening the database file".into(), true, true));
             return;
         }
 
@@ -252,8 +252,8 @@ impl Dictionary for DSLDict {
             match choice {
                 Some(0) => {
                     // User clicked "No"
-                    self.app_sender.send(AppEvent::SetReady());
-                    self.app_sender.send(AppEvent::SetStatus("index not found".into(), true, true));
+                    self.app_sender.send(AppEvent::SetReady(Some("index not found".to_string()), true));
+                    //self.app_sender.send(AppEvent::SetStatus("index not found".into(), true, true));
                     return;
                 }
                 Some(1) => {
@@ -306,8 +306,8 @@ impl Dictionary for DSLDict {
             //get offset by title
             
             if offset == 0 {
-                app_sender.send(AppEvent::SetReady());
-                app_sender.send(AppEvent::SetStatus("not found".into(), true, true));
+                app_sender.send(AppEvent::SetReady(Some("not found".to_string()), true));
+                //app_sender.send(AppEvent::SetStatus("not found".into(), true, true));
                 return;
                 //return anyhow!("error");
             }
@@ -325,11 +325,11 @@ impl Dictionary for DSLDict {
                         dict_text: Some(t_text),
                         is_fav: None
                     }, false));
-                    app_sender.send(AppEvent::SetReady());
+                    app_sender.send(AppEvent::SetReady(None, true));
                 }
-                Err(_e) => {
-                    app_sender.send(AppEvent::SetReady());
-                    app_sender.send(AppEvent::SetStatus("error".into(), true, true));
+                Err(e) => {
+                    app_sender.send(AppEvent::SetReady(Some(e.to_string()), true));
+                    //app_sender.send(AppEvent::SetStatus("error".into(), true, true));
                 }
             };
         };

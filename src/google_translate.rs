@@ -67,9 +67,9 @@ impl Translator for GT {
                                 is_fav: None
                             }, false));
                         }
-                        Err(_e) => {
-                            app_sender.send(AppEvent::SetReady());
-                            app_sender.send(AppEvent::SetStatus("translation failed (https req error)".into(), true, false));
+                        Err(e) => {
+                            app_sender.send(AppEvent::SetReady(Some(e.to_string()), false));
+                            //app_sender.send(AppEvent::SetStatus(e.to_string().as_str().into(), true, false));
                         }
                     }
                     thread::sleep(Duration::from_millis((GLOBAL_SETTINGS.http_throttling * 1000.0) as u64));
@@ -77,8 +77,8 @@ impl Translator for GT {
                 }
             });
         } else {
-            self.app_sender.send(AppEvent::SetReady());
-            self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, false));
+            self.app_sender.send(AppEvent::SetReady(Some("error: rate limit".to_string()), false));
+            //self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, false));
         }
     }
 }

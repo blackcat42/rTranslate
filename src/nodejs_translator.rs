@@ -106,7 +106,7 @@ impl Translator for NT {
                             println!("Thread returned");
                             match value {
                                 Ok(_) => {
-                                    s2.send(AppEvent::SetReady());
+                                    s2.send(AppEvent::SetReady(None, false));
                                 },
                                 Err(e) => {
                                     s2.send(AppEvent::SetStatus(e.to_string().into(), true, false));
@@ -114,8 +114,8 @@ impl Translator for NT {
                             }
                         },
                         Err(_e) => {
-                            s2.send(AppEvent::SetReady());
-                            s2.send(AppEvent::SetStatus("Error: nodejs thread panic".into(), true, false));
+                            s2.send(AppEvent::SetReady(Some("Error: nodejs thread panic".to_string()), false));
+                            //s2.send(AppEvent::SetStatus("Error: nodejs thread panic".into(), true, false));
                             is_running.store(false, Ordering::Relaxed);
                         },
                     };
@@ -211,7 +211,7 @@ fn run_node_thread(
                     .stdout(Stdio::piped())
                     .spawn().expect("Failed to spawn child process");
             } */else {
-                s.send(AppEvent::SetReady());
+                s.send(AppEvent::SetReady(Some("error".to_string()), false));
                 panic!("");
             }
 
@@ -272,16 +272,16 @@ fn run_node_thread(
                                         *data = text.clone();
 
                                         let text = text.replace("\r", "").replace("\n", "<ENDOFLINE>");
-                                        if let Err(_event) = stdin.write_all(text.as_bytes()) {
+                                        if let Err(e) = stdin.write_all(text.as_bytes()) {
                                             is_running.store(false, Ordering::Relaxed);
-                                            s.send(AppEvent::SetReady());
-                                            s.send(AppEvent::SetStatus("Error: Failed to write to stdin".into(), true, false));
+                                            s.send(AppEvent::SetReady(Some(e.to_string()), false));
+                                            //s.send(AppEvent::SetStatus("Error: Failed to write to stdin".into(), true, false));
                                             //child.kill();
                                         }
-                                        if let Err(_event) = stdin.write_all(b"\n") {
+                                        if let Err(e) = stdin.write_all(b"\n") {
                                             is_running.store(false, Ordering::Relaxed);
-                                            s.send(AppEvent::SetReady());
-                                            s.send(AppEvent::SetStatus("Error: Failed to write to stdin".into(), true, false));
+                                            s.send(AppEvent::SetReady(Some(e.to_string()), false));
+                                            //s.send(AppEvent::SetStatus("Error: Failed to write to stdin".into(), true, false));
                                             //child.kill();
                                         }
                                     },

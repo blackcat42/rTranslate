@@ -996,22 +996,31 @@ impl AppView {
         }
     }
 
-    pub fn set_waiting(&mut self) {
-        //TODO: is_dict
+    pub fn set_waiting(&mut self, is_dict: bool) {
         self.is_processing.store(true, Ordering::Relaxed);
-        self.txt_popup.set_buffer(self.waiting_buf.clone());
-        self.txt_main.set_buffer(self.waiting_buf.clone());
-        self.txt_popup_dict.set_buffer(self.waiting_buf.clone());
-        self.txt_dict_main.set_buffer(self.waiting_buf.clone());
+        if !is_dict {
+            self.txt_popup.set_buffer(self.waiting_buf.clone());
+            self.txt_main.set_buffer(self.waiting_buf.clone());      
+        } else {
+            self.txt_popup_dict.set_buffer(self.waiting_buf.clone());
+            self.txt_dict_main.set_buffer(self.waiting_buf.clone());
+        }
         self.run_anim();
     }
 
-    pub fn set_ready(&mut self) {
+    pub fn set_ready(&mut self, error: Option<String>, is_dict: bool) {
         self.is_processing.store(false, Ordering::Relaxed);
-        self.txt_popup.set_buffer(self.translation_buf.clone());
-        self.txt_main.set_buffer(self.translation_buf.clone());
-        self.txt_popup_dict.set_buffer(self.dict_buf.clone());
-        self.txt_dict_main.set_buffer(self.dict_buf.clone());
+        if let Some(err) = error {
+            self.set_error(err.as_str(), is_dict);
+            self.status_frame_main.set_label(err.as_str());
+            //TODO: check src_text
+        } else if !is_dict {
+            self.txt_popup.set_buffer(self.translation_buf.clone());
+            self.txt_main.set_buffer(self.translation_buf.clone());           
+        } else {
+            self.txt_popup_dict.set_buffer(self.dict_buf.clone());
+            self.txt_dict_main.set_buffer(self.dict_buf.clone());
+        }
     }
     pub fn set_error(&mut self, text: &str, is_dict: bool) {
         self.error_buf.set_text(text);
@@ -1059,7 +1068,7 @@ impl AppView {
         
         if let Some(t_text) = translation_text {
             self.translation_buf.set_text(format!("{}\n", &t_text).as_str());
-            self.set_ready();
+            self.set_ready(None, false);
         }
 
         if let Some(lang_from) = src && let Some(lang_to) = target && let Some(translator_name) = translator {
@@ -1108,7 +1117,7 @@ impl AppView {
         }
 
         if let Some(dict_text) = dict_text {
-            self.set_ready();
+            self.set_ready(None, true);
             let text_chuncs = dsl_parse(&dict_text);
             //teal, red, green, blue, indigo
             let mut sbuf = fltk::text::TextBuffer::default();
@@ -1265,7 +1274,7 @@ impl AppView {
         //self.status_frame_dict.set_label(text);
         self.status_frame_main.set_label(text);
         if is_error {
-            self.set_error(text, is_dict);
+            //self.set_error(text, is_dict);
             //TODO: check src_text
         }
         app::redraw();

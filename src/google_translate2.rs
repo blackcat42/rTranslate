@@ -17,21 +17,21 @@ use wreq_util::{
     Emulation
 };
 
-pub struct GT {
+pub struct GT2 {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
     uid: String
 }
 
-impl GT {
+impl GT2 {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
         //let uid = "tr_google2".to_string();
         Self {is_running, app_sender, name, uid}
     }
 }
-impl Translator for GT {
+impl Translator for GT2 {
     fn terminate(&mut self) {
         
     }
@@ -68,9 +68,9 @@ impl Translator for GT {
                                 is_fav: None
                             }, false));
                         }
-                        Err(_e) => {
-                            app_sender.send(AppEvent::SetReady());
-                            app_sender.send(AppEvent::SetStatus("translation failed (https req error)".into(), true, false));
+                        Err(e) => {
+                            app_sender.send(AppEvent::SetReady(Some(e.to_string()), false));
+                            //app_sender.send(AppEvent::SetStatus(e.to_string().as_str().into(), true, false));
                         }
                     }
                     thread::sleep(Duration::from_millis((GLOBAL_SETTINGS.http_throttling * 1000.0) as u64));
@@ -78,8 +78,8 @@ impl Translator for GT {
                 }
             });
         } else {
-            self.app_sender.send(AppEvent::SetReady());
-            self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, false));
+            self.app_sender.send(AppEvent::SetReady(Some("error: rate limit".to_string()), false));
+            //self.app_sender.send(AppEvent::SetStatus("error: rate limit".into(), true, false));
         }
     }
 }
@@ -113,7 +113,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
         match api_key {
             Some(api_key) => {
-                let api_key = header::HeaderValue::from_str(&api_key).unwrap();
+                let api_key = header::HeaderValue::from_str(&api_key)?;
                 headers.insert("X-Goog-API-Key", api_key);
                 headers.insert("Content-Type", header::HeaderValue::from_static("application/json+protobuf"));
 
@@ -129,32 +129,39 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                 Ok(resp)
             }
             None => {
-                Err(anyhow!("error"))
+                Err(anyhow!("No api key found. Please check settings.json : \"google_translate_api_key\""))
             }
         }
         
     });
 
-    //TODO!: [3,"API key not valid. Please pass a valid API key.",[["",["","",[["",""]]]],["",["",""]]]]
     match result {
         Ok(json_data) => {
             let value: Value = serde_json::from_str(json_data.as_str())?;
             let mut src_lng_suggested = None;
-            if let Some(items) = value.as_array()
-                && items.get(0).is_some() 
-                && let Some(tr_items) = items[0].as_array() {
+            if let Some(items) = value.as_array() {
+                if items.get(0).is_some() && let Some(tr_items) = items[0].as_array() {
                     for item_value in tr_items {
                         if let Some(text) = item_value.as_str() {
                             response.push_str(text);
                             response.push_str("\n");
-                            //println!("{}", text);
                         }
                     };
 
                     if let Some(arr1) = items.get(1) && let Some(lang) = arr1.get(0) {
                         src_lng_suggested = Some(lang.to_string());
                     }
+                } else if items.get(0).is_some() && items.get(1).is_some() 
+                && let Some(error) = items[0].as_i64() 
+                && error == 3 {
+                    if let Some(error_txt) = items[1].as_str() {
+                        return Err(anyhow!(error_txt.to_string()));
+                    } else {
+                        return Err(anyhow!("error"));
+                    }
                 }
+            } 
+
             if response.chars().count() > 1 {
                 Ok((response, src_lng_suggested))
             } else {
