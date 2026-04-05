@@ -507,10 +507,6 @@ fn main() {
                 let _ = app_state.insert_dict_entry(src_id, dict.as_str(), dict_text.as_str());
                 let _ = app_state.update_history_browser(); 
             }
-            Some(AppEvent::SavePRNN((src_id, prnn_source_uid, filename))) => {
-                let _ = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
-                //let _ = app_state.update_browser(); 
-            }
 
             Some(AppEvent::SetStatus(text, is_error, is_dict)) => {
                 app_view.set_status(&text, is_error, is_dict);
@@ -630,7 +626,16 @@ fn main() {
                 let _ = app_state.run_tts();
             }
             Some(AppEvent::PRNNString()) => {
-                let _ = app_state.run_prnn();
+                app_view.prnn_index = app_view.prnn_index + 1;
+                let _ = app_state.run_prnn(app_view.prnn_index);
+            }
+            Some(AppEvent::PRNNSave((src_id, prnn_source_uid, filename))) => {
+                let file = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
+                if let Ok(file) = file {
+                    //let filename = format!("{}.ogg", file);
+                    //app_sender.send(AppEvent::TTSPlay(file));
+                }
+                //let _ = app_state.update_browser(); 
             }
             Some(AppEvent::TTSave(src_id, tts_engine, tts_voice, filename)) => {
                 let file = app_state.insert_tts(
@@ -640,13 +645,14 @@ fn main() {
                     &filename
                 );
                 if let Ok(file) = file {
-                    app_sender.send(AppEvent::TTSPlay(file));
+                    let filename = format!("{}.ogg", file);
+                    app_sender.send(AppEvent::TTSPlay(filename));
                 }
             }
             Some(AppEvent::TTSPlay(filename)) => {
                 app_view.set_ready(None, false);
 
-                let audio_path = format!(r"tts_cache\{filename}.ogg");
+                let audio_path = format!(r"tts_cache\{filename}");
 
                 std::thread::spawn({
                     let working_dir = env::current_dir().expect("current_dir");

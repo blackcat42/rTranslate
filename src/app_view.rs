@@ -24,7 +24,7 @@ use std::convert::AsRef;
 use std::collections::HashMap;
 
 use strum::IntoEnumIterator;
-use mouse_position::mouse_position::{Mouse};
+//use mouse_position::mouse_position::{Mouse};
 use crate::types::{AppEvent, Lang, LangNames, TTSource, PRNNSource, TranslSource, UIState, UIStateDict };
 
 use crate::bbcode::{dsl_parse};
@@ -61,6 +61,7 @@ pub struct AppView {
     //status_frame_dict: Frame,
     pub src: String, //todo: use src_buf?
     pub src_dict: String,
+    pub prnn_index: i32,
 
     transl_browser: fltk::browser::HoldBrowser,
     fav_browser: fltk::browser::HoldBrowser,
@@ -489,7 +490,7 @@ impl AppView {
         run_dict_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::SendToDict());
+                    s.send(AppEvent::RequestDictEntry(false, false, true));
                 }
         });
         col_left_row_dict.fixed(&run_dict_btn_main, 150);
@@ -686,13 +687,21 @@ impl AppView {
         win_popup_dict.set_opacity(GLOBAL_SETTINGS.popup_opacity); //0.8
         //fltk bug? panic or high cpu usage when we trying to hide the windows. spawning a new thread and hiding them inside it works
         //TODO: should be called after app's event loop run?
-        std::thread::spawn({
+        /*std::thread::spawn({
             let win_popup = win_popup.clone();
             let win_popup_dict = win_popup_dict.clone();
             move || {
                 win_popup.platform_hide();
                 win_popup_dict.platform_hide(); //doesn't work and causing cpu utilization issue, w/o spawning separate thread
                 app::awake();
+            }
+        });*/
+        app::add_timeout3(0.1, {
+            let win_popup = win_popup.clone();
+            let win_popup_dict = win_popup_dict.clone();
+            move|_| {
+                win_popup.platform_hide();
+                win_popup_dict.platform_hide();
             }
         });
 
@@ -735,7 +744,8 @@ impl AppView {
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<String>(selected_index) {
                             println!("Selected: {}", d);
-                            app_sender.send(AppEvent::TTSPlay(d));
+                            let filename = format!("{}.ogg", d);
+                            app_sender.send(AppEvent::TTSPlay(filename));
                         }
                     }
                 }
@@ -750,6 +760,7 @@ impl AppView {
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<String>(selected_index) {
                             println!("Selected: {}", d);
+                            //let filename = format!("{}.ogg", d);
                             app_sender.send(AppEvent::TTSPlay(d));
                         }
                     }
@@ -977,6 +988,7 @@ impl AppView {
             fav_browser,
             tts_browser,
             dict_assets_browser,
+            prnn_index: 0,
 
             win_popup,
             win_popup_dict,
@@ -1107,6 +1119,7 @@ impl AppView {
         if is_new_source {  
             self.src_dict_buf.set_text(format!("{}\n", &src_text_dict).as_str()); //new line is req bc fltk widget bug
             self.src_dict = src_text_dict;
+            self.prnn_index = -1;
         } else if src_text_dict != self.src_dict {
             return;
         }
@@ -1260,7 +1273,8 @@ impl AppView {
     pub fn set_dict_assets_browser_data(&mut self, data: Vec<PRNNSource>) {
         self.dict_assets_browser.clear();
         for item in data {
-            self.dict_assets_browser.add_with_data(item.service.as_ref(), item.path);
+            let name = format!("{}: {}", &item.service, &item.path);
+            self.dict_assets_browser.add_with_data(&name, item.path);
         }
     }
 
@@ -1338,13 +1352,17 @@ impl AppView {
     pub fn show_popup(&mut self, show_dict: bool, hotspot: bool) {
         let win = if show_dict { &mut self.win_popup_dict } else { &mut self.win_popup };
         if hotspot {
-            let position = Mouse::get_mouse_position();
-            match position {
+            //dbg!(app::get_mouse());
+            let position = app::get_mouse();
+            win.set_pos(position.0, position.1); //TODO: screen edges, offsets, etc.
+            //let position = Mouse::get_mouse_position();
+            /*match position {
                 Mouse::Position { x, y } => {
+                    println!("x: {} y: {}", x, y);
                     win.set_pos(x, y); //TODO: screen edges, offsets, etc.
                 },
                 Mouse::Error => println!("Error getting mouse position"),
-            }
+            }*/
         }
         //win.redraw();
         app::redraw();

@@ -4,7 +4,7 @@ use fltk::{
 
 //TODO: rewrite, split into separate modules and traits, remove is_dict flags, etc...
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, ToSql};
 const SEED: u32 = 42;
 
 use std::collections::HashMap;
@@ -425,7 +425,8 @@ impl AppState {
 
         match tts_file {
             Ok(tr) => {
-                self.app_sender.send(AppEvent::TTSPlay(tr));
+                let filename = format!("{}.ogg", tr);
+                self.app_sender.send(AppEvent::TTSPlay(filename));
             }
             Err(_) => {
                 if text.chars().count() < 2 {
@@ -486,11 +487,10 @@ impl AppState {
         }
     }
 
-    pub fn run_prnn(&mut self) -> Result<()> {
+    pub fn run_prnn(&mut self, index: i32) -> Result<()> {
         //let text = self.src_text_dict.clone();
-        let (text, src_id, is_fav) = self.insert_src(&self.src_text)?;
-        let tts_file = self.check_prnn_cache(src_id, &self.selected_prnn_source);
-        //15_kkr_af-heart.ogg
+        let (text, src_id, is_fav) = self.insert_src(&self.src_text_dict)?;
+        let tts_file = self.check_prnn_cache(src_id, &self.selected_prnn_source, index);
 
         match tts_file {
             Ok(tr) => {
@@ -509,14 +509,6 @@ impl AppState {
                         text.clone(), 
                         src_id, 
                     );
-                    /*//TODO: async, non-blocking
-                    if let Ok(filename) = a {
-                        let _ = self.insert_prnn(
-                            src_id, 
-                            self.selected_prnn_source.as_str(), 
-                        );
-                        self.app_sender.send(AppEvent::TTSPlay(filename));
-                    }*/
                 } else {
                     println!("error");
                 }
@@ -526,36 +518,45 @@ impl AppState {
         Ok(())
     }
 
-    pub fn check_prnn_cache(&self, src_id: i64, selected_prnn_source: &str) -> Result<String> {
+    pub fn check_prnn_cache(&self, src_id: i64, selected_prnn_source: &str, index: i32) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Err(anyhow!("db support is off"));
         }
-        if let Some(db) = db_ref {
-            let tts = db.query_row(
-                "SELECT path FROM prnn 
-                 WHERE src_id = ?1 AND prnn_source_uid = ?2",
-                params![src_id, selected_prnn_source],
-                |row| {
-                    let text = row.get(0)?;
-                    Ok(text)
-                },
-            );
 
-            match tts {
-                Ok(t) => {
-                    println!("tts found");
-                    let audio_path = format!(r"tts_cache\{t}.ogg");
-                    let working_dir = std::env::current_dir()?;
-                    match working_dir.join(audio_path).try_exists() {
-                        Ok(true) => Ok(t),
-                        Ok(false) => Err(anyhow!("tts not found (fs erroe)")),
-                        Err(_e) => Err(anyhow!("tts not found")),
-                    }
-                }
-                Err(_) => {
-                    Err(anyhow!("tts db-entry not found"))
-                }
+        if let Some(db) = db_ref {
+            let mut data_pr_prnn = db.prepare(
+                "SELECT path, prnn_source_uid FROM prnn
+                 WHERE src_id = :id AND prnn_source_uid = :prnn_src_uid"
+            )?;
+            let data_prnn = data_pr_prnn.query_map(&[(":id", &src_id as &dyn ToSql), (":prnn_src_uid", &selected_prnn_source as &dyn ToSql)], |row| {
+                Ok(PRNNSource {
+                    path: row.get(0)?,
+                    service: row.get(1)?,
+                })
+            })?;
+            let mut prnn_arr: Vec<PRNNSource> = Vec::new();
+            for item in data_prnn {
+                let item = item?;
+                prnn_arr.push(item);
+            }
+            let index = if index < 0 {
+                0_usize
+            } else {
+                index as usize
+            };
+            if prnn_arr.is_empty() {
+                return Err(anyhow!("no pronunciation found"));
+            }
+            let current_index = index % prnn_arr.len();
+            let tts = prnn_arr.get(current_index).ok_or(anyhow!("error"))?;
+            let tts = tts.path.clone();
+            let audio_path = format!(r"tts_cache\{tts}");
+            let working_dir = std::env::current_dir()?;
+            match working_dir.join(audio_path).try_exists() {
+                Ok(true) => Ok(tts),
+                Ok(false) => Err(anyhow!("pronunciation not found (fs error)")),
+                Err(e) => Err(e.into()),
             }
         } else {
             Err(anyhow!("db"))
@@ -639,22 +640,21 @@ impl AppState {
             Ok(filename.to_string())
         }
     }
-    pub fn insert_prnn(&self, src_id: i64, prnn_source: &str, filename: &str) -> Result<i64> {
+    pub fn insert_prnn(&self, src_id: i64, prnn_source: &str, filename: &str) -> Result<String> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
-            return Ok(0);
+            return Ok(filename.to_string());
         }
         if let Some(db) = db_ref {
-            //let zxc = src_id.clone().to_string();
-            //let path = format!(r"{zxc}_{filename}");
             db.execute(
                 "REPLACE INTO prnn (src_id, path, prnn_source_uid) VALUES (?1, ?2, ?3)",
                 params![src_id, filename, prnn_source],
             )?;
             println!("prnn inserted/replaced");
-            Ok(db.last_insert_rowid())//TODO: RETURNING clause
+            //Ok(db.last_insert_rowid())//TODO: RETURNING clause
+            Ok(filename.to_string())
         } else {
-            Ok(0)
+            Ok(filename.to_string())
         }
     }
 

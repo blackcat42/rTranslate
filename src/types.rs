@@ -28,7 +28,7 @@ pub enum AppEvent {
     //TODO:
     SaveTranslation((i64, String, String, Lang, Lang, String)),
     SaveDictEntry((i64, String, String, String)),
-    SavePRNN((i64, String, String)),
+    PRNNSave((i64, String, String)),
     ToggleFav(Option<String>, bool),
 
     Translate(bool, bool, bool),
