@@ -32,7 +32,7 @@ impl WP {
         Self { is_running, app_sender, name}
     }
 }
-
+//TODO! language detect
 impl PRNNService for WP {
     fn get_name(&self) -> String {
         self.name.clone()
@@ -59,8 +59,8 @@ impl PRNNService for WP {
                                 app_sender.send(AppEvent::TTSPlay(str1.to_string()));
                             }
                         }
-                        Err(_e) => {
-                            app_sender.send(AppEvent::Message("tts error".into()));
+                        Err(e) => {
+                            app_sender.send(AppEvent::Message(e.to_string().into()));
                             //app_sender.send(AppEvent::SetStatus("tts error".into(), false, true));
                         }
                     }
@@ -100,6 +100,7 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
     let mut headers = header::HeaderMap::new();
     headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip"));
     headers.insert("Host", header::HeaderValue::from_static("en.wiktionary.org"));
+    headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
 
     let result = rt.block_on(async {
         let mut arr: Vec<String> = vec![];
@@ -109,7 +110,6 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
             //.emulation(Emulation::Chrome137)
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36")
             //.cookie_store(true)
             .gzip(true)
             .build()?;
@@ -169,10 +169,11 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
                 let audio_path = format!(r"tts_cache\{filename}");
                 let audio_path_full = working_dir.join(&audio_path);
                 if let Ok(exist) = audio_path_full.try_exists() && exist {
+                    arr_filenames.push(filename);
                     continue;
                 } else {
                     //https://wikitech.wikimedia.org/wiki/Robot_policy
-                    tokio::time::sleep(tokio::time::Duration::from_millis(1300)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
                     let audio_resp = client.get(full_url).send().await?;
                     println!("{}", audio_resp.status());
                     if audio_resp.status().is_success() {
@@ -181,6 +182,7 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
                         file.write_all(&audio_bytes)?;
                         arr_filenames.push(filename);
                     } else {
+                        //TODO! 429 Too Many Requests
                         return Err(anyhow!("https error"));
                     }
                 }

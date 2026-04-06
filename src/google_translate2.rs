@@ -110,6 +110,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         println!("{}", req_body);
         let mut headers = header::HeaderMap::new();
         headers.insert("Host", header::HeaderValue::from_static("translate-pa.googleapis.com"));
+        headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
         let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
         match api_key {
             Some(api_key) => {
@@ -121,7 +122,6 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                     .emulation(Emulation::Chrome137)
                     .default_headers(headers)
                     .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-                    .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
                     .build()?;
                 let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
 

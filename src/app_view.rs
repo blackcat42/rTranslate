@@ -939,6 +939,7 @@ impl AppView {
             let mut main_win = main_win.clone();
             move |_| {
                 main_win.show();
+                win_popup.platform_hide();
             }
         });
         open_button_dict.set_callback({
@@ -946,6 +947,7 @@ impl AppView {
             let mut main_win = main_win.clone();
             move |_| {
                 main_win.show();
+                win_popup_dict.platform_hide();
             }
         });
         
