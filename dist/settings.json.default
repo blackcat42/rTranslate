@@ -87,7 +87,7 @@
 
     "nodejs_unload_timeout": 120, //in seconds
     "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
-    "http_request_timeout": 5, //in seconds
+    "http_request_timeout": 30, //in seconds
 
     "source_text_max_length": 4500, //Source text will be truncated to this size. The recommend value is 5000 or less (google translate api limit).
     "transl_request_min_length": 3,

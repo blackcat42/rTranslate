@@ -937,6 +937,7 @@ impl AppView {
         open_button.set_callback({
             let s = app_sender;
             let mut main_win = main_win.clone();
+            let mut win_popup = win_popup.clone();
             move |_| {
                 main_win.show();
                 win_popup.platform_hide();
@@ -945,6 +946,7 @@ impl AppView {
         open_button_dict.set_callback({
             let s = app_sender;
             let mut main_win = main_win.clone();
+            let mut win_popup_dict = win_popup_dict.clone();
             move |_| {
                 main_win.show();
                 win_popup_dict.platform_hide();

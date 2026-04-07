@@ -56,7 +56,7 @@ impl Translator for GT2 {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
                     match transl_result {
                         Ok(t_text) => {
-                            //println!("lng: {}", t_text.1); //TODO!
+                            println!("lng: {}", t_text.1); //TODO!
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), src_lang.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
