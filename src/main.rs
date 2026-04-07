@@ -51,6 +51,7 @@ use tray_icon::{
 mod nodejs_translator;
 mod google_translate;
 mod google_translate2;
+mod deepl_translate;
 mod wiktionary_en;
 mod prnn_wiki;
 mod nodejs_tts;
@@ -306,6 +307,8 @@ fn main() {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone())));
         } else if value.uid == "tr_google2" {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone())));
+        } else if value.uid == "tr_deepl" {
+            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone())));
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
