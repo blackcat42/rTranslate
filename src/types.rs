@@ -35,7 +35,7 @@ pub enum AppEvent {
     RequestDictEntry(bool, bool, bool),
     SendToDict(),
     TTString(),
-    PRNNString(),
+    PRNNString(bool),
     TTSave(i64, String, String, String),
     TTSPlay(String),
 
@@ -196,6 +196,82 @@ pub enum Lang {
     #[strum(serialize = "hye", to_string = "hy")] Hy,
 }
 
+impl Lang {
+    pub fn code_3(&self) -> &str {
+        match self {
+            Lang::Epo => "epo",
+            Lang::En => "eng",
+            Lang::Ru => "rus",
+            Lang::Zh => "cmn",
+            Lang::Es => "spa",
+            Lang::Pt => "por",
+            Lang::It => "ita",
+            Lang::Bn => "ben",
+            Lang::Fr => "fra",
+            Lang::De => "deu",
+            Lang::Uk => "ukr",
+            Lang::Ka => "kat",
+            Lang::Ar => "ara",
+            Lang::Hi => "hin",
+            Lang::Ja => "jpn",
+            Lang::He => "heb",
+            Lang::Yi => "yid",
+            Lang::Pl => "pol",
+            Lang::Am => "amh",
+            Lang::Jv => "jav",
+            Lang::Ko => "kor",
+            Lang::Nb => "nob",
+            Lang::Da => "dan",
+            Lang::Sv => "swe",
+            Lang::Fi => "fin",
+            Lang::Tr => "tur",
+            Lang::Nl => "nld",
+            Lang::Hu => "hun",
+            Lang::Cs => "ces",
+            Lang::El => "ell",
+            Lang::Bg => "bul",
+            Lang::Be => "bel",
+            Lang::Mr => "mar",
+            Lang::Kn => "kan",
+            Lang::Ro => "ron",
+            Lang::Sl => "slv",
+            Lang::Hr => "hrv",
+            Lang::Sr => "srp",
+            Lang::Mk => "mkd",
+            Lang::Lt => "lit",
+            Lang::Lv => "lav",
+            Lang::Et => "est",
+            Lang::Ta => "tam",
+            Lang::Vi => "vie",
+            Lang::Ur => "urd",
+            Lang::Th => "tha",
+            Lang::Gu => "guj",
+            Lang::Uz => "uzb",
+            Lang::Pa => "pan",
+            Lang::Az => "aze",
+            Lang::Id => "ind",
+            Lang::Te => "tel",
+            Lang::Fa => "pes",
+            Lang::Ml => "mal",
+            Lang::Or => "ori",
+            Lang::My => "mya",
+            Lang::Ne => "nep",
+            Lang::Si => "sin",
+            Lang::Km => "khm",
+            Lang::Tk => "tuk",
+            Lang::Ak => "aka",
+            Lang::Zu => "zul",
+            Lang::Sn => "sna",
+            Lang::Af => "afr",
+            Lang::La => "lat",
+            Lang::Sk => "slk",
+            Lang::Ca => "cat",
+            Lang::Tl => "tgl",
+            Lang::Hy => "hye",
+        }
+    }
+}
+
 //todo: whatlang::Lang::from_code("eng").unwrap().eng_name()
 #[allow(unreachable_patterns)]
 #[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
@@ -316,7 +392,7 @@ pub trait TTSEngine {
 }
 
 pub trait PRNNService {
-    fn generate(&self, text: String, src_id: i64) -> Result<()>;
+    fn generate(&self, text: String, src_lang: Lang, src_id: i64) -> Result<()>;
     fn get_name(&self) -> String;
 }
 

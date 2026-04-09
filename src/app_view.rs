@@ -550,6 +550,7 @@ impl AppView {
         }
 
         let mut _col1_row2_prnn_but = button::Button::default().with_size(10, 10).with_label("Play");
+        //TODO! Play and Update buttons
         /*if let Ok(image) = PngImage::load(working_dir.join(r"icons\play.png").to_str().unwrap_or("")) {
             _col1_row2_prnn_but.set_image(Some(image));
             _col1_row2_prnn_but.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
@@ -557,7 +558,7 @@ impl AppView {
         _col1_row2_prnn_but.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::PRNNString());
+                    s.send(AppEvent::PRNNString(true));
                 }
         });
         
@@ -899,7 +900,7 @@ impl AppView {
         prnn_button_dict.set_callback({
             let s = app_sender;
             move |_| {
-                s.send(AppEvent::PRNNString());
+                s.send(AppEvent::PRNNString(false));
             }
         });
         

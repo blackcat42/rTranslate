@@ -1,7 +1,7 @@
 {
 
     //The following arrays determine the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting out an item will hide it from UI.
-    //WARN!: Setting the path field for items with the following uids will override their built-in services: tr_google, tr_google2, tr_deepl, dict_wiktionary_en, prnn_wiki
+    //WARN!: Setting the path field for items with the following uids will override their built-in services: tr_google, tr_google2, tr_deepl, dict_wiktionary_en, prnn_wiki, prnn_google
 
     //"uid" can only contain alphabetical characters, digits and underscores
     "translators": [
@@ -52,12 +52,27 @@
     ],
     "prnn_sources": [
         {
+            "uid": "prnn_google",
+            "name": "Google Pronunciations"
+        },
+        {
             "uid": "prnn_wiki",
             "name": "Wiktionary Pronunciations"
         }
     ],
 
-    "google_translate_api_key": null, //X-Goog-API-Key 
+    //"google_translate_api_key": null, //X-Goog-API-Key 
+    "google_translate_api_key": "AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520", //https://github.com/ssut/py-googletrans/issues/268#issuecomment-3220244991
+    
+    //PRONUNCIATIONS: English accents to download
+    "eng_accents": [
+        "us",
+        "gb",
+        "uk",
+        //"in" //Indian?
+    ],
+    "download_all_pronunciations": false, //dowload pronunciation in all available accents and languages, if possible
+
 
     /*"proxy": { //not impl yet
         "protocol": "http", //"http", "https", "soks4", "soks4a", "soks5"

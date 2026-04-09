@@ -1,4 +1,4 @@
-use crate::types::{AppEvent, PRNNService};
+use crate::types::{AppEvent, PRNNService, Lang};
 use std::{thread, time::Duration};
 use std::sync::{Arc };
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,7 +9,8 @@ use serde_json::Value;
 use wreq::{
     Client,
     Version,
-    header
+    header,
+    StatusCode
 };
 use wreq_util::{
     Emulation
@@ -38,7 +39,7 @@ impl PRNNService for WP {
         self.name.clone()
     }
     
-    fn generate(&self, text: String, src_id: i64) -> Result<()> {
+    fn generate(&self, text: String, src_lang: Lang, src_id: i64) -> Result<()> {
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
                 let app_sender = self.app_sender;
@@ -46,7 +47,7 @@ impl PRNNService for WP {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
 
-                    let filenames = send_pr_request(text.clone(), src_id);
+                    let filenames = send_pr_request(app_sender, text.clone(), src_lang, src_id);
                     match filenames {
                         Ok(p_files) => {
                             //dbg!(&p_file);
@@ -89,7 +90,7 @@ struct MediaItem {
     type: String
 }*/
 
-fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, src_id: i64) -> Result<Vec<String>> {
     
     //let req_string = format!("https://en.wiktionary.org/api/rest_v1/page/media-list/{}", selected_text.to_lowercase());
 
@@ -141,53 +142,88 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
 
         
         let req_string2 = format!("https://en.wiktionary.org/wiki/{}", selected_text.to_lowercase());
-        let resp_full_text = client.get(req_string2).send().await?.text().await?;
-
-
-        let working_dir = std::env::current_dir()?;
+        let resp = client.get(req_string2).send().await?;
+        let status = resp.status();
+        if status.is_success() {
+            let resp_full_text = resp.text().await?;
+            let working_dir = std::env::current_dir()?;
         
-        let item0 = regex::escape("upload.wikimedia.org/wikipedia/commons/");
-        let regex_string_audio = format!(r"(?i){item0}(./../?)([^/]+\.wav|[^/]+\.ogg)");
-        let re = regex::Regex::new(&regex_string_audio)?;
+            let item0 = regex::escape("upload.wikimedia.org/wikipedia/commons/");
+            let regex_string_audio = format!(r"(?i){item0}(./../?)([^/]+\.wav|[^/]+\.ogg)");
+            let re = regex::Regex::new(&regex_string_audio)?;
 
-        for caps in re.captures_iter(&resp_full_text) {
-            dbg!(&caps);
-            if let Some(inner_text) = caps.get(1) && let Some(text_filename) = caps.get(2) {
-                //adr
-                let infix = inner_text.as_str();
-                let flnm = text_filename.as_str();
-                let full_url = format!("https://upload.wikimedia.org/wikipedia/commons/{infix}{flnm}");
-                let filename = sanitize_filename::sanitize(flnm);
-                println!("{}", filename);
-                println!("{}", filename.ends_with(".ogg"));
-                if !filename.ends_with(".ogg") 
-                && !filename.ends_with(".mp3") 
-                && !filename.ends_with(".wav") {
-                    continue;
-                }
+            let matches: Vec<_> = re.captures_iter(&resp_full_text).collect();
+            let matches_count = matches.len();
+            for caps in matches {
+                dbg!(&caps);
+                if let Some(inner_text) = caps.get(1) && let Some(text_filename) = caps.get(2) {
+                    //adr
+                    let infix = inner_text.as_str();
+                    let flnm = text_filename.as_str();
+                    let full_url = format!("https://upload.wikimedia.org/wikipedia/commons/{infix}{flnm}");
+                    let filename = urlencoding::decode(flnm).unwrap_or(selected_text.to_lowercase().into());
+                    let filename = filename.into_owned();
+                    let filename = sanitize_filename::sanitize(&filename);
+                    println!("{}", filename);
+                    println!("{}", filename.ends_with(".ogg"));
+                    if !filename.ends_with(".ogg") 
+                    && !filename.ends_with(".mp3") 
+                    && !filename.ends_with(".wav") {
+                        continue;
+                    }
 
-                let audio_path = format!(r"tts_cache\{filename}");
-                let audio_path_full = working_dir.join(&audio_path);
-                if let Ok(exist) = audio_path_full.try_exists() && exist {
-                    arr_filenames.push(filename);
-                    continue;
-                } else {
-                    //https://wikitech.wikimedia.org/wiki/Robot_policy
-                    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
-                    let audio_resp = client.get(full_url).send().await?;
-                    println!("{}", audio_resp.status());
-                    if audio_resp.status().is_success() {
-                        let audio_bytes = audio_resp.bytes().await?;
-                        let mut file = File::create(&audio_path_full)?;
-                        file.write_all(&audio_bytes)?;
+                    //TODO: language detect
+                    let lowercase_filename = filename.to_lowercase();
+                    if !GLOBAL_SETTINGS.download_all_pronunciations {
+                        if !lowercase_filename.contains(src_lang.as_ref()) 
+                        && !lowercase_filename.contains(src_lang.code_3()) {
+                            continue;
+                        } else if src_lang.code_3() == "eng" 
+                        && !GLOBAL_SETTINGS.eng_accents.iter().any(|item| lowercase_filename.contains(item)) {
+                            continue;
+                        }
+                    }
+
+                    let status_str = format!("Downloading pronunciation files ({}/{})...", arr_filenames.len() + 1, matches_count);
+                    app_sender.send(AppEvent::SetStatus(status_str.as_str().into(), true, true));
+                    if arr_filenames.len() >= 10 {
+                        continue;
+                    }
+                    let audio_path = format!(r"tts_cache\{filename}");
+                    let audio_path_full = working_dir.join(&audio_path);
+                    if let Ok(exist) = audio_path_full.try_exists() && exist {
                         arr_filenames.push(filename);
+                        continue;
                     } else {
-                        //TODO! 429 Too Many Requests
-                        return Err(anyhow!("https error"));
+                        //https://wikitech.wikimedia.org/wiki/Robot_policy
+                        tokio::time::sleep(tokio::time::Duration::from_millis(5100)).await;
+                        let audio_resp = client.get(full_url).send().await?;
+                        println!("{}", audio_resp.status());
+                        if audio_resp.status().is_success() {
+                            let audio_bytes = audio_resp.bytes().await?;
+                            let mut file = File::create(&audio_path_full)?;
+                            file.write_all(&audio_bytes)?;
+                            arr_filenames.push(filename);
+                        } else {
+                            //TODO! 429 Too Many Requests
+                            match status {
+                                StatusCode::NOT_FOUND => {
+                                    continue;
+                                }
+                                code => {
+                                    return Err(anyhow!(code.to_string()))
+                                }
+                            } 
+                            //return Err(anyhow!(audio_resp.status().to_string()));
+                        }
                     }
                 }
             }
+            Ok(arr_filenames)
+        } else {
+            Err(anyhow!(status.to_string()))
         }
+        
 
         /*if arr.len() > 0 {
             for item in arr {
@@ -260,7 +296,6 @@ fn send_pr_request(selected_text: String, src_id: i64) -> Result<Vec<String>> {
         } else {
             return Err(anyhow!("error"));
         }*/
-        Ok(arr_filenames)
     });
 
 

@@ -487,10 +487,14 @@ impl AppState {
         }
     }
 
-    pub fn run_prnn(&mut self, index: i32) -> Result<()> {
+    pub fn run_prnn(&mut self, index: i32, force: bool) -> Result<()> {
         //let text = self.src_text_dict.clone();
         let (text, src_id, is_fav) = self.insert_src(&self.src_text_dict)?;
-        let tts_file = self.check_prnn_cache(src_id, &self.selected_prnn_source, index);
+        let tts_file = if !force {
+            self.check_prnn_cache(src_id, &self.selected_prnn_source, index)
+        } else {
+            Err(anyhow!("forced"))
+        };
 
         match tts_file {
             Ok(tr) => {
@@ -501,12 +505,16 @@ impl AppState {
                     self.app_sender.send(AppEvent::SetStatus("TTS error: text is too short".into(), false, true));
                     return Err(anyhow!("TTS error: text is too short"));
                 }
+                if text.chars().count() > GLOBAL_SETTINGS.dict_request_max_length {
+                    return Err(anyhow!("source text is too long"));
+                }
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, true));
                 if let Some(engine) = self.prnn_sources.get_mut(self.selected_prnn_source.clone().as_str()) {
                     let _ = engine.generate(
                         text.clone(), 
+                        self.selected_src.clone(),
                         src_id, 
                     );
                 } else {

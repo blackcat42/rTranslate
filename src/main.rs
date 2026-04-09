@@ -54,6 +54,7 @@ mod google_translate2;
 mod deepl_translate;
 mod wiktionary_en;
 mod prnn_wiki;
+mod prnn_google;
 mod nodejs_tts;
 mod user_dict;
 mod types;
@@ -79,6 +80,9 @@ struct Settings {
     pub dictionaries: Vec<DictOption>,
     pub tts_engines: Vec<TTSEngineOption>,
     pub prnn_sources: Vec<PRNNSourceOption>,
+
+    pub download_all_pronunciations: bool,
+    pub eng_accents: Vec<String>,
 
     pub google_translate_api_key: Option<String>,
 
@@ -345,6 +349,8 @@ fn main() {
         } else*/ 
         if value.uid == "prnn_wiki" {
             app_state.prnn_sources.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone())));
+        } else if value.uid == "prnn_google" {
+            app_state.prnn_sources.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone())));
         }
     }
     //app_state.prnn_sources.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));
@@ -628,9 +634,11 @@ fn main() {
             Some(AppEvent::TTString()) => {
                 let _ = app_state.run_tts();
             }
-            Some(AppEvent::PRNNString()) => {
+            Some(AppEvent::PRNNString(force)) => {
                 app_view.prnn_index = app_view.prnn_index + 1;
-                let _ = app_state.run_prnn(app_view.prnn_index);
+                if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {
+                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
+                }
             }
             Some(AppEvent::PRNNSave((src_id, prnn_source_uid, filename))) => {
                 let file = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
