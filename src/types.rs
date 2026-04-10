@@ -27,7 +27,7 @@ pub enum AppEvent {
 
     //TODO:
     SaveTranslation((i64, String, String, Lang, Lang, String)),
-    SaveDictEntry((i64, String, String, String)),
+    SaveDictEntry((i64, String, String, String, Option<Lang>, Option<Lang>)),
     PRNNSave((i64, String, String)),
     ToggleFav(Option<String>, bool),
 
@@ -421,8 +421,8 @@ pub struct UIStateDict {
     pub src_text_dict: String,
     pub dict_uid: Option<String>,
     pub dict_name: Option<String>, 
-    //pub src: Lang, 
-    //pub target: Lang, 
+    pub src: Option<Lang>,
+    pub target: Option<Lang>,
     pub dict_text: Option<String>,
     pub is_fav: Option<bool>
 }

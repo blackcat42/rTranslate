@@ -512,8 +512,8 @@ fn main() {
                 let _ = app_state.update_history_browser();
                 
             }
-            Some(AppEvent::SaveDictEntry((src_id, _src_text, dict, dict_text))) => {
-                let _ = app_state.insert_dict_entry(src_id, dict.as_str(), dict_text.as_str());
+            Some(AppEvent::SaveDictEntry((src_id, _src_text, dict, dict_text, src_lang, target_lang))) => {
+                let _ = app_state.insert_dict_entry(src_id, dict.as_str(), dict_text.as_str(), src_lang, target_lang);
                 let _ = app_state.update_history_browser(); 
             }
 
@@ -609,7 +609,7 @@ fn main() {
             Some(AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf)) => 'request_dict_arm: {
                 //app_view.clear_ui(true);
                 if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
-                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_dict_buf.text(), true) {
+                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), true) {
                         app_view.set_status(set_src_error.to_string().as_str(), true, true);
                         break 'request_dict_arm;
                     }

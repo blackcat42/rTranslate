@@ -50,18 +50,18 @@ impl Dictionary for WDEn {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
 
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone());
+                    let transl_result = send_tr_request(text.clone());
                     match transl_result {
                         Ok(t_text) => {
-                            app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), uid.clone(), t_text.clone())));
+                            app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), uid.clone(), t_text.clone(), None, None)));
 
                             app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                                 src_id: Some(src_id),
                                 src_text_dict: text.clone(),
                                 dict_uid: Some(uid), 
                                 dict_name: Some(name), 
-                                //src: src_lang.clone(), 
-                                //target: target_lang.clone(), 
+                                src: None, 
+                                target: None, 
                                 dict_text: Some(t_text),
                                 is_fav: None
                             }, false));
@@ -86,7 +86,7 @@ impl Dictionary for WDEn {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> Result<String> {
+fn send_tr_request(selected_text: String) -> Result<String> {
     //let mut response = "".to_string();
 
     let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();

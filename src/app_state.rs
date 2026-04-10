@@ -199,8 +199,8 @@ impl AppState {
                 src_text_dict: self.src_text_dict.clone(),
                 dict_uid: None,
                 dict_name: None,
-                //src: src_lang.clone(), 
-                //target: target_lang.clone(), 
+                src: None, 
+                target: None, 
                 dict_text: None,
                 is_fav: Some(is_fav),
             };
@@ -375,7 +375,7 @@ impl AppState {
         let dict_entry = if force {
             None
         } else {
-            self.check_dict_cache(self.src_id, &self.selected_dict)
+            self.check_dict_cache(self.src_id, &self.selected_dict, src_lang.as_ref(), target_lang.as_ref())
         };
 
         match dict_entry {
@@ -391,9 +391,9 @@ impl AppState {
                     src_text_dict: selected_text,
                     dict_uid: Some(dict_uid), 
                     dict_name: Some(dict_name), 
-                    //src: src_lang.clone(), 
-                    //target: target_lang.clone(), 
-                    dict_text: Some(t),
+                    src: t.1.clone(), 
+                    target: t.2.clone(), 
+                    dict_text: Some(t.0),
                     is_fav: None,
                 }, false));
             }
@@ -600,7 +600,7 @@ impl AppState {
         }
     }
 
-    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str) -> Option<String> {
+    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str, src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return None;
@@ -608,13 +608,30 @@ impl AppState {
         if let Some(db) = db_ref {
             let transl = db.query_row(
                 "SELECT text FROM dict 
-                 WHERE src_id = ?1 AND dict_uid = ?2",
-                params![src_id, selected_dict],
+                 WHERE src_id = ?1 AND dict_uid = ?2 AND src = ?3 AND target = ?4",
+                params![src_id, selected_dict, src_lang, target_lang],
                 |row| {
                     let text = row.get(0)?;
-                    Ok(text)
+                    Ok((
+                        text, 
+                        Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
+                        Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
+                    ))
                 },
             );
+            let transl = if transl.is_ok() {
+                transl
+            } else {
+                db.query_row(
+                    "SELECT text FROM dict 
+                     WHERE src_id = ?1 AND dict_uid = ?2 AND src is NULL AND target is NULL",
+                    params![src_id, selected_dict],
+                    |row| {
+                        let text = row.get(0)?;
+                        Ok((text, None, None))
+                    },
+                )
+            };
 
             match transl {
                 Ok(t) => {
@@ -682,7 +699,7 @@ impl AppState {
             Ok(0)
         }
     }
-    pub fn insert_dict_entry(&self, src_id: i64, selected_dict: &str, text: &str) -> Result<i64> {
+    pub fn insert_dict_entry(&self, src_id: i64, selected_dict: &str, text: &str, src: Option<Lang>, target: Option<Lang>) -> Result<i64> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Ok(0);
@@ -691,10 +708,18 @@ impl AppState {
             //let selected_translator = selected_translator;
             //let src = src.as_ref();
             //let target = target.as_ref();
-            db.execute(
-                "REPLACE INTO dict (src_id, dict_uid, text) VALUES (?1, ?2, ?3)",
-                params![src_id, selected_dict, text],
-            )?;
+            if let Some(src) = src && let Some(target) = target {
+                db.execute(
+                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![src_id, selected_dict, src.as_ref(), target.as_ref(), text],
+                )?;
+            } else {
+                db.execute(
+                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, NULL, NULL, ?3)",
+                    params![src_id, selected_dict, text],
+                )?;
+            }
+            
             println!("dict inserted/replaced");
             Ok(db.last_insert_rowid())//TODO: RETURNING clause
         } else {
@@ -802,8 +827,8 @@ impl AppState {
                     src_text_dict: text.to_string(),
                     dict_uid: None,
                     dict_name: None,
-                    //src: src_lang.clone(), 
-                    //target: target_lang.clone(), 
+                    src: None,
+                    target: None,
                     dict_text: None,
                     is_fav: Some(!is_fav),
                 };
@@ -885,6 +910,8 @@ impl AppState {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     text TEXT NOT NULL,
                     dict_uid TEXT NOT NULL,
+                    src TEXT,
+                    target TEXT,
                     src_id INTEGER NOT NULL REFERENCES src(id) ON DELETE CASCADE
                 )",
                 (),

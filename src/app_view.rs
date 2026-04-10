@@ -456,11 +456,11 @@ impl AppView {
             );
         }
 
-        let mut run_transl_btn_main = button::Button::default().with_label("Translate").with_size(20, 20);
+        let mut run_transl_btn_main = button::Button::default().with_label("Translate / Refresh").with_size(20, 20);
         run_transl_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::Translate(false, false, true));
+                    s.send(AppEvent::Translate(false, true, true));
                 }
         });
         col_left_row_tr.fixed(&run_transl_btn_main, 150);
@@ -490,7 +490,7 @@ impl AppView {
         run_dict_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::RequestDictEntry(false, false, true));
+                    s.send(AppEvent::RequestDictEntry(false, true, true));
                 }
         });
         col_left_row_dict.fixed(&run_dict_btn_main, 150);
@@ -549,12 +549,12 @@ impl AppView {
             );
         }
 
-        let mut _col1_row2_prnn_but = button::Button::default().with_size(10, 10).with_label("Play");
+        let mut _col1_row2_prnn_but = button::Button::default().with_size(10, 10);
         //TODO! Play and Update buttons
-        /*if let Ok(image) = PngImage::load(working_dir.join(r"icons\play.png").to_str().unwrap_or("")) {
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\download.png").to_str().unwrap_or("")) {
             _col1_row2_prnn_but.set_image(Some(image));
             _col1_row2_prnn_but.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }*/
+        }
         _col1_row2_prnn_but.set_callback({
                 let s = app_sender;
                 move |_b| {
@@ -563,7 +563,8 @@ impl AppView {
         });
         
         col_left_row_tts.fixed(&_col1_row1_tts_but, 55); //25
-        col_left_row_tts.fixed(&_col1_row2_prnn_but, 55);
+        col_left_row_tts.fixed(&_col1_row2_prnn_but, 25);
+        //col_left_row_tts.fixed(&_col1_row2_prnn_refresh_but, 25);
 
         col_left_row_tts.set_margins(0,15,0,0);
         main_controls_left.fixed(&col_left_row_tts, 40);
@@ -576,13 +577,13 @@ impl AppView {
             fav_button_main.set_image(Some(image));
             fav_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         }
-        let mut refresh_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Refresh");
+        /*let mut refresh_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Refresh");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
             refresh_button_main.set_image(Some(image));
             refresh_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
-        }
+        }*/
         col_left_row_fav.fixed(&fav_button_main, 135);
-        col_left_row_fav.fixed(&refresh_button_main, 100);
+        //col_left_row_fav.fixed(&refresh_button_main, 100);
         col_left_row_fav.set_margins(0,15,0,0);
         main_controls_left.fixed(&col_left_row_fav, 40);
         col_left_row_fav.end();
@@ -928,13 +929,13 @@ impl AppView {
                 s.send(AppEvent::RequestDictEntry(false, true, false));
             }
         });
-        refresh_button_main.set_callback({
+        /*refresh_button_main.set_callback({
             let s = app_sender;
             move |_button| {
                 s.send(AppEvent::Translate(true, true, false));
                 s.send(AppEvent::RequestDictEntry(true, true, false));
             }
-        });
+        });*/
         open_button.set_callback({
             let s = app_sender;
             let mut main_win = main_win.clone();
@@ -1119,7 +1120,7 @@ impl AppView {
 
     pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
         println!("update_ui {is_new_source}");
-        let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, dict_text, is_fav} = state;
+        let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, src, target, dict_text, is_fav} = state;
 
         if is_new_source {  
             self.src_dict_buf.set_text(format!("{}\n", &src_text_dict).as_str()); //new line is req bc fltk widget bug
@@ -1216,7 +1217,15 @@ impl AppView {
         //let title_text = format!("{}->{} ({})", from.as_ref(), to.as_ref(), dict_name);
 
         if let Some(dict_name) = dict_name {
-            let title_text = format!("\"{}\" - {}", &self.src_dict, dict_name);
+            let mut title_text = format!("\"{}\" - {}", &self.src_dict, dict_name);
+            if let Some(src) = src {
+                title_text.push(' ');
+                title_text.push_str(src.as_ref());
+            }
+            if let Some(target) = target {
+                title_text.push_str(" -> ");
+                title_text.push_str(target.as_ref());
+            }
             self.title_frame_dict.set_label(&title_text);
         }
 
