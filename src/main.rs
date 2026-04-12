@@ -53,6 +53,7 @@ mod google_translate;
 mod google_translate2;
 mod deepl_translate;
 mod wiktionary_en;
+mod google_dict;
 mod prnn_wiki;
 mod prnn_google;
 mod nodejs_tts;
@@ -327,6 +328,8 @@ fn main() {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
         } else if value.uid == "dict_wiktionary_en" {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone())));
+        } else if value.uid == "dict_google" {
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone())));
         }
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));

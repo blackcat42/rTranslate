@@ -1218,13 +1218,17 @@ impl AppView {
 
         if let Some(dict_name) = dict_name {
             let mut title_text = format!("\"{}\" - {}", &self.src_dict, dict_name);
-            if let Some(src) = src {
-                title_text.push(' ');
-                title_text.push_str(src.as_ref());
-            }
-            if let Some(target) = target {
-                title_text.push_str(" -> ");
-                title_text.push_str(target.as_ref());
+            if src.is_some() || target.is_some() {
+                title_text.push_str(" (");
+                if let Some(src) = src {
+                    title_text.push(' ');
+                    title_text.push_str(src.as_ref());
+                }
+                if let Some(target) = target {
+                    title_text.push_str("->");
+                    title_text.push_str(target.as_ref());
+                }
+                title_text.push(')');
             }
             self.title_frame_dict.set_label(&title_text);
         }

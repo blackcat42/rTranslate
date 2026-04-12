@@ -624,7 +624,7 @@ impl AppState {
             } else {
                 db.query_row(
                     "SELECT text FROM dict 
-                     WHERE src_id = ?1 AND dict_uid = ?2 AND src is NULL AND target is NULL",
+                     WHERE src_id = ?1 AND dict_uid = ?2 AND src = 'undefined' AND target = 'undefined'",
                     params![src_id, selected_dict],
                     |row| {
                         let text = row.get(0)?;
@@ -715,7 +715,7 @@ impl AppState {
                 )?;
             } else {
                 db.execute(
-                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, NULL, NULL, ?3)",
+                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, 'undefined', 'undefined', ?3)",
                     params![src_id, selected_dict, text],
                 )?;
             }
@@ -907,12 +907,13 @@ impl AppState {
 
             db.execute(
                 "CREATE TABLE IF NOT EXISTS dict (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    src_id INTEGER NOT NULL,
                     text TEXT NOT NULL,
                     dict_uid TEXT NOT NULL,
-                    src TEXT,
-                    target TEXT,
-                    src_id INTEGER NOT NULL REFERENCES src(id) ON DELETE CASCADE
+                    src TEXT NOT NULL,
+                    target TEXT NOT NULL,
+                    PRIMARY KEY (src_id, dict_uid, src, target)
+                    FOREIGN KEY (src_id) REFERENCES src(id) ON DELETE CASCADE
                 )",
                 (),
             )?;
