@@ -18,9 +18,9 @@ IF %ERRORLEVEL% EQU 1 (
 
 CHOICE /C YN /M "Download bergamot models for local translation? [Y/N]"
 IF %ERRORLEVEL% EQU 1 (
-    cd .\bergamot
+    cd .\extensions\tr_bergamot
     deno install_models.js
-    cd ..
+    cd ..\..
 )
 
 CHOICE /C YN /M "Clear deno cache? [Y/N]"

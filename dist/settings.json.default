@@ -7,34 +7,65 @@
     "translators": [
         {
             "uid": "tr_google",
-            "name": "Google",
+            "name": "Google (legacy)",
             //"use_proxy": false
         },
         {
             "uid": "tr_google2",
-            "name": "Google2",
+            "name": "Google",
             //"use_proxy": false
-        },
-        {
-            "uid": "tr_bergamot",
-            "name": "Bergamot",
-            "path": "bergamot\\app.cjs"
         },
         {
             "uid": "tr_deepl",
             "name": "DeepL",
             //"use_proxy": false
         },
+        {
+            "uid": "tr_bergamot",
+            "name": "Bergamot",
+
+            //"command": "deno", //if deno installed and in PATH
+            "command": ".\\deno", //if deno.exe is placed in the same directory as rTranslate.exe
+
+            "args": [
+                "--allow-read=.",
+                "--deny-net",
+                "app.cjs"
+            ],
+            "reload_if_lang_changed": true
+        },
         /*{
-            "uid": "tr_node_example",
-            "name": "Example",
-            "path": "example_translator\\index.cjs"
+            "uid": "tr_js_example",
+            "name": "JS example",
+            //"command": "deno", //if deno installed and in PATH
+            "command": ".\\deno", //if deno.exe is placed in the same directory as rTranslate.exe
+
+            //working directory of the sideprocess always sets as ".\extensions\{service_uid}\"
+            "args": [
+                "--allow-read=.",
+                "--deny-net",
+                "index.cjs"
+            ],
+            "reload_if_lang_changed": false
         },*/
+        /*{
+            "uid": "tr_c_example",
+            "name": "C example",
+            "command": ".\\extensions\\tr_c_example\\app",
+            "args": [
+            ],
+            "reload_if_lang_changed": false
+        },*/
+
     ],
     "dictionaries": [
         {
             "uid": "dict_wiktionary_en",
             "name": "English Wiktionary",
+        },
+        {
+            "uid": "dict_google",
+            "name": "Google",
         },
         /*{
             "uid": "dict_example_dsl",

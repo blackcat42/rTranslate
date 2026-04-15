@@ -1,0 +1,1 @@
+clang --target=i686-pc-windows-msvc -s tr_service.c -o app.exe

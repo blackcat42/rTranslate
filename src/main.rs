@@ -128,7 +128,9 @@ struct Settings {
 struct TranslatorOption {
     pub uid: String,
     pub name: String,
-    pub path: Option<String>,
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub reload_if_lang_changed: Option<bool>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct DictOption {
@@ -306,8 +308,11 @@ fn main() {
             app_panic_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
-        if let Some(path) = &value.path && path.chars().count() > 0 {
-            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
+        if let Some(command) = &value.command 
+        && command.chars().count() > 0
+        && let Some(args) = &value.args 
+        && let Some(reload) = &value.reload_if_lang_changed {
+            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), reload.clone() )));
         } else if value.uid == "tr_google" {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone())));
         } else if value.uid == "tr_google2" {
@@ -566,6 +571,7 @@ fn main() {
                     }
                     match get_selected_text() {
                         Ok(selected_text) => {
+                            //TODO!!! use unicode_segmentation::UnicodeSegmentation; selected_text.trim().unicode_words().count() < 2
                             if !selected_text.trim().contains(' ') 
                                && !is_dict 
                                && GLOBAL_SETTINGS.single_word_to_dict {

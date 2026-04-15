@@ -177,6 +177,31 @@ async function onRuntimeInitialized() {
     data = data.toString();
     data = data.replace('<ENDOFLINE>', '\n');
     //if (count < 1) return;
+    const regex_s = /<SRC_LANG=(..)>/;
+    const match_s = data.match(regex_s);
+    let srcLang = match_s ? match_s[1] : null;
+    if (match_s) {
+        data = data.replace(match_s[0], "");
+    }
+    const regex_a = /<SRC_LANG=auto>/;
+    const match_a = data.match(regex_a);
+    if (match_a) {
+        data = data.replace(match_a[0], "");
+    }
+    const regex_t = /<TARGET_LANG=(..)>/;
+    const match_t = data.match(regex_t);
+    let targetLang = match_t ? match_t[1] : null;
+    if (match_t) {
+        data = data.replace(match_t[0], "");
+    }
+
+    const regex_id = /<SRC_ID=(\d+)>/;
+    const match_id = data.match(regex_id);
+    let src_id = match_id ? match_id[1] : null;
+    if (match_id) {
+        data = data.replace(match_id[0], "");
+    }
+    
 
     input.push_back(data);
     
@@ -192,11 +217,18 @@ async function onRuntimeInitialized() {
     let aaa = "";
     for (let i = 0; i < output.size(); ++i) {
       // Get output from std::vector<Response>.
-      const translation = output.get(i).getTranslatedText();
+      let translation = output.get(i).getTranslatedText();
       aaa += translation;
       // Print raw translation for inspection.
       //console.log(output)
       //process.stdout.write(translation + "\n")
+      let src_id_str = "";
+      if (src_id !== null) {
+        src_id_str = '<SRC_ID=' + src_id + '>';
+      } else {
+        process.exit(53);
+      }
+      translation = src_id_str + '<SRC_LANG_DETECTED=undefined>' + translation;
       process.stdout.write(translation.replace(/\r\n|\r|\n/gm, '<ENDOFLINE>') + "\n")
     }
     //process.stdout.write(aaa.replace(/[\r\n]/gm, '') + "\n")

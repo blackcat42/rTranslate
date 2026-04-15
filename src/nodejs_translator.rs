@@ -16,35 +16,37 @@ use std::io::{BufRead, BufReader};
 use std::convert::AsRef;
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
+use std::str::FromStr;
 
 //TODO: catch thread panics
 
 #[allow(clippy::type_complexity)]
 pub struct NT {
-    tx: mpsc::Sender<Option<(String, i64)>>,
-    shared_receiver: Arc<Mutex<Receiver<Option<(String, i64)>>>>,
+    tx: mpsc::Sender<Option<(String, i64, Lang, Lang)>>,
+    shared_receiver: Arc<Mutex<Receiver<Option<(String, i64, Lang, Lang)>>>>,
     is_running: Arc<AtomicBool>,
     current_src_id: Arc<AtomicI64>,
     current_src_text: Arc<RwLock<String>>,
     s: fltk::app::Sender<AppEvent>,
     uid: String,
     name: String,
-    entry_point: String,
+    command: String,
+    args: Vec<String>,
     src_lang: Lang,
     target_lang: Lang,
+    reload_if_lang_changed: bool,
 }
 
 impl NT {
-    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, entry_point: String) -> Self {
-        let (tx, rx) = mpsc::channel::<Option<(String, i64)>>();
+    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>, reload_if_lang_changed: bool) -> Self {
+        let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
         let shared_receiver = Arc::new(Mutex::new(rx));
         let is_running = Arc::new(AtomicBool::new(false));
         let current_src_id = Arc::new(AtomicI64::new(0));
         let current_src_text = Arc::new(RwLock::new(String::from("")));
-        //let uid = "brgmt".to_string();
         let src_lang = Lang::En;
         let target_lang = Lang::Ru;
-        Self { tx, shared_receiver, is_running, current_src_id, current_src_text, s, uid, name, entry_point, src_lang, target_lang}
+        Self { tx, shared_receiver, is_running, current_src_id, current_src_text, s, uid, name, command, args, src_lang, target_lang, reload_if_lang_changed}
     }
 }
 
@@ -60,9 +62,10 @@ impl Translator for NT {
         println!("old lng: {} new lng: {}", self.src_lang.as_ref(), src_lang.as_ref());
 
         //fallback if src language changed, but process with specific language model is still running
-        let is_reload_needed = false;
-        if (self.src_lang != src_lang || self.target_lang != target_lang) 
-            && self.is_running.load(Ordering::Relaxed) {
+
+        if self.reload_if_lang_changed
+        && (self.src_lang != src_lang || self.target_lang != target_lang) 
+        && self.is_running.load(Ordering::Relaxed) {
             self.terminate();
         }
         self.src_lang = src_lang;
@@ -74,13 +77,13 @@ impl Translator for NT {
             let is_running = Arc::clone(&self.is_running);
             let current_src_id = Arc::clone(&self.current_src_id);
             let current_src_text = Arc::clone(&self.current_src_text);
-            let selected_text2 = selected_text.clone();
             let s2 = self.s;
             let tx2 = self.tx.clone();
 
             let src_lang = self.src_lang.clone();
             let target_lang = self.target_lang.clone();
-            let entry_point = self.entry_point.clone();
+            let command = self.command.clone();
+            let args = self.args.clone();
             let uid = self.uid.clone();
             let service_name = self.get_name();
 
@@ -91,13 +94,13 @@ impl Translator for NT {
                         Arc::clone(&is_running), 
                         s2, 
                         tx2,
-                        selected_text2, 
                         shared_receiver, 
                         Arc::clone(&current_src_id), 
                         Arc::clone(&current_src_text),
                         src_lang, 
                         target_lang, 
-                        entry_point, 
+                        command, 
+                        args,
                         uid,
                         service_name
                     );
@@ -115,18 +118,14 @@ impl Translator for NT {
                         },
                         Err(_e) => {
                             s2.send(AppEvent::SetReady(Some("Error: nodejs thread panic".to_string()), false));
-                            //s2.send(AppEvent::SetStatus("Error: nodejs thread panic".into(), true, false));
                             is_running.store(false, Ordering::Relaxed);
                         },
                     };
                 }
             );
-            let _ = self.tx.send(Some((selected_text.clone(), src_id)));
+            let _ = self.tx.send(Some((selected_text.clone(), src_id, self.src_lang.clone(), self.target_lang.clone() )));
         } else {
-            //println!("is_brgmt_running");
-            if !is_reload_needed {
-                let _ = self.tx.send(Some((selected_text.clone(), src_id)));
-            }
+            let _ = self.tx.send(Some((selected_text.clone(), src_id, self.src_lang.clone(), self.target_lang.clone() )));
         }
     }
 
@@ -147,14 +146,14 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 fn run_node_thread(
     is_running: Arc<AtomicBool>,
     s: fltk::app::Sender<AppEvent>,
-    tx: mpsc::Sender<Option<(String, i64)>>,
-    _text: String,
-    cloned_receiver: Arc<Mutex<Receiver<Option<(String, i64)>>>>,
+    tx: mpsc::Sender<Option<(String, i64, Lang, Lang)>>,
+    cloned_receiver: Arc<Mutex<Receiver<Option<(String, i64, Lang, Lang)>>>>,
     current_src_id: Arc<AtomicI64>,
     current_src_text:Arc<RwLock<String>>,
     src_lang: Lang,
     target_lang: Lang,
-    entry_point: String,
+    command: String,
+    args: Vec<String>,
     service_uid: String,
     service_name: String
 ) -> thread::JoinHandle<Result<()>> {
@@ -168,49 +167,35 @@ fn run_node_thread(
         //let tx = tx;
 
         move || {
-            let full_path = working_dir.join(entry_point.as_str());
-            let directory = &full_path.parent().unwrap();
+            //let full_path = working_dir.join(entry_point.as_str());
+            let directory = working_dir.join(&format!("extensions\\{service_uid}"));
             let mut child;
             let src_lang_str = src_lang.as_ref();
             let target_lang_str = target_lang.as_ref();
 
-            if which(r".\deno").is_ok() {
-                child = Command::new(working_dir.join(r".\deno"))
-                    .arg("--allow-read=.")
-                    .arg("--deny-net")
-                    //.arg("--allow-write=.")
-                    .arg(&full_path)
-                    .arg(format!("--src={src_lang_str}"))
-                    .arg(format!("--target={target_lang_str}"))
-                    .creation_flags(CREATE_NO_WINDOW)
-                    .current_dir(directory)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn().expect("Failed to spawn child process");
-            } else if which("deno").is_ok() {
-                child = Command::new("deno")
-                    .arg("--allow-read=.")
-                    .arg("--deny-net")
-                    //.arg("--allow-write=.")
-                    .arg(&full_path)
-                    .arg(format!("--src={src_lang_str}"))
-                    .arg(format!("--target={target_lang_str}"))
-                    .creation_flags(CREATE_NO_WINDOW)
-                    .current_dir(directory)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn().expect("Failed to spawn child process");
-            } /*TODO: else if which("node").is_ok() {
-                child = Command::new("node")
-                    .arg(working_dir.join(r"bergamot\app.cjs"))
-                    .arg(format!("--src={src_lang_str}"))
-                    .arg(format!("--target={target_lang2}"))
-                    .creation_flags(CREATE_NO_WINDOW)
-                    .current_dir(working_dir.join("bergamot"))
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn().expect("Failed to spawn child process");
-            } */else {
+            if which(&command).is_ok() {
+                if command.starts_with(".\\") {
+                    child = Command::new(working_dir.join(&command))
+                        .args(args)
+                        .arg(format!("--src={src_lang_str}"))
+                        .arg(format!("--target={target_lang_str}"))
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .current_dir(directory)
+                        .stdin(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn().expect("Failed to spawn child process");
+                } else {
+                    child = Command::new(&command)
+                        .args(args)
+                        .arg(format!("--src={src_lang_str}"))
+                        .arg(format!("--target={target_lang_str}"))
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .current_dir(directory)
+                        .stdin(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn().expect("Failed to spawn child process");
+                };  
+            } else {
                 s.send(AppEvent::SetReady(Some("error".to_string()), false));
                 panic!("");
             }
@@ -225,29 +210,61 @@ fn run_node_thread(
                 let current_src_text: Arc<RwLock<String>> = Arc::clone(&current_src_text);
                 let name = service_name.clone();
                 let is_running = is_running.clone();
+                let mut src_lang = src_lang.clone();
+                let mut target_lang = target_lang.clone();
                 move || {
                     let reader = BufReader::new(stdout);
                     for line in reader.lines() {
                         let service_uid = service_uid.clone();
                         if let Ok(l) = line {
                             println!("Child says: {}", l.len());
+                            println!("Child says: {}", l.clone());
                             if l.len() > 2 {
                                 let src_text = current_src_text.read().unwrap();
                                 //let src_text = *src_text;
                                 let src_id = current_src_id.load(Ordering::Relaxed);
                                 //one line - one response; inner newlines have been temporarily converted into <ENDOFLINE> tokens
-                                let l2 = l.replace("<ENDOFLINE>", "\n");
-                                s.send(AppEvent::SaveTranslation((src_id, src_text.clone(), service_uid.clone(), src_lang.clone(), target_lang.clone(), l2.to_string())));
-                                s.send(AppEvent::UpdateUi(UIState {
-                                    src_text: src_text.clone(),
-                                    tr_uid: Some(service_uid), 
-                                    translator: Some(name.clone()), 
-                                    src: Some(src_lang.clone()), 
-                                    target: Some(target_lang.clone()), 
-                                    translation_text: Some(l2.to_string()),
-                                    is_fav: None
-                                }, false));
-                                // + "\n" 
+                                let mut l2 = l.replace("<ENDOFLINE>", "\n");
+
+                                let mut response_src_id: Option<i64> = None;
+                                let regex_string = format!(r"<SRC_ID=(\d+)>");
+                                let re = regex::Regex::new(&regex_string).unwrap();
+                                if let Some(caps) = re.captures(&l2) {
+                                    if let Some(matched_group) = caps.get(1) {
+                                        response_src_id = Some(matched_group.as_str().parse::<i64>().unwrap());
+                                        let full_match = caps.get(0).unwrap().as_str();
+                                        l2 = l2.replacen(full_match, "", 1);
+                                    }
+                                }
+                                
+
+                                let mut src_lang_detected: Option<String> = None;
+                                let regex_string = format!(r"<SRC_LANG_DETECTED=(..|auto|null|undefined)>");
+                                let re = regex::Regex::new(&regex_string).unwrap();
+                                if let Some(caps) = re.captures(&l2) {
+                                    if let Some(matched_group) = caps.get(1) {
+                                        src_lang_detected = Some(matched_group.as_str().to_string());
+                                        let full_match = caps.get(0).unwrap().as_str();
+                                        l2 = l2.replacen(full_match, "", 1);
+                                    }
+                                }
+                                if let Some(lng) = src_lang_detected && let Ok(detected_lng) = Lang::from_str(&lng) {
+                                    src_lang = detected_lng;
+                                }
+
+                                if let Some(id) = response_src_id && id == src_id {
+                                    s.send(AppEvent::SaveTranslation((src_id, src_text.clone(), service_uid.clone(), src_lang.clone(), target_lang.clone(), l2.to_string())));
+                                    s.send(AppEvent::UpdateUi(UIState {
+                                        src_text: src_text.clone(),
+                                        tr_uid: Some(service_uid), 
+                                        translator: Some(name.clone()), 
+                                        src: Some(src_lang.clone()), 
+                                        target: Some(target_lang.clone()), 
+                                        translation_text: Some(l2.to_string()),
+                                        is_fav: None
+                                    }, false));
+                                    // + "\n" 
+                                }
                             }        
                         }
                     }
@@ -266,11 +283,14 @@ fn run_node_thread(
                         match transl_request {
                             Ok(res) => {
                                 match res {
-                                    Some((text, src_id)) => {
-                                        current_src_id.store(src_id, Ordering::Relaxed);
+                                    Some((text, src_id, src_lng, target_lng)) => {
+                                        current_src_id.store(src_id.clone(), Ordering::Relaxed);
                                         let mut data = current_src_text.write().unwrap();
                                         *data = text.clone();
+                                        let src_lng = src_lng.as_ref();
+                                        let target_lng = target_lng.as_ref();
 
+                                        let text = format!("<SRC_ID={src_id}><SRC_LANG={src_lng}><TARGET_LANG={target_lng}>{text}");
                                         let text = text.replace("\r", "").replace("\n", "<ENDOFLINE>");
                                         if let Err(e) = stdin.write_all(text.as_bytes()) {
                                             is_running.store(false, Ordering::Relaxed);

@@ -20,7 +20,7 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-/dist/bergamot/models/
+/dist/extensions/tr_bergamot/models/
 /dist/kokoro/models/onnx-community/Kokoro-82M-v1.0-ONNX/onnx/
 /dist/kokoro/node_modules/
 /dist/dictionaries/
