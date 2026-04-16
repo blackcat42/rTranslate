@@ -80,7 +80,7 @@ struct Settings {
     pub translators: Vec<TranslatorOption>,
     pub dictionaries: Vec<DictOption>,
     pub tts_engines: Vec<TTSEngineOption>,
-    pub prnn_sources: Vec<PRNNSourceOption>,
+    pub prnn_services: Vec<PRNNSourceOption>,
 
     pub download_all_pronunciations: bool,
     pub eng_accents: Vec<String>,
@@ -102,7 +102,7 @@ struct Settings {
     pub dict_hotkey: Option<String>,
     pub single_word_to_dict: bool,
 
-    pub nodejs_unload_timeout: u64,
+    pub ext_service_unload_timeout: u64,
     pub http_throttling: f64,
     pub http_request_timeout: u64,
 
@@ -143,7 +143,8 @@ struct DictOption {
 struct TTSEngineOption {
     pub uid: String,
     pub name: String,
-    pub path: Option<String>,
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
     pub voices: Vec<String>
 }
 #[derive(Debug, Deserialize, Serialize)]
@@ -296,7 +297,7 @@ fn main() {
         translators: HashMap::new(),
         dictionaries: HashMap::new(),
         tts_engines: HashMap::new(),
-        prnn_sources: HashMap::new(),
+        prnn_services: HashMap::new(),
     };
     let _ = app_state.init_db();
 
@@ -345,23 +346,25 @@ fn main() {
             panic!("Error");
         }
 
-        if let Some(path) = &value.path && path.chars().count() > 0 {
+        if let Some(command) = &value.command 
+        && command.chars().count() > 0
+        && let Some(args) = &value.args {
             dbg!(value);
-            app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), path.clone())));
+            app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone())));
         }
     }
     
-    for value in GLOBAL_SETTINGS.prnn_sources.iter() {
+    for value in GLOBAL_SETTINGS.prnn_services.iter() {
         /*if let Some(path) = &value.path && path.chars().count() > 0 {
             //
         } else*/ 
         if value.uid == "prnn_wiki" {
-            app_state.prnn_sources.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone())));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone())));
         } else if value.uid == "prnn_google" {
-            app_state.prnn_sources.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone())));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone())));
         }
     }
-    //app_state.prnn_sources.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));
+    //app_state.prnn_services.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));
 
     let _ = app_state.update_history_browser();
     let _ = app_state.update_fav_browser();
@@ -388,7 +391,7 @@ fn main() {
         }).clone()
     ));
     app_sender.send(AppEvent::SetPRNNEngine(
-        GLOBAL_SETTINGS.prnn_sources.get(0).unwrap_or_else(|| {
+        GLOBAL_SETTINGS.prnn_services.get(0).unwrap_or_else(|| {
             app_panic_message("Failed to parse selected_prnn_source");
             panic!("Error");
         }).uid.clone()
@@ -491,7 +494,7 @@ fn main() {
             Some(AppEvent::SetPRNNEngine(prnn)) => {
                 app_state.selected_prnn_source = prnn.clone();
 
-                if let Some(prnn_struct) = app_state.prnn_sources.get(prnn.as_str()) {
+                if let Some(prnn_struct) = app_state.prnn_services.get(prnn.as_str()) {
                     let prnn_name = prnn_struct.get_name();
                     app_view.set_prnn_service(&prnn_name);
                 }

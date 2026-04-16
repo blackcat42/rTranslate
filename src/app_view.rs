@@ -534,7 +534,7 @@ impl AppView {
 
         let mut prnn_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("Pronunciation:").with_align(fltk::enums::Align::TopLeft);
 
-        for qwe in GLOBAL_SETTINGS.prnn_sources.iter() {
+        for qwe in GLOBAL_SETTINGS.prnn_services.iter() {
             let name = format!("{}", &*qwe.name);
             prnn_choice.add(
                 &name,

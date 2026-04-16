@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as https from 'node:https';
 
 function run() {
-    const file = fs.createWriteStream('models/onnx-community/Kokoro-82M-v1.0-ONNX/onnx/model_fp16.onnx');
+    const file = fs.createWriteStream('./models/onnx-community/Kokoro-82M-v1.0-ONNX/onnx/model_fp16.onnx');
 
     const request = https
         .get('https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/onnx/model_fp16.onnx?download=true', (response) => {

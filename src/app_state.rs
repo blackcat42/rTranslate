@@ -51,7 +51,7 @@ pub struct AppState {
     pub translators: HashMap<String, Box<dyn Translator>>,
     pub dictionaries: HashMap<String, Box<dyn Dictionary>>,
     pub tts_engines: HashMap<String, Box<dyn TTSEngine>>,
-    pub prnn_sources: HashMap<String, Box<dyn PRNNService>>,
+    pub prnn_services: HashMap<String, Box<dyn PRNNService>>,
 
     pub db: Option<Connection>,
 }
@@ -511,7 +511,7 @@ impl AppState {
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, true));
-                if let Some(engine) = self.prnn_sources.get_mut(self.selected_prnn_source.clone().as_str()) {
+                if let Some(engine) = self.prnn_services.get_mut(self.selected_prnn_source.clone().as_str()) {
                     let _ = engine.generate(
                         text.clone(), 
                         self.selected_src.clone(),

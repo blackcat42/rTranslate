@@ -279,7 +279,7 @@ fn run_node_thread(
                 let receiver = cloned_receiver.lock();
                 match receiver {
                     Ok(r) => {
-                        let transl_request = r.recv_timeout(Duration::from_secs(GLOBAL_SETTINGS.nodejs_unload_timeout));
+                        let transl_request = r.recv_timeout(Duration::from_secs(GLOBAL_SETTINGS.ext_service_unload_timeout));
                         match transl_request {
                             Ok(res) => {
                                 match res {

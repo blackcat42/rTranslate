@@ -18,7 +18,8 @@ pub struct NTTS {
     s: fltk::app::Sender<AppEvent>,
     uid: String,
     name: String,
-    entry_point: String,
+    command: String,
+    args: Vec<String>
 }
 
 use anyhow::{anyhow, Result};
@@ -28,11 +29,11 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 impl NTTS {
-    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, entry_point: String) -> Self {
+    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>) -> Self {
         //let (tx, rx) = mpsc::channel::<(String, i64)>();
         //let shared_receiver = Arc::new(Mutex::new(rx));
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, s, uid, name, entry_point}
+        Self { is_running, s, uid, name, command, args}
     }
 }
 
@@ -49,28 +50,58 @@ impl TTSEngine for NTTS {
         
         let s = self.s;
         let engine_uid = self.uid.clone();
-        let entry_point = self.entry_point.clone();
+        //let entry_point = self.entry_point.clone();
+        let command = self.command.clone();
+        let args = self.args.clone();
         let is_running = Arc::clone(&self.is_running);
         std::thread::spawn(move || {
             
             let working_dir = env::current_dir().unwrap();
-        
+            let directory = working_dir.join(&format!("extensions\\{engine_uid}"));
+
             let voice = speaker_uid;
             let mut child;
 
-            let full_path = working_dir.join(entry_point.as_str());
-            let dir_str = &full_path.parent().unwrap();
+            //let full_path = working_dir.join(entry_point.as_str());
+            //let dir_str = &full_path.parent().unwrap();
             
             let filename = format!("{src_id}_{engine_uid}_{voice}");
 
-            if which(r".\deno").is_ok() {
+            if which(&command).is_ok() {
+                if command.starts_with(".\\") {
+                    child = Command::new(working_dir.join(&command))
+                        .args(args)
+                        .arg(format!("--voice={voice}"))
+                        .arg(format!("--uid={filename}"))
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .current_dir(directory)
+                        .stdin(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn().expect("Failed to spawn child process");
+                } else {
+                    child = Command::new(&command)
+                        .args(args)
+                        .arg(format!("--voice={voice}"))
+                        .arg(format!("--uid={filename}"))
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .current_dir(directory)
+                        .stdin(Stdio::piped())
+                        .stdout(Stdio::piped())
+                        .spawn().expect("Failed to spawn child process");
+                };  
+            } else {
+                s.send(AppEvent::SetReady(Some("error".to_string()), false));
+                panic!("");
+            }
+
+            /*if which(r".\deno").is_ok() {
                     child = Command::new(working_dir.join(r".\deno"))
                         .arg("--allow-read=.")
                         .arg("--deny-net")
     					.arg("--allow-ffi=.")
     					.arg("--allow-env")
     					.arg("--allow-write=.")
-    					.arg("--allow-run=./oggenc2")
+    					.arg("--allow-run=../../oggenc2")
                         .arg(&full_path)
                         .arg(format!("--voice={voice}"))
                         .arg(format!("--uid={filename}"))
@@ -86,7 +117,7 @@ impl TTSEngine for NTTS {
                         .arg("--allow-ffi=.")
                         .arg("--allow-env")
                         .arg("--allow-write=.")
-                        .arg("--allow-run=./oggenc2")
+                        .arg("--allow-run=../../oggenc2")
                         .arg(&full_path)
                         .arg(format!("--voice={voice}"))
                         .arg(format!("--uid={filename}"))
@@ -106,7 +137,7 @@ impl TTSEngine for NTTS {
                         .spawn().expect("Failed to spawn child process");
                 }*/ else {
                     panic!("");
-                }
+                }*/
 
             let mut stdin = child.stdin.take().expect("Failed to open stdin");
             std::thread::spawn(move || {

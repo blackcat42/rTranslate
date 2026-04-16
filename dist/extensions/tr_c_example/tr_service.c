@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-//TODO
+
 int main(void) {
     char buffer[8192];
     while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
@@ -9,5 +9,9 @@ int main(void) {
         fputs(output_str, stdout);
         fflush(stdout);
     }
+    //ERROR CODES:
+    //73 - Language error (unsupported) 
+    //53 - service error
+    //0 - success (no errors)
     return 0;
 }

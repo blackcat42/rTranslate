@@ -1,9 +1,11 @@
 {
 
     //The following arrays determine the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting out an item will hide it from UI.
-    //WARN!: Setting the path field for items with the following uids will override their built-in services: tr_google, tr_google2, tr_deepl, dict_wiktionary_en, prnn_wiki, prnn_google
+
+    //WARN!: Setting the "command" field for items with the following uids will override their built-in services: tr_google, tr_google2, tr_deepl, dict_wiktionary_en, prnn_wiki, prnn_google
 
     //"uid" can only contain alphabetical characters, digits and underscores
+
     "translators": [
         {
             "uid": "tr_google",
@@ -75,13 +77,22 @@
     ],
     "tts_engines": [
         {
-            "uid": "kokoro",
+            "uid": "tts_kokoro",
             "name": "Kokoro",
-            "path": "kokoro\\index.mjs",
+            "command": ".\\deno",
+            "args": [
+                "--allow-read=.",
+                "--deny-net",
+                "--allow-ffi=.",
+                "--allow-env",
+                "--allow-write=.",
+                "--allow-run=../../oggenc2",
+                "index.mjs"
+            ],
             "voices": ["af_heart", "af_nicole"]
         }
     ],
-    "prnn_sources": [
+    "prnn_services": [
         {
             "uid": "prnn_google",
             "name": "Google Pronunciations"
@@ -131,7 +142,7 @@
     "text_bg_color": "#F0F0F0",
     "popup_opacity": 1.0, //0.0-1.0
 
-    "nodejs_unload_timeout": 120, //in seconds
+    "ext_service_unload_timeout": 120, //in seconds
     "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
     "http_request_timeout": 30, //in seconds
 

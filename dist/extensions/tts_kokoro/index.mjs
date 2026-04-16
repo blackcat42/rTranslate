@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { unlinkSync } from 'node:fs';
 
 // Specify a custom location for models
-env.localModelPath = 'models/';
+env.localModelPath = './models/';
 // Disable remote model fetching
 env.allowRemoteModels = false;
 
@@ -35,7 +35,7 @@ if (voice == "AfHeart") voice = "af_heart";
 //let uid = (params['--kkr-voice'] && params['--kkr-voice'].length > 2) ? params['--kkr-voice'] : 'out';
 
 const inputPath = 'tmp_audio.wav';
-const outputPath = '../tts_cache/' + uid + '.ogg';
+const outputPath = '../../tts_cache/' + uid + '.ogg';
 
 
 
@@ -55,7 +55,7 @@ const outputPath = '../tts_cache/' + uid + '.ogg';
       '-o', outputPath,      
     ];
 
-    const oggencProcess = spawn('./oggenc2', args);
+    const oggencProcess = spawn('../../oggenc2', args);
 
     oggencProcess.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);

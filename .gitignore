@@ -21,11 +21,12 @@ target
 #.idea/
 
 /dist/extensions/tr_bergamot/models/
-/dist/kokoro/models/onnx-community/Kokoro-82M-v1.0-ONNX/onnx/
-/dist/kokoro/node_modules/
+/dist/extensions/tts_kokoro/models/onnx-community/Kokoro-82M-v1.0-ONNX/onnx/
+/dist/extensions/tts_kokoro/node_modules/
 /dist/dictionaries/
 /dist/tts_cache/
 /dist/*.exe
+!/dist/oggenc2.exe
 /dist/*.db
 /assets_other/
 *.sublime-project

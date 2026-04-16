@@ -5,13 +5,13 @@ IF %ERRORLEVEL% EQU 1 (
 
 CHOICE /C YN /M "Install kokoro-tts runtime? [Y/N]"
 IF %ERRORLEVEL% EQU 1 (
-    cd .\kokoro
+    cd .\extensions\kokoro
     deno install --frozen --node-modules-dir=manual
     cd ..
 )
 CHOICE /C YN /M "Download kokoro-tts models? [Y/N]"
 IF %ERRORLEVEL% EQU 1 (
-    cd .\kokoro
+    cd .\extensions\kokoro
     deno install_models.js
     cd ..
 )
