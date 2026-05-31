@@ -42,8 +42,9 @@ jobs:
       - name: Prepare Release Folder
         shell: pwsh
         run: |
-          Copy-Item "target/i686-pc-windows-msvc/release/rTranslate.exe" -Destination "dist/" -Force
-          Compress-Archive -Path "./dist/*" -DestinationPath "release-${{github.ref_name}}-windows-x32.zip"
+          ls
+          Copy-Item "target\i686-pc-windows-msvc\release\rTranslate.exe" -Destination "dist\" -Force
+          Compress-Archive -Path "dist\*" -DestinationPath "release-${{github.ref_name}}-windows-x32.zip"
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
