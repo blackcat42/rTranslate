@@ -22,8 +22,8 @@ jobs:
           toolchain: stable-msvc
           target: i686-pc-windows-msvc
 
-      #- name: Cache cargo
-      #  uses: swatinem/rust-cache@v2
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
 
       - name: Install dependencies on Windows
         run: |
