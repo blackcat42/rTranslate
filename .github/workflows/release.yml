@@ -22,8 +22,8 @@ jobs:
           toolchain: stable-msvc
           target: i686-pc-windows-msvc
 
-      - name: Cache cargo
-        uses: swatinem/rust-cache@v2
+      #- name: Cache cargo
+      #  uses: swatinem/rust-cache@v2
 
       - name: Install dependencies on Windows
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: Build on Windows with Static Linking
         #env:
         #  RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo build --release --locked --target i686-pc-windows-msvc
+        run: cargo build --release --locked --verbose --target i686-pc-windows-msvc
 
       - name: Prepare Release Folder
         shell: pwsh
