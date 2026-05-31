@@ -1,0 +1,56 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-msvc
+          target: i686-pc-windows-msvc
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+
+      - name: Install dependencies on Windows
+        run: |
+          choco install cmake -y
+          choco install strawberryperl -y
+          choco install pkgconfiglite -y
+          choco install llvm -y
+          choco install nasm -y
+        shell: cmd
+
+      - name: Build on Windows with Static Linking
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: cargo build --release --locked --target i686-pc-windows-msvc
+
+      - name: Prepare Release Folder
+        shell: pwsh
+        run: |
+          Copy-Item "target/i686-pc-windows-msvc/release/rTranslate.exe" -Destination "dist/" -Force
+          Compress-Archive -Path "./dist/*" -DestinationPath "release-${{github.ref_name}}-windows-x32.zip"
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-${{github.ref_name}}-windows-x32.zip
+          tag_name: ${{ github.ref }}
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
