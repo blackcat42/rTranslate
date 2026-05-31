@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 which = "8.0.0"
-fltk = { version = "^1.5", features = ["fltk-bundled"] }
+fltk = "^1.5"
 #fltk-anchor = "0.2.0"
 anyhow = "1.0.100"
 #fltk = "1.5.10"

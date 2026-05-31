@@ -35,8 +35,8 @@ jobs:
         shell: cmd
 
       - name: Build on Windows with Static Linking
-        env:
-          RUSTFLAGS: "-C target-feature=+crt-static"
+        #env:
+        #  RUSTFLAGS: "-C target-feature=+crt-static"
         run: cargo build --release --locked --target i686-pc-windows-msvc
 
       - name: Prepare Release Folder
