@@ -75,7 +75,7 @@ rl.on('line', (data) => {
         process.exit(53);
     }
 
-    const output = src_id_str + '<SRC_LANG_DETECTED=es>' + 'This is an example. Source text:' + data + '\n Lang (src) from args: ' + lang_src + ' Lang (target) from args: ' + lang_target + ' Lang (src) from stdin: ' + srcLang + ' Lang (target) from stdin: ' + targetLang;
+    const output = src_id_str + '<SRC_LANG_DETECTED=' + srcLang + '>' + 'This is an example. Source text:' + data + '\nLang (src) from args: ' + lang_src + '\nLang (target) from args: ' + lang_target + '\nLang (src) from stdin: ' + srcLang + '\nLang (target) from stdin: ' + targetLang;
     process.stdout.write(output.replace(/\r\n|\r|\n/gm, '<ENDOFLINE>') + "\n")
 
 })

@@ -48,21 +48,34 @@ use tray_icon::{
 };*/
 //use anyhow::{anyhow};
 
-mod nodejs_translator;
-mod google_translate;
-mod google_translate2;
-mod deepl_translate;
-mod wiktionary_en;
-mod google_dict;
-mod prnn_wiki;
-mod prnn_google;
-mod nodejs_tts;
-mod user_dict;
+mod tr_services;
+use tr_services::nodejs_translator;
+use tr_services::google_translate;
+use tr_services::google_translate2;
+use tr_services::deepl_translate;
+
+mod dict_services;
+use dict_services::wiktionary_en;
+use dict_services::google_dict;
+use dict_services::user_dict;
+
+mod prnn_services;
+use prnn_services::prnn_wiki;
+use prnn_services::prnn_google;
+
+mod tts_services;
+use tts_services::nodejs_tts;
+
 mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
-use types::{AppEvent, UIState, UIStateDict, TranslSource, LangNames};
+use types::{AppEvent, 
+    //UIState, 
+    //UIStateDict, 
+    //TranslSource, 
+    LangNames
+};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
@@ -76,11 +89,11 @@ fn default_as_false() -> bool { false } //explicit is better
 fn default_as_minus_one() -> i32 { -1 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Settings {
-    pub translators: Vec<TranslatorOption>,
-    pub dictionaries: Vec<DictOption>,
-    pub tts_engines: Vec<TTSEngineOption>,
-    pub prnn_services: Vec<PRNNSourceOption>,
+pub struct Settings {
+    translators: Vec<TranslatorOption>,
+    dictionaries: Vec<DictOption>,
+    tts_engines: Vec<TTSEngineOption>,
+    prnn_services: Vec<PRNNSourceOption>,
 
     pub download_all_pronunciations: bool,
     pub eng_accents: Vec<String>,
@@ -647,17 +660,17 @@ fn main() {
                 let _ = app_state.run_tts();
             }
             Some(AppEvent::PRNNString(force)) => {
-                app_view.prnn_index = app_view.prnn_index + 1;
+                app_view.prnn_index += 1;
                 if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {
                     app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
                 }
             }
             Some(AppEvent::PRNNSave((src_id, prnn_source_uid, filename))) => {
-                let file = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
-                if let Ok(file) = file {
+                let _file = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
+                //if let Ok(file) = file {
                     //let filename = format!("{}.ogg", file);
                     //app_sender.send(AppEvent::TTSPlay(file));
-                }
+                //}
                 //let _ = app_state.update_browser(); 
             }
             Some(AppEvent::TTSave(src_id, tts_engine, tts_voice, filename)) => {
@@ -792,7 +805,7 @@ fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
 
         while let Some(row) = data.next()? {
             let id: u32 = row.get(0)?;
-            let path: String = row.get(1)?;
+            //let path: String = row.get(1)?;
             //println!("ID: {}", &id);
             //println!("PATH: {}", &path);
             ids.push(id);

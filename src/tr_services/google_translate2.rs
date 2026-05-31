@@ -1,3 +1,4 @@
+//TODO: html entities
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState};
 //use ureq::Agent;
