@@ -34,3 +34,8 @@ target
 /todo.txt
 /todo_api.txt
 /dist/settings.json
+
+/build_win_dbg.bat
+/build_win_release.bat
+/build_win_release_x64.bat
+/.cargo/config.toml

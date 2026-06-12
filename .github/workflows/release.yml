@@ -14,6 +14,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
+        run: |
+          git config --system core.autocrlf false
+          git config --system core.eol lf
         uses: actions/checkout@v4
 
       - name: Install Rust
@@ -37,19 +40,18 @@ jobs:
       - name: Build on Windows with Static Linking
         #env:
         #  RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo build --release --locked --verbose --target i686-pc-windows-msvc
+        run: cargo build --release --locked --target i686-pc-windows-msvc
 
       - name: Prepare Release Folder
         shell: pwsh
         run: |
-          ls
           Copy-Item "target\i686-pc-windows-msvc\release\rTranslate.exe" -Destination "dist\" -Force
-          Compress-Archive -Path "dist\*" -DestinationPath "release-${{github.ref_name}}-windows-x32.zip"
+          Compress-Archive -Path "dist\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows-x86.zip"
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-${{github.ref_name}}-windows-x32.zip
+          files: rtranslate-${{github.ref_name}}-windows-x86.zip
           tag_name: ${{ github.ref }}
           draft: false
           prerelease: true

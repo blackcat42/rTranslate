@@ -39,14 +39,19 @@ async function run() {
       output: process.stdout,
     });
     rl.question('Enter a comma-separated list of lang-pairs(e.g.: \'en-es, es-en\' to download translation models): ', (userInput) => {
-      const inputArray = userInput.trim().split(',');
-      const trimmedArray = inputArray.map(item => item.trim().replaceAll(/["']/g, ''));
+        const inputArray = userInput.trim().split(',');
+        const trimmedArray = inputArray.map(item => item.trim().replaceAll(/["']/g, ''));
 
-      console.log('Original input string:', userInput);
-      console.log('Parsed array:', trimmedArray);
+        console.log('Original input string:', userInput);
+        console.log('Parsed array:', trimmedArray);
 
-      rl.close();
-      downloadModels(data, trimmedArray);
+        rl.close();
+
+        if (!fs.existsSync('models')) {
+            fs.mkdirSync('models');
+        }
+
+        downloadModels(data, trimmedArray);
     });
 }
 
