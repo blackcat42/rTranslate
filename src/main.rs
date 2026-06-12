@@ -46,7 +46,6 @@ use tray_icon::{
     },
     TrayIcon, TrayIconBuilder, TrayIconEvent, TrayIconEventReceiver,
 };*/
-//use anyhow::{anyhow};
 
 mod tr_services;
 use tr_services::nodejs_translator;
@@ -100,8 +99,8 @@ pub struct Settings {
 
     pub google_translate_api_key: Option<String>,
 
-    pub src_language: String,
-    pub target_language: String,
+    pub pinned_src_languages: Vec<String>,
+    pub pinned_target_languages: Vec<String>,
 
     pub default_translator: String,
     pub default_dict: String,
@@ -130,7 +129,6 @@ pub struct Settings {
     #[serde(default = "default_as_minus_one")]
     pub audio_max_entries: i32,
 
-    pub lang_autodetect: bool,
 
     #[serde(default = "default_as_true")]
     pub use_db: bool,
@@ -207,6 +205,12 @@ fn main() {
             app_panic_message("current_dir");
             panic!("Error: {}", e);
         });
+
+    //create directories
+    let audio_path = working_dir.join("tts_cache");
+    if let Err(err) = std::fs::create_dir_all(audio_path) {
+        println!("{err:?}");
+    }
 
     //TRAY
     let tray_menu = Menu::new();
@@ -302,8 +306,8 @@ fn main() {
         selected_tts_voice: "".to_string(),
         selected_tts_engine: "".to_string(),
         selected_prnn_source: "".to_string(),
-        selected_src: types::Lang::from_str(&GLOBAL_SETTINGS.src_language).unwrap_or(types::Lang::En),
-        selected_target: types::Lang::from_str(&GLOBAL_SETTINGS.target_language).unwrap_or(types::Lang::Ru),
+        selected_src: types::Lang::from_str(GLOBAL_SETTINGS.pinned_src_languages.first().unwrap_or(&"en".to_string())).unwrap_or(types::Lang::En),
+        selected_target: types::Lang::from_str(GLOBAL_SETTINGS.pinned_target_languages.first().unwrap_or(&"ru".to_string())).unwrap_or(types::Lang::Ru),
 
         db: conn,
 
@@ -384,8 +388,10 @@ fn main() {
 
 
 
-    app_view.set_lang(
+    app_view.set_src_lang(
         LangNames::from_str(app_state.selected_src.as_ref()).unwrap_or(LangNames::En).as_ref(), 
+    );
+    app_view.set_target_lang(
         LangNames::from_str(app_state.selected_target.as_ref()).unwrap_or(LangNames::En).as_ref()
     );
     app_sender.send(AppEvent::SetTranslator(GLOBAL_SETTINGS.default_translator.clone()));
@@ -474,11 +480,16 @@ fn main() {
                 };
             }
             Some(AppEvent::SetSrcLang(lng)) => {
-                app_state.selected_src = lng;
+                app_state.selected_src = lng.clone();
                 //TODO: update views
+                let lng_name = LangNames::from_str(lng.as_ref()).unwrap_or(LangNames::En);
+                app_view.set_src_lang(lng_name.as_ref());
             }
             Some(AppEvent::SetTargetLang(lng)) => {
-                app_state.selected_target = lng;
+                app_state.selected_target = lng.clone();
+                //TODO: update views
+                let lng_name = LangNames::from_str(lng.as_ref()).unwrap_or(LangNames::Ru);
+                app_view.set_target_lang(lng_name.as_ref());
             }
             Some(AppEvent::SetTranslator(translator)) => {
                 app_state.selected_translator = translator.clone();
@@ -514,20 +525,12 @@ fn main() {
                 
             }
 
-            Some(AppEvent::ToggleFav(text, is_dict)) => {
-                //let _ = app_state.set_fav(text);
-                match text {
-                    Some(t) => {
-                        let _ = app_state.toggle_fav(&t, is_dict);
-                    },
-                    None => {
-                        if is_dict {
-                            let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
-                        } else {
-                            let _ = app_state.toggle_fav(&app_view.src, is_dict);
-                        }
-                    }
-                };
+            Some(AppEvent::ToggleFav(is_dict)) => {
+                if is_dict {
+                    let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
+                } else {
+                    let _ = app_state.toggle_fav(&app_view.src, is_dict);
+                }
                 let _ = app_state.update_fav_browser();
             }
 

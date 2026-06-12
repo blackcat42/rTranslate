@@ -241,7 +241,7 @@ impl AppState {
         let mut target_lang = self.selected_target.clone();
 
         let mut is_lang_detected = true;
-        if GLOBAL_SETTINGS.lang_autodetect {
+        if src_lang == Lang::Auto {
             //DETECT LANGUAGE
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
             //println!("{:?}", info.lang().code()); 
@@ -304,9 +304,9 @@ impl AppState {
                     src_text: selected_text,
                     tr_uid: Some(tr_uid), 
                     translator: Some(tr_name), 
-                    src: Some(src_lang.clone()), 
-                    target: Some(target_lang.clone()), 
-                    translation_text: Some(t),
+                    src: t.1.clone(), 
+                    target: t.2.clone(),
+                    translation_text: Some(t.0),
                     is_fav: None
                 }, false));
             }
@@ -349,7 +349,7 @@ impl AppState {
         let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
 
-        if GLOBAL_SETTINGS.lang_autodetect {
+        if src_lang == Lang::Auto {
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
             //println!("{:?}", info.lang().code()); println!("{:?}", info.is_reliable());
             if info.is_reliable() {
@@ -366,8 +366,6 @@ impl AppState {
 
                 let qwe = format!("Language detected as {}", info.lang().code());
                 self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, true));
-            } else {
-                self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, true));
             }
         }
 
@@ -571,21 +569,43 @@ impl AppState {
         }
     }
     
-    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, src_lang: &str, target_lang: &str) -> Option<String> {
+    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, mut src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return None;
         }
         if let Some(db) = db_ref {
-            let transl = db.query_row(
-                "SELECT text FROM transl 
-                 WHERE src_id = ?1 AND transl_engine_uid = ?2 AND src = ?3 AND target = ?4",
-                params![src_id, selected_translator, src_lang, target_lang],
-                |row| {
-                    let text = row.get(0)?;
-                    Ok(text)
-                },
-            );
+            let transl = if src_lang != "auto" { 
+                db.query_row(
+                    "SELECT text FROM transl 
+                     WHERE src_id = ?1 AND transl_engine_uid = ?2 AND src = ?3 AND target = ?4",
+                    params![src_id, selected_translator, src_lang, target_lang],
+                    |row| {
+                        let text = row.get(0)?;
+                        Ok((
+                            text, 
+                            Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
+                            Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
+                        ))
+                    },
+                )
+            } else {
+                db.query_row(
+                    "SELECT text, src FROM transl 
+                     WHERE src_id = ?1 AND transl_engine_uid = ?2 AND target = ?3",
+                    params![src_id, selected_translator, target_lang],
+                    |row| {
+                        let text = row.get(0)?;
+                        let _src_lang: String = row.get(1)?;
+                        let src_lang = _src_lang.as_str();
+                        Ok((
+                            text, 
+                            Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
+                            Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
+                        ))
+                    },
+                )
+            };
 
             match transl {
                 Ok(t) => {
@@ -600,25 +620,43 @@ impl AppState {
         }
     }
 
-    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str, src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
+    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str, mut src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return None;
         }
         if let Some(db) = db_ref {
-            let transl = db.query_row(
-                "SELECT text FROM dict 
-                 WHERE src_id = ?1 AND dict_uid = ?2 AND src = ?3 AND target = ?4",
-                params![src_id, selected_dict, src_lang, target_lang],
-                |row| {
-                    let text = row.get(0)?;
-                    Ok((
-                        text, 
-                        Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
-                        Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
-                    ))
-                },
-            );
+            let transl = if src_lang != "auto" {
+                db.query_row(
+                    "SELECT text FROM dict 
+                     WHERE src_id = ?1 AND dict_uid = ?2 AND src = ?3 AND target = ?4",
+                    params![src_id, selected_dict, src_lang, target_lang],
+                    |row| {
+                        let text = row.get(0)?;
+                        Ok((
+                            text, 
+                            Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
+                            Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
+                        ))
+                    },
+                )
+            } else {
+                db.query_row(
+                    "SELECT text, src FROM dict 
+                     WHERE src_id = ?1 AND dict_uid = ?2 AND target = ?3",
+                    params![src_id, selected_dict, target_lang],
+                    |row| {
+                        let text = row.get(0)?;
+                        let _src_lang: String = row.get(1)?;
+                        let src_lang = _src_lang.as_str();
+                        Ok((
+                            text, 
+                            Some(Lang::from_str(src_lang).unwrap_or(Lang::En)), 
+                            Some(Lang::from_str(target_lang).unwrap_or(Lang::Ru))
+                        ))
+                    },
+                )
+            };
             let transl = if transl.is_ok() {
                 transl
             } else {

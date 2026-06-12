@@ -8,6 +8,7 @@ use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
+use std::str::FromStr;
 
 use wreq::{
     Client,
@@ -57,13 +58,13 @@ impl Translator for GT2 {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
                     match transl_result {
                         Ok(t_text) => {
-                            println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
-                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), src_lang.clone(), target_lang.clone(), t_text.0.clone())));
+                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
                                 tr_uid: Some(uid), 
                                 translator: Some(name), 
-                                src: Some(src_lang), 
+                                src: Some(t_text.1), 
                                 target: Some(target_lang), 
                                 translation_text: Some(t_text.0),
                                 is_fav: None
@@ -86,10 +87,10 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Option<String>)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
-    let src_lang = if is_lang_detected {
+    let src_lang_ref = if is_lang_detected {
         src_lang.as_ref()
     } else {
         "auto"
@@ -104,10 +105,10 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
 
         //let selected_text: String = selected_text.lines().map(|s| serde_json::to_string(s).unwrap_or("\"\"".to_string())).filter(|item| *item != "\"\"".to_string()).collect::<Vec<String>>().join(","); //array of strings (serialized)
         let selected_text = serde_json::to_string(&selected_text)?;
-        let src_lang = serde_json::to_string(src_lang)?;
+        let src_lang_ref = serde_json::to_string(src_lang_ref)?;
         let target_lang = serde_json::to_string(target_lang.as_ref())?;
 
-        let req_body = format!("[[[{}],{},{}],\"wt_lib\"]", selected_text, src_lang, target_lang);
+        let req_body = format!("[[[{}],{},{}],\"wt_lib\"]", selected_text, src_lang_ref, target_lang);
         println!("{}", req_body);
         let mut headers = header::HeaderMap::new();
         headers.insert("Host", header::HeaderValue::from_static("translate-pa.googleapis.com"));
@@ -139,7 +140,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
     match result {
         Ok(json_data) => {
             let value: Value = serde_json::from_str(json_data.as_str())?;
-            let mut src_lng_suggested = None;
+            let mut src_lng_suggested = src_lang.clone();
             if let Some(items) = value.as_array() {
                 if items.get(0).is_some() && let Some(tr_items) = items[0].as_array() {
                     for item_value in tr_items {
@@ -150,7 +151,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                     };
 
                     if let Some(arr1) = items.get(1) && let Some(lang) = arr1.get(0) {
-                        src_lng_suggested = Some(lang.to_string());
+                        src_lng_suggested = Lang::from_str(lang.as_str().unwrap_or("auto")).unwrap_or(src_lang);
                     }
                 } else if items.get(0).is_some() && items.get(1).is_some() 
                 && let Some(error) = items[0].as_i64() 

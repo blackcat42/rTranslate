@@ -14,6 +14,7 @@ use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
+use std::str::FromStr;
 
 pub struct GT {
     is_running: Arc<AtomicBool>,
@@ -55,13 +56,13 @@ impl Translator for GT {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
                     match transl_result {
                         Ok(t_text) => {
-                            println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
-                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), src_lang.clone(), target_lang.clone(), t_text.0.clone())));
+                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text.clone(),
                                 tr_uid: Some(uid), 
                                 translator: Some(name), 
-                                src: Some(src_lang), 
+                                src: Some(t_text.1), 
                                 target: Some(target_lang), 
                                 translation_text: Some(t_text.0),
                                 is_fav: None
@@ -84,15 +85,15 @@ impl Translator for GT {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Option<String>)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
-    let src_lang = if is_lang_detected {
+    let src_lang_ref = if is_lang_detected {
         src_lang.as_ref()
     } else {
         "auto"
     };
-    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang, target_lang.as_ref());
+    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang_ref, target_lang.as_ref());
     println!("{}", req_string);
 
     let rt = TOKIO_RT.get_or_init(|| {
@@ -113,7 +114,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
     match result {
         Ok(json_data) => {
             let value: Value = serde_json::from_str(json_data.as_str())?;
-            let mut src_lng_suggested = None;
+            let mut src_lng_suggested = src_lang.clone();
             if let Some(items) = value.as_array()
                 && items.get(0).is_some() 
                 && let Some(tr_items) = items[0].as_array() {
@@ -124,7 +125,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                         }
                     };
                     if let Some(lang) = items.get(2) {
-                        src_lng_suggested = Some(lang.to_string());
+                        src_lng_suggested = Lang::from_str(lang.as_str().unwrap_or("auto")).unwrap_or(src_lang);
                     }
                 }
             if response.chars().count() > 1 {

@@ -143,6 +143,13 @@ impl AppView {
             refresh_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
 
+        let mut lng_menu_button_wrapper = button::Button::new(51, 5, 18, 18, "");
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
+            lng_menu_button_wrapper.set_image(Some(image));
+            lng_menu_button_wrapper.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
+        }
+        let mut lng_menu_button = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
+
         let mut tts_button = button::Button::new(28, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\audio.png").to_str().unwrap_or("")) {
             tts_button.set_image(Some(image));
@@ -168,6 +175,7 @@ impl AppView {
         flex_titlebar.fixed(&title_frame, 1);
         flex_titlebar.fixed(&fav_button, 18);
         flex_titlebar.fixed(&refresh_button, 18);
+        flex_titlebar.fixed(&lng_menu_button_wrapper, 18);
         flex_titlebar.fixed(&tts_button, 18);
         flex_titlebar.fixed(&dict_button, 18);
         //flex_titlebar.fixed(&qsettings_button, 18);
@@ -283,6 +291,13 @@ impl AppView {
             refresh_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
 
+        let mut lng_menu_button_wrapper_dict = button::Button::new(51, 5, 18, 18, "");
+        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
+            lng_menu_button_wrapper_dict.set_image(Some(image));
+            lng_menu_button_wrapper_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
+        }
+        let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
+
         let mut prnn_button_dict = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\audio.png").to_str().unwrap_or("")) {
             prnn_button_dict.set_image(Some(image));
@@ -299,6 +314,7 @@ impl AppView {
         flex_titlebar_dict.fixed(&close_button_dict, 18);
         flex_titlebar_dict.fixed(&title_frame_dict, 1);
         flex_titlebar_dict.fixed(&fav_button_dict, 18);
+        flex_titlebar_dict.fixed(&lng_menu_button_wrapper_dict, 18);
         flex_titlebar_dict.fixed(&prnn_button_dict, 18);
         flex_titlebar_dict.fixed(&refresh_button_dict, 18);
         flex_titlebar_dict.fixed(&open_button_dict, 18);
@@ -680,6 +696,171 @@ impl AppView {
         ////////////////////---------------END MAIN WIN---------------/////////////////////
         ////////////////////---------------END UI---------------/////////////////////
 
+        
+        lng_menu_button.add(
+                "From:",
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Inactive,
+                |_| {}
+        );
+        lng_menu_button_dict.add(
+                "From:",
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Inactive,
+                |_| {}
+        );
+        for item in &GLOBAL_SETTINGS.pinned_src_languages {
+            let lng = Lang::from_str(item).unwrap_or(Lang::En);
+            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
+            let name_from = format!("&{}", l_name.as_ref());
+            lng_menu_button.add(
+                name_from.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    let lng = lng.clone();
+                    move |_b| {
+                        s.send(AppEvent::SetSrcLang(lng.clone()));
+                        s.send(AppEvent::Translate(false, false, false));
+                    }
+                },
+            );
+            lng_menu_button_dict.add(
+                name_from.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetSrcLang(lng.clone()));
+                        s.send(AppEvent::RequestDictEntry(false, false, false));
+                    }
+                },
+            );
+        }
+        
+        for lng in Lang::iter() {
+            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
+            let name_from = format!("All (source)/{}", l_name.as_ref());
+            lng_menu_button.add(
+                name_from.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    let lng = lng.clone();
+                    move |_b| {
+                        s.send(AppEvent::SetSrcLang(lng.clone()));
+                        s.send(AppEvent::Translate(false, false, false));
+                    }
+                },
+            );
+            lng_menu_button_dict.add(
+                name_from.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetSrcLang(lng.clone()));
+                        s.send(AppEvent::RequestDictEntry(false, false, false));
+                    }
+                },
+            );
+        };
+        //lng_menu_button.add("", fltk::enums::Shortcut::None, fltk::menu::MenuFlag::MenuDivider, |_| {});
+        lng_menu_button.add(
+                "To:",
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Inactive,
+                |_| {}
+        );
+        lng_menu_button_dict.add(
+                "To:",
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Inactive,
+                |_| {}
+        );
+
+        for item in &GLOBAL_SETTINGS.pinned_target_languages {
+            let lng = Lang::from_str(item).unwrap_or(Lang::Ru);
+            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
+            let name_to = format!("&{} ", l_name.as_ref());
+            lng_menu_button.add(
+                name_to.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    let lng = lng.clone();
+                    move |_b| {
+                        s.send(AppEvent::SetTargetLang(lng.clone()));
+                        s.send(AppEvent::Translate(false, false, false));
+                    }
+                },
+            );
+            lng_menu_button_dict.add(
+                name_to.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetTargetLang(lng.clone()));
+                        s.send(AppEvent::RequestDictEntry(false, false, false));
+                    }
+                },
+            );
+        }
+        for lng in Lang::iter() {
+            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
+            let name_to = format!("All (target)/{}", l_name.as_ref());
+            lng_menu_button.add(
+                name_to.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    let lng = lng.clone();
+                    move |_b| {
+                        s.send(AppEvent::SetTargetLang(lng.clone()));
+                        s.send(AppEvent::Translate(false, false, false));
+                    }
+                },
+            );
+            lng_menu_button_dict.add(
+                name_to.as_ref(),
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetTargetLang(lng.clone()));
+                        s.send(AppEvent::RequestDictEntry(false, false, false));
+                    }
+                },
+            );
+        };
+
+        lng_menu_button.hide();
+        lng_menu_button_dict.hide();
+        lng_menu_button_wrapper.set_callback(move |b| {
+            if let Some(item) = lng_menu_button.menu() {
+                if let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+                    selected.do_callback(&lng_menu_button); 
+                }
+                
+            }
+        });
+        lng_menu_button_wrapper_dict.set_callback(move |b| {
+            if let Some(item) = lng_menu_button_dict.menu() {
+                if let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+                    selected.do_callback(&lng_menu_button_dict); 
+                }
+            }
+        });
+
         win_popup.hotspot(&close_button);
         win_popup_dict.hotspot(&close_button_dict);
         //trying to hide popup window at startup...
@@ -877,19 +1058,19 @@ impl AppView {
         fav_button.set_callback({
             let s = app_sender;
             move |_| {
-                s.send(AppEvent::ToggleFav(None, false));
+                s.send(AppEvent::ToggleFav(false));
             }
         });
         fav_button_dict.set_callback({
             let s = app_sender;
             move |_| {
-                s.send(AppEvent::ToggleFav(None, true));
+                s.send(AppEvent::ToggleFav(true));
             }
         });
         fav_button_main.set_callback({
             let s = app_sender;
             move |_| {
-                s.send(AppEvent::ToggleFav(None, false));
+                s.send(AppEvent::ToggleFav(false));
             }
         });
         tts_button.set_callback({
@@ -1322,10 +1503,12 @@ impl AppView {
         app::awake();
     }
 
-    pub fn set_lang(&mut self, from: &str, to: &str) {
+    pub fn set_src_lang(&mut self, from: &str) {
         if let Some(item) = self.lang_choice_from.find_item(from) {
             self.lang_choice_from.set_item(&item);
         }
+    }
+    pub fn set_target_lang(&mut self, to: &str) {
         if let Some(item) = self.lang_choice_to.find_item(to) {
             self.lang_choice_to.set_item(&item);
         }

@@ -2,6 +2,8 @@
 
     //The following arrays determine the order and visibility of the corresponding controls (e.g. translator buttons) in the app's UI. Commenting out an item will hide it from UI.
 
+    //⚠️ Caution: Any executable you link in the "command" field runs directly on your machine. Be careful and only use CLI apps from sources you personally trust.
+
     //WARN!: Setting the "command" field for items with the following uids will override their built-in services: tr_google, tr_google2, tr_deepl, dict_wiktionary_en, prnn_wiki, prnn_google
 
     //"uid" can only contain alphabetical characters, digits and underscores
@@ -126,8 +128,9 @@
 
     
 
-    "src_language": "en", //ISO 639_3 or ISO 639_1
-    "target_language": "ru", //ISO 639_3 or ISO 639_1
+    //ISO 639_3 or ISO 639_1 or "auto"; first item is used as the default
+    "pinned_src_languages": ["auto", "en", "es", "zh", "ja", "ru"],
+    "pinned_target_languages": ["ru", "en", "es"],
 
     "default_translator": "tr_google",
     "default_dict": "dict_wiktionary_en",
@@ -154,9 +157,7 @@
     "audio_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
     "clear_audio_cache_at_startup": false, //if false - deleting db entries will not affect audio cache files ("tts_cache" folder)
 
-    "lang_autodetect": true,
-
-    //sqlite is required for history and user dictionaries support; default as true; disabling is not recommended
+    //sqlite is required for history and dsl dictionaries support; default as true; disabling is not recommended
     /*"use_db": true,
     "use_db_dict": true,*/
 }

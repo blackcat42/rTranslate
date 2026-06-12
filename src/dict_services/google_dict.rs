@@ -97,11 +97,7 @@ impl Dictionary for GD {
 #[allow(unused_variables)]
 fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> Result<String> {
     //let mut response = "".to_string();
-    let src_lang = if GLOBAL_SETTINGS.lang_autodetect {
-        "auto"
-    } else {
-        src_lang.as_ref()
-    };
+    let src_lang = src_lang.as_ref();
     let target_lang = target_lang.as_ref();
 
     let token: Option<String> = None;

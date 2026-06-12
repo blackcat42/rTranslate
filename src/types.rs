@@ -29,7 +29,7 @@ pub enum AppEvent {
     SaveTranslation((i64, String, String, Lang, Lang, String)),
     SaveDictEntry((i64, String, String, String, Option<Lang>, Option<Lang>)),
     PRNNSave((i64, String, String)),
-    ToggleFav(Option<String>, bool),
+    ToggleFav(bool),
 
     Translate(bool, bool, bool),
     RequestDictEntry(bool, bool, bool),
@@ -125,6 +125,7 @@ pub enum LangNames {
 #[allow(unused)]
 #[derive(Debug, AsRefStr, EnumString, Clone, PartialEq, Eq, EnumIter)]
 pub enum Lang {
+    #[strum(serialize = "auto", to_string = "auto")] Auto,
     #[strum(serialize = "epo", to_string = "eo")] Epo,
     #[strum(serialize = "eng", to_string = "en")] En,
     #[strum(serialize = "rus", to_string = "ru")] Ru,
@@ -199,6 +200,7 @@ pub enum Lang {
 impl Lang {
     pub fn code_3(&self) -> &str {
         match self {
+            Lang::Auto => "auto",
             Lang::Epo => "epo",
             Lang::En => "eng",
             Lang::Ru => "rus",
@@ -276,6 +278,7 @@ impl Lang {
 #[allow(unreachable_patterns)]
 #[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
 pub enum LangNames {
+    #[strum(serialize = "auto", to_string = "Auto")] Auto,
     #[strum(serialize = "eo", to_string = "Esperanto")] Epo,
     #[strum(serialize = "en", to_string = "English")] En,
     #[strum(serialize = "ru", to_string = "Russian")] Ru,
