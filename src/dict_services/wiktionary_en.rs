@@ -16,16 +16,17 @@ pub struct WDEn {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    uid: String
+    uid: String,
+    use_proxy: bool
 }
 
 
 
 impl WDEn {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
         //let uid = "dict_wiktionary_en".to_string();
-        Self {is_running, app_sender, name, uid}
+        Self {is_running, app_sender, name, uid, use_proxy}
     }
 }
 impl Dictionary for WDEn {
@@ -47,10 +48,23 @@ impl Dictionary for WDEn {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name();
                 let uid = self.get_uid();
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let transl_result = send_tr_request(text.clone());
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let transl_result = send_tr_request(text.clone(), proxy);
                     match transl_result {
                         Ok(t_text) => {
                             app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), uid.clone(), t_text.clone(), None, None)));
@@ -86,7 +100,7 @@ impl Dictionary for WDEn {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String) -> Result<String> {
+fn send_tr_request(selected_text: String, proxy: Option<wreq::Proxy>) -> Result<String> {
     //let mut response = "".to_string();
 
     let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();
@@ -97,11 +111,17 @@ fn send_tr_request(selected_text: String) -> Result<String> {
     });
 
     let result = rt.block_on(async {
-        let client = Client::builder()
+        let mut client = Client::builder()
             //.emulation(Emulation::Chrome137)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36")
-            .build()?;
+            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36");
+        client = if let Some(proxy) = proxy {
+            client.proxy(proxy)
+        } else {
+            client
+        };
+        let client = client.build()?;
+        
         let resp = client.get(req_string).query(&[("title", selected_text.to_lowercase())]).send().await?.text().await?;
         //println!("{}", resp);
         Ok(resp)

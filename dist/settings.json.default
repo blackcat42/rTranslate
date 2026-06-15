@@ -22,7 +22,7 @@
         {
             "uid": "tr_deepl",
             "name": "DeepL",
-            //"use_proxy": false
+            //"use_proxy": true
         },
         {
             "uid": "tr_bergamot",
@@ -118,12 +118,10 @@
     "download_all_pronunciations": false, //dowload pronunciation in all available accents and languages, if possible
 
 
-    /*"proxy": { //not impl yet
-        "protocol": "http", //"http", "https", "soks4", "soks4a", "soks5"
-        "host": "127.0.0.1",
-        "port": 8080,
-        "username": "",
-        "password": ""
+    /*"proxy": {
+        "url": "http://127.0.0.1:9080", //supported protocols: "http", "https", "soks4", "soks4a", "soks5"
+        //"username": "",
+        //"password": ""
     },*/
 
     

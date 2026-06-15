@@ -509,10 +509,19 @@ impl AppState {
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, true));
+                let detected_lang = self.get_last_detected_lang(src_id);
                 if let Some(engine) = self.prnn_services.get_mut(self.selected_prnn_source.clone().as_str()) {
+                    let lang =  if let Some(lng) = detected_lang {
+                        lng
+                    } else if self.selected_src.as_ref() == "auto" {
+                        Lang::En
+                    } else {
+                        self.selected_src.clone()
+                    };
+
                     let _ = engine.generate(
                         text.clone(), 
-                        self.selected_src.clone(),
+                        lang,
                         src_id, 
                     );
                 } else {
@@ -881,6 +890,34 @@ impl AppState {
         }
     }
 
+    pub fn get_last_detected_lang(&self, src_id: i64) -> Option<Lang> {
+        let db_ref = &self.db;
+        if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
+            return None;
+        }
+
+        if let Some(db) = db_ref {
+            let lang = db.query_row(
+                "SELECT src FROM (
+                    SELECT src FROM transl WHERE src_id = ?1 AND src != 'auto' AND src != 'undefined' ORDER BY rowid DESC LIMIT 1
+                )
+                UNION ALL
+                SELECT src FROM (
+                    SELECT src FROM dict WHERE src_id = ?1 AND src != 'auto' AND src != 'undefined' ORDER BY rowid DESC LIMIT 1
+                )", 
+                params![src_id],
+                |row| {
+                    let src_lang: String = row.get(0)?;
+                    Ok(
+                       Lang::from_str(&src_lang).unwrap_or(Lang::En)
+                    )
+                },
+            );
+            return lang.ok();
+        } else {
+            return None;
+        };
+    }
 
     pub fn init_db(&self) -> Result<()> {
         //println!("open_db");

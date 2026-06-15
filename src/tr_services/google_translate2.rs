@@ -1,4 +1,3 @@
-//TODO: html entities
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState};
 //use ureq::Agent;
@@ -23,14 +22,15 @@ pub struct GT2 {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    uid: String
+    uid: String,
+    use_proxy: bool
 }
 
 impl GT2 {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
         //let uid = "tr_google2".to_string();
-        Self {is_running, app_sender, name, uid}
+        Self {is_running, app_sender, name, uid, use_proxy}
     }
 }
 impl Translator for GT2 {
@@ -52,10 +52,23 @@ impl Translator for GT2 {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name();
                 let uid = self.get_uid();
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
                     match transl_result {
                         Ok(t_text) => {
                             //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
@@ -87,7 +100,7 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Lang)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: Option<wreq::Proxy>) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if is_lang_detected {
@@ -120,11 +133,17 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                 headers.insert("X-Goog-API-Key", api_key);
                 headers.insert("Content-Type", header::HeaderValue::from_static("application/json+protobuf"));
 
-                let client = wreq::Client::builder()
+                let mut client = wreq::Client::builder()
                     .emulation(Emulation::Chrome137)
                     .default_headers(headers)
-                    .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-                    .build()?;
+                    .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout));
+                client = if let Some(proxy) = proxy {
+                    client.proxy(proxy)
+                } else {
+                    client
+                };
+                let client = client.build()?;
+
                 let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
 
                 println!("{}", resp);
@@ -165,6 +184,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
             } 
 
             if response.chars().count() > 1 {
+                //TODO!: parse html entities
                 Ok((response, src_lng_suggested))
             } else {
                 Err(anyhow!("error"))

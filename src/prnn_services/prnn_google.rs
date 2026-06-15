@@ -25,12 +25,13 @@ pub struct GP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
+    use_proxy: bool
 }
 
 impl GP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender, name}
+        Self { is_running, app_sender, name, use_proxy}
     }
 }
 //TODO! language detect
@@ -45,10 +46,23 @@ impl PRNNService for GP {
                 let app_sender = self.app_sender;
                 let is_running = Arc::clone(&self.is_running);
                 let src_lang = src_lang.clone();
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let filenames = send_pr_request(app_sender, text.clone(), src_lang.as_ref(), src_id);
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let filenames = send_pr_request(app_sender, text.clone(), src_lang.as_ref(), src_id, proxy);
                     match filenames {
                         Ok(p_files) => {
                             //dbg!(&p_file);
@@ -81,7 +95,7 @@ impl PRNNService for GP {
 }
 
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, src_id: i64) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
 
     let selected_text = selected_text.to_lowercase();
     let first_two_chars: String = selected_text.chars().take(2).collect();
@@ -120,11 +134,16 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
         let mut arr_filenames: Vec<String> = vec![];
         let working_dir = std::env::current_dir()?;
 
-        let client = Client::builder()
+        let mut client = Client::builder()
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .gzip(true)
-            .build()?;
+            .gzip(true);
+        client = if let Some(proxy) = proxy {
+            client.proxy(proxy)
+        } else {
+            client
+        };
+        let client = client.build()?;
 
         let mut count = 1;
         let urls_len = arr_urls.len();

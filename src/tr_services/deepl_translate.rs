@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
+use std::str::FromStr;
 
 use wreq::{
     Client,
@@ -24,13 +25,14 @@ pub struct DL {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    uid: String
+    uid: String,
+    use_proxy: bool
 }
 
 impl DL {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, name, uid}
+        Self {is_running, app_sender, name, uid, use_proxy}
     }
 }
 impl Translator for DL {
@@ -52,19 +54,32 @@ impl Translator for DL {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name();
                 let uid = self.get_uid();
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected);
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
                     match transl_result {
                         Ok(t_text) => {
-                            println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
-                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), src_lang.clone(), target_lang.clone(), t_text.0.clone())));
+                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
                                 tr_uid: Some(uid), 
                                 translator: Some(name), 
-                                src: Some(src_lang), 
+                                src: Some(t_text.1), 
                                 target: Some(target_lang), 
                                 translation_text: Some(t_text.0),
                                 is_fav: None
@@ -139,10 +154,10 @@ struct DLang {
     method: String
 }*/
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) -> Result<(String, Option<String>)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: Option<wreq::Proxy>) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
-    let src_lang = if is_lang_detected {
+    let src_lang_ref = if is_lang_detected {
         src_lang.as_ref().to_uppercase()
     } else {
         "auto".to_string()
@@ -166,7 +181,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
             params: PostDataParams {
                 splitting: "newlines".to_string(),
                 lang: DLang {
-                    source_lang_user_selected: src_lang.to_string(),
+                    source_lang_user_selected: src_lang_ref.to_string(),
                     target_lang: target_lang.as_ref().to_uppercase(),
                 },
                 texts: vec![TextItem {
@@ -200,12 +215,18 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
 
         // Create a new req client
-        let client = wreq::Client::builder()
+        let mut client = wreq::Client::builder()
             .emulation(Emulation::Chrome137)
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .gzip(true)
-            .build()?;
+            .gzip(true);
+        client = if let Some(proxy) = proxy {
+            client.proxy(proxy)
+        } else {
+            client
+        };
+        
+        let client = client.build()?;
         //client := req.C().SetTLSFingerprintRandomized()
         let resp = client.post(url_full)
             //.version(Version::HTTP_11)
@@ -230,7 +251,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         Ok(json_data) => {
             println!("{}", &json_data);
             let json_data: Value = serde_json::from_str(json_data.as_str())?;
-            let mut src_lng_suggested = None;
+            let mut src_lng_suggested = src_lang.clone();
             if let Some(texts) = json_data.pointer("/result/texts") {
 
                 if let Some(texts_arr) = texts.as_array() 
@@ -253,8 +274,8 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                 println!("response error");
             }
 
-            if let Some(lng) = json_data.pointer("/result/lang") && let Some(lng_str) = lng.as_str()  {
-                src_lng_suggested = Some(lng_str.to_lowercase());
+            if let Some(lng) = json_data.pointer("/result/lang") {
+                src_lng_suggested = Lang::from_str(lng.as_str().unwrap_or("auto").to_lowercase().as_str()).unwrap_or(src_lang);
             }
             // if let Some(lng) = data.pointer("/result/lang_is_confident") {
             // }

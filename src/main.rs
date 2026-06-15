@@ -117,6 +117,7 @@ pub struct Settings {
     pub ext_service_unload_timeout: u64,
     pub http_throttling: f64,
     pub http_request_timeout: u64,
+    pub proxy: Option<ProxyOption>,
 
     pub source_text_max_length: usize, //TODO: chunking
     pub transl_request_min_length: usize,
@@ -139,6 +140,10 @@ pub struct Settings {
 struct TranslatorOption {
     pub uid: String,
     pub name: String,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+
     pub command: Option<String>,
     pub args: Option<Vec<String>>,
     pub reload_if_lang_changed: Option<bool>,
@@ -147,6 +152,10 @@ struct TranslatorOption {
 struct DictOption {
     pub uid: String,
     pub name: String,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+
     pub path: Option<String>,
     pub dict_path: Option<String>,
 }
@@ -162,6 +171,15 @@ struct TTSEngineOption {
 struct PRNNSourceOption {
     pub uid: String,
     pub name: String,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+}
+#[derive(Debug, Deserialize, Serialize)]
+struct ProxyOption {
+    pub url: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
@@ -326,17 +344,18 @@ fn main() {
             app_panic_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
+        let use_proxy = value.use_proxy;
         if let Some(command) = &value.command 
         && command.chars().count() > 0
         && let Some(args) = &value.args 
         && let Some(reload) = &value.reload_if_lang_changed {
-            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), reload.clone() )));
+            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), reload.clone(), use_proxy )));
         } else if value.uid == "tr_google" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "tr_google2" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "tr_deepl" {
-            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
@@ -346,13 +365,14 @@ fn main() {
             app_panic_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
+        let use_proxy = value.use_proxy;
         if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
         } else if value.uid == "dict_wiktionary_en" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "dict_google" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone())));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         }
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
@@ -375,10 +395,11 @@ fn main() {
         /*if let Some(path) = &value.path && path.chars().count() > 0 {
             //
         } else*/ 
+        let use_proxy = value.use_proxy;
         if value.uid == "prnn_wiki" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone())));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone(), use_proxy)));
         } else if value.uid == "prnn_google" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone())));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone(), use_proxy)));
         }
     }
     //app_state.prnn_services.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));

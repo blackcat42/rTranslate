@@ -35,10 +35,11 @@ pub struct NT {
     src_lang: Lang,
     target_lang: Lang,
     reload_if_lang_changed: bool,
+    use_proxy: bool
 }
 
 impl NT {
-    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>, reload_if_lang_changed: bool) -> Self {
+    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>, reload_if_lang_changed: bool, use_proxy: bool) -> Self {
         let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
         let shared_receiver = Arc::new(Mutex::new(rx));
         let is_running = Arc::new(AtomicBool::new(false));
@@ -46,7 +47,7 @@ impl NT {
         let current_src_text = Arc::new(RwLock::new(String::from("")));
         let src_lang = Lang::En;
         let target_lang = Lang::Ru;
-        Self { tx, shared_receiver, is_running, current_src_id, current_src_text, s, uid, name, command, args, src_lang, target_lang, reload_if_lang_changed}
+        Self { tx, shared_receiver, is_running, current_src_id, current_src_text, s, uid, name, command, args, src_lang, target_lang, reload_if_lang_changed, use_proxy}
     }
 }
 
@@ -86,6 +87,7 @@ impl Translator for NT {
             let args = self.args.clone();
             let uid = self.uid.clone();
             let service_name = self.get_name();
+            let use_proxy = self.use_proxy;
 
             std::thread::spawn(
                 move || {
@@ -102,7 +104,8 @@ impl Translator for NT {
                         command, 
                         args,
                         uid,
-                        service_name
+                        service_name,
+                        use_proxy
                     );
                     match brgmt_thread.join() {
                         Ok(value) => {
@@ -155,7 +158,8 @@ fn run_node_thread(
     command: String,
     args: Vec<String>,
     service_uid: String,
-    service_name: String
+    service_name: String,
+    use_proxy: bool
 ) -> thread::JoinHandle<Result<()>> {
     //TODO: catch thread panics
     
@@ -172,6 +176,7 @@ fn run_node_thread(
             let mut child;
             let src_lang_str = src_lang.as_ref();
             let target_lang_str = target_lang.as_ref();
+            let use_proxy: &str = if use_proxy { "true" } else { "false" };
 
             if which(&command).is_ok() {
                 if command.starts_with(".\\") {
@@ -179,6 +184,7 @@ fn run_node_thread(
                         .args(args)
                         .arg(format!("--src={src_lang_str}"))
                         .arg(format!("--target={target_lang_str}"))
+                        .arg(format!("--proxy={use_proxy}")) //TODO proxy settings
                         .creation_flags(CREATE_NO_WINDOW)
                         .current_dir(directory)
                         .stdin(Stdio::piped())
@@ -189,6 +195,7 @@ fn run_node_thread(
                         .args(args)
                         .arg(format!("--src={src_lang_str}"))
                         .arg(format!("--target={target_lang_str}"))
+                        .arg(format!("--proxy={use_proxy}")) //TODO proxy settings
                         .creation_flags(CREATE_NO_WINDOW)
                         .current_dir(directory)
                         .stdin(Stdio::piped())

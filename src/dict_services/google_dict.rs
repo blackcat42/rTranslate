@@ -18,15 +18,16 @@ pub struct GD {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    uid: String
+    uid: String,
+    use_proxy: bool
 }
 use std::str::FromStr;
 
 
 impl GD {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, name, uid}
+        Self {is_running, app_sender, name, uid, use_proxy}
     }
 }
 impl Dictionary for GD {
@@ -47,10 +48,23 @@ impl Dictionary for GD {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name();
                 let uid = self.get_uid();
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone());
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), proxy);
                     match transl_result {
                         Ok(t_text) => {
                             let tt_text = parse_resp_json_to_dsl(t_text.clone());
@@ -95,7 +109,7 @@ impl Dictionary for GD {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> Result<String> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, proxy: Option<wreq::Proxy>) -> Result<String> {
     //let mut response = "".to_string();
     let src_lang = src_lang.as_ref();
     let target_lang = target_lang.as_ref();
@@ -132,11 +146,17 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang) -> 
     });
 
     let result = rt.block_on(async {
-        let client = Client::builder()
+        let mut client = Client::builder()
             //.emulation(Emulation::Chrome137)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36")
-            .build()?;
+            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36");
+        client = if let Some(proxy) = proxy {
+            client.proxy(proxy)
+        } else {
+            client
+        };
+        let client = client.build()?;
+        
         let resp = client.get(req_string).query(&[("q", selected_text.to_lowercase())]).send().await?.text().await?;
         Ok(resp)
     });

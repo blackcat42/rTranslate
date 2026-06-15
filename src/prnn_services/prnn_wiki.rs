@@ -25,12 +25,13 @@ pub struct WP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
+    use_proxy: bool
 }
 
 impl WP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender, name}
+        Self { is_running, app_sender, name, use_proxy}
     }
 }
 //TODO! language detect
@@ -44,10 +45,23 @@ impl PRNNService for WP {
             thread::spawn({
                 let app_sender = self.app_sender;
                 let is_running = Arc::clone(&self.is_running);
+                let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-
-                    let filenames = send_pr_request(app_sender, text.clone(), src_lang, src_id);
+                    let mut proxy: Option<wreq::Proxy> = None;
+                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
+                        let proxy_url = &proxy_settings.url;
+                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
+                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
+                                wreq_proxy.basic_auth(username, password)
+                            } else {
+                                wreq_proxy
+                            };
+                            proxy = Some(wreq_proxy);
+                        }
+                        
+                    }
+                    let filenames = send_pr_request(app_sender, text.clone(), src_lang, src_id, proxy);
                     match filenames {
                         Ok(p_files) => {
                             //dbg!(&p_file);
@@ -90,7 +104,7 @@ struct MediaItem {
     type: String
 }*/
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, src_id: i64) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
     
     //let req_string = format!("https://en.wiktionary.org/api/rest_v1/page/media-list/{}", selected_text.to_lowercase());
 
@@ -107,14 +121,18 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
         let mut arr: Vec<String> = vec![];
         let mut arr_filenames: Vec<String> = vec![];
 
-        let client = Client::builder()
+        let mut client = Client::builder()
             //.emulation(Emulation::Chrome137)
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
             //.cookie_store(true)
-            .gzip(true)
-            .build()?;
-
+            .gzip(true);
+        client = if let Some(proxy) = proxy {
+            client.proxy(proxy)
+        } else {
+            client
+        };
+        let client = client.build()?;
 
         /*let resp = client.get(req_string).send().await?.text().await?;
         println!("{}", resp);
