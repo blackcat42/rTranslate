@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use fltk::{
     app,
 };
@@ -244,8 +245,8 @@ impl AppState {
         if src_lang == Lang::Auto {
             //DETECT LANGUAGE
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
-            //println!("{:?}", info.lang().code()); 
-            //println!("{:?}", info.is_reliable());
+            //dprintln!("{:?}", info.lang().code()); 
+            //dprintln!("{:?}", info.is_reliable());
             if info.is_reliable() {
                 let lng = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
                 if lng == target_lang {
@@ -351,7 +352,7 @@ impl AppState {
 
         if src_lang == Lang::Auto {
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
-            //println!("{:?}", info.lang().code()); println!("{:?}", info.is_reliable());
+            //dprintln!("{:?}", info.lang().code()); dprintln!("{:?}", info.is_reliable());
             if info.is_reliable() {
                 let lng = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
                 if lng == target_lang {
@@ -441,7 +442,7 @@ impl AppState {
                         self.selected_tts_voice.clone()
                     );
                 } else {
-                    println!("error");
+                    dprintln!("error");
                 }
             }
         }
@@ -467,7 +468,7 @@ impl AppState {
 
             match tts {
                 Ok(t) => {
-                    println!("tts found");
+                    dprintln!("tts found");
                     let audio_path = format!(r"tts_cache\{t}.ogg");
                     let working_dir = std::env::current_dir()?;
                     match working_dir.join(audio_path).try_exists() {
@@ -525,7 +526,7 @@ impl AppState {
                         src_id, 
                     );
                 } else {
-                    println!("error");
+                    dprintln!("error");
                 }
             }
         }
@@ -705,7 +706,7 @@ impl AppState {
                 "REPLACE INTO tts (src_id, path, tts_engine_uid, tts_voice_uid) VALUES (?1, ?2, ?3, ?4)",
                 params![src_id, path, tts_engine, tts_voice],
             )?;
-            println!("tts inserted/replaced");
+            dprintln!("tts inserted/replaced");
             //Ok(db.last_insert_rowid())//TODO: RETURNING clause
             Ok(filename.to_string())
         } else {
@@ -722,7 +723,7 @@ impl AppState {
                 "REPLACE INTO prnn (src_id, path, prnn_source_uid) VALUES (?1, ?2, ?3)",
                 params![src_id, filename, prnn_source],
             )?;
-            println!("prnn inserted/replaced");
+            dprintln!("prnn inserted/replaced");
             //Ok(db.last_insert_rowid())//TODO: RETURNING clause
             Ok(filename.to_string())
         } else {
@@ -740,7 +741,7 @@ impl AppState {
                 "REPLACE INTO transl (src_id, transl_engine_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![src_id, selected_translator, src, target, text],
             )?;
-            println!("transl inserted/replaced");
+            dprintln!("transl inserted/replaced");
             Ok(db.last_insert_rowid()) //TODO: RETURNING clause
         } else {
             Ok(0)
@@ -767,7 +768,7 @@ impl AppState {
                 )?;
             }
             
-            println!("dict inserted/replaced");
+            dprintln!("dict inserted/replaced");
             Ok(db.last_insert_rowid())//TODO: RETURNING clause
         } else {
             Ok(0)
@@ -810,7 +811,7 @@ impl AppState {
 
             match src_id {
                 Ok((id, fav)) => {
-                    println!("cached src found");
+                    dprintln!("cached src found");
                     Ok((text, id, fav))
                 }
                 Err(_) => {
@@ -818,7 +819,7 @@ impl AppState {
                         "INSERT INTO src (text, hash) VALUES (?1, ?2)",
                         params![text, hash],
                     )?;
-                    println!("src inserted");
+                    dprintln!("src inserted");
                     Ok((text, db.last_insert_rowid(), false)) //TODO: RETURNING clause
                 }
             } 
@@ -920,7 +921,7 @@ impl AppState {
     }
 
     pub fn init_db(&self) -> Result<()> {
-        //println!("open_db");
+        //dprintln!("open_db");
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             self.app_sender.send(AppEvent::SetStatus("no db support, caching will not work".into(), false, false));

@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use fltk::{
     app,
     prelude::*,
@@ -214,7 +215,7 @@ impl AppView {
         for qwe in GLOBAL_SETTINGS.translators.iter() {
             let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
             let icon_path = format!(r"icons/{}.ico", &qwe.uid);
-            println!("{}", icon_path);
+            dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
                 button.set_image(Some(image));
                 button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
@@ -350,7 +351,7 @@ impl AppView {
         for qwe in GLOBAL_SETTINGS.dictionaries.iter() {
             let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
             let icon_path = format!(r"icons/{}.ico", &qwe.uid);
-            println!("{}", icon_path);
+            dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
                 button.set_image(Some(image));
                 button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
@@ -893,10 +894,10 @@ impl AppView {
                 // FLTK browser indices are 1-based
                 let selected_index = b.value(); 
                 if selected_index > 0 && let Some(text) = b.text(selected_index) {
-                    println!("Selected: {} at index {}", text, selected_index);
+                    dprintln!("Selected: {} at index {}", text, selected_index);
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<i32>(selected_index) {
-                            println!("Selected: {}", d);
+                            dprintln!("Selected: {}", d);
                             app_sender.send(AppEvent::UpdateTTState(d));
                         }
                     }
@@ -908,10 +909,10 @@ impl AppView {
                 // FLTK browser indices are 1-based
                 let selected_index = b.value(); 
                 if selected_index > 0 && let Some(text) = b.text(selected_index) {
-                    println!("Selected: {} at index {}", text, selected_index);
+                    dprintln!("Selected: {} at index {}", text, selected_index);
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<i32>(selected_index) {
-                            println!("Selected: {}", d);
+                            dprintln!("Selected: {}", d);
                             app_sender.send(AppEvent::UpdateTTState(d));
                         }
                     }
@@ -923,10 +924,10 @@ impl AppView {
                 // FLTK browser indices are 1-based
                 let selected_index = b.value(); 
                 if selected_index > 0 && let Some(text) = b.text(selected_index) {
-                    println!("Selected: {} at index {}", text, selected_index);
+                    dprintln!("Selected: {} at index {}", text, selected_index);
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<String>(selected_index) {
-                            println!("Selected: {}", d);
+                            dprintln!("Selected: {}", d);
                             let filename = format!("{}.ogg", d);
                             app_sender.send(AppEvent::TTSPlay(filename));
                         }
@@ -939,10 +940,10 @@ impl AppView {
                 // FLTK browser indices are 1-based
                 let selected_index = b.value(); 
                 if selected_index > 0 && let Some(text) = b.text(selected_index) {
-                    println!("Selected: {} at index {}", text, selected_index);
+                    dprintln!("Selected: {} at index {}", text, selected_index);
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
                         if let Some(d) = b.data::<String>(selected_index) {
-                            println!("Selected: {}", d);
+                            dprintln!("Selected: {}", d);
                             //let filename = format!("{}.ogg", d);
                             app_sender.send(AppEvent::TTSPlay(d));
                         }
@@ -955,7 +956,7 @@ impl AppView {
         //TODO bug: sometimes, after mouse hover on the tray icon, something starts triggering the app's main loop infinitely. difficult to reproduce, cpu load 0,12%, 7KK cycles delta
         std::thread::spawn({
             move || loop {
-                println!("TrayIconEvent loop");
+                dprintln!("TrayIconEvent loop");
                 if let Ok(e) = TrayIconEvent::receiver().recv() {
                     app_sender.send(AppEvent::TrayIcon(e));
                 }
@@ -963,7 +964,7 @@ impl AppView {
                     match e {
                         //TODO
                         TrayIconEvent::DoubleClick{..} => {
-                            println!("{:?}", e);
+                            dprintln!("{:?}", e);
                             app_sender.send(AppEvent::ShowPopup(false));
                         }
                         TrayIconEvent::Click {..} => {
@@ -977,7 +978,7 @@ impl AppView {
         //TRAY MENU EVENTS
         std::thread::spawn({
             move || loop {
-                println!("TrayMenuEvent loop");
+                dprintln!("TrayMenuEvent loop");
                 if let Ok(e) = MenuEvent::receiver().recv() {
                     app_sender.send(AppEvent::TrayMenuEvent(e));
                 }
@@ -1235,7 +1236,7 @@ impl AppView {
     }
 
     pub fn clear_ui(&mut self, is_dict: bool) {
-        println!("clear_ui");
+        dprintln!("clear_ui");
         self.set_status("", false, false);
         if !is_dict {
             self.title_frame.set_label("");
@@ -1252,7 +1253,7 @@ impl AppView {
         state: UIState,
         is_new_source: bool
     ) {
-        println!("update_ui");
+        dprintln!("update_ui");
         let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
 
         if is_new_source {  
@@ -1300,7 +1301,7 @@ impl AppView {
     }
 
     pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
-        println!("update_ui {is_new_source}");
+        dprintln!("update_ui {is_new_source}");
         let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, src, target, dict_text, is_fav} = state;
 
         if is_new_source {  
@@ -1447,7 +1448,7 @@ impl AppView {
         let mut txt_buf_clone = self.waiting_buf.clone();
         std::thread::spawn({
             move || {
-                println!("---animation loop start---");
+                dprintln!("---animation loop start---");
                 let mut is_processing_n = 0;
                 while is_processing_clone.load(Ordering::Relaxed) {
                     is_processing_n += 1;
@@ -1458,7 +1459,7 @@ impl AppView {
                     app::awake();
                     thread::sleep(Duration::from_millis(100));
                 }
-                println!("---animation loop stop---");
+                dprintln!("---animation loop stop---");
             }
         });
     }
@@ -1559,10 +1560,10 @@ impl AppView {
             //let position = Mouse::get_mouse_position();
             /*match position {
                 Mouse::Position { x, y } => {
-                    println!("x: {} y: {}", x, y);
+                    dprintln!("x: {} y: {}", x, y);
                     win.set_pos(x, y); //TODO: screen edges, offsets, etc.
                 },
-                Mouse::Error => println!("Error getting mouse position"),
+                Mouse::Error => dprintln!("Error getting mouse position"),
             }*/
         }
         //win.redraw();
@@ -1575,7 +1576,7 @@ impl AppView {
 }
 
 /*fn set_w_pos(mut win: DoubleWindow) {    
-    println!("getting mouse position");
+    dprintln!("getting mouse position");
     win.set_pos(x, y);
 }*/
 

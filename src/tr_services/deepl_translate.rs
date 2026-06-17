@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState};
@@ -73,7 +74,7 @@ impl Translator for DL {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
                     match transl_result {
                         Ok(t_text) => {
-                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
@@ -249,7 +250,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
 
     match result {
         Ok(json_data) => {
-            println!("{}", &json_data);
+            dprintln!("{}", &json_data);
             let json_data: Value = serde_json::from_str(json_data.as_str())?;
             let mut src_lng_suggested = src_lang.clone();
             if let Some(texts) = json_data.pointer("/result/texts") {
@@ -271,7 +272,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                     return Err(anyhow!("response error: empty array (/result/texts)"));
                 }
             } else {
-                println!("response error");
+                dprintln!("response error");
             }
 
             if let Some(lng) = json_data.pointer("/result/lang") {

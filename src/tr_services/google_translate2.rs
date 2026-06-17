@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState};
 //use ureq::Agent;
@@ -71,7 +72,7 @@ impl Translator for GT2 {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
                     match transl_result {
                         Ok(t_text) => {
-                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
@@ -122,7 +123,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         let target_lang = serde_json::to_string(target_lang.as_ref())?;
 
         let req_body = format!("[[[{}],{},{}],\"wt_lib\"]", selected_text, src_lang_ref, target_lang);
-        println!("{}", req_body);
+        dprintln!("{}", req_body);
         let mut headers = header::HeaderMap::new();
         headers.insert("Host", header::HeaderValue::from_static("translate-pa.googleapis.com"));
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
@@ -146,7 +147,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
 
                 let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
 
-                println!("{}", resp);
+                dprintln!("{}", resp);
                 Ok(resp)
             }
             None => {

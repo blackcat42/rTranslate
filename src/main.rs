@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 #![allow(clippy::get_first)]
+
+use debug_print::{debug_println as dprintln};
 
 use fltk::{
     app,
@@ -227,7 +228,7 @@ fn main() {
     //create directories
     let audio_path = working_dir.join("tts_cache");
     if let Err(err) = std::fs::create_dir_all(audio_path) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
 
     //TRAY
@@ -235,23 +236,23 @@ fn main() {
 
     let tray_menu_main_window = MenuItem::new("rTranslate", true, None); //TODO: make bold
     if let Err(err) = tray_menu.append(&tray_menu_main_window) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
     let tray_menu_popup_window = MenuItem::new("Show popup window", true, None);
     if let Err(err) = tray_menu.append(&tray_menu_popup_window) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
     let tray_menu_popup_dict_window = MenuItem::new("Show dict. popup window", true, None);
     if let Err(err) = tray_menu.append(&tray_menu_popup_dict_window) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
     let tray_menu_settings = MenuItem::new("Settings", true, None);
     if let Err(err) = tray_menu.append(&tray_menu_settings) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
     let tray_menu_exit = MenuItem::new("Exit", true, None);
     if let Err(err) = tray_menu.append(&tray_menu_exit) {
-        println!("{err:?}");
+        dprintln!("{err:?}");
     }
 
     let icon = load_icon(working_dir.join(r"icons\tray_icon.png").as_path());
@@ -440,7 +441,7 @@ fn main() {
     //HOTKEYS
     //TODO: github.com/iholston/win-hotkeys; github.com/obv-mikhail/InputBot
     std::thread::spawn(move || loop {
-        //println!("hotkeys event loop");
+        //dprintln!("hotkeys event loop");
         if let Ok(event) = GlobalHotKeyEvent::receiver().recv() { 
             app_sender.send(AppEvent::HotKey(event));
         }
@@ -450,7 +451,7 @@ fn main() {
         if app::event() == fltk::enums::Event::KeyUp {
             let key = app::event_key();
             match key {
-                fltk::enums::Key::Left => println!("ArrowLeft"),
+                fltk::enums::Key::Left => dprintln!("ArrowLeft"),
                 _ => ()
             };
             //handle_key(key);
@@ -460,7 +461,7 @@ fn main() {
 
 
     while app.wait() {
-        //println!("app main loop");
+        //dprintln!("app main loop");
         match app_receiver.recv() {
 
             //TODO: get ui_state from database by given src- and translation id's (single source of truth)
@@ -584,7 +585,7 @@ fn main() {
                 }
             }
             Some(AppEvent::TrayMenuEvent(e)) => {
-                println!("{:?}", e);
+                dprintln!("{:?}", e);
 
                 if e.id == tray_menu_exit.id() {
                     std::process::exit(0);
@@ -636,7 +637,7 @@ fn main() {
                         },
                         Err(_) => {
                             app_view.set_status("An error occurred while getting the selected text", true, false);
-                            println!("An error occurred while getting the selected text");
+                            dprintln!("An error occurred while getting the selected text");
                         }
                     }
                 }
@@ -830,8 +831,8 @@ fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
         while let Some(row) = data.next()? {
             let id: u32 = row.get(0)?;
             //let path: String = row.get(1)?;
-            //println!("ID: {}", &id);
-            //println!("PATH: {}", &path);
+            //dprintln!("ID: {}", &id);
+            //dprintln!("PATH: {}", &path);
             ids.push(id);
         }
         let _ = delete_audio_files_by_ids(conn, ids);
@@ -844,7 +845,7 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
     
     let history_max_entries = GLOBAL_SETTINGS.history_max_entries;
     if let Some(db) = conn {
-        //println!("clear_history");
+        //dprintln!("clear_history");
 
         let count: i32 = db.query_row(
             "SELECT COUNT(*) FROM src WHERE src.fav = FALSE",
@@ -856,7 +857,7 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
         }
 
         let limit_del = count - history_max_entries;
-        //println!("limit_del {}", limit_del);
+        //dprintln!("limit_del {}", limit_del);
 
         let mut data_pr = db.prepare(
             "SELECT id FROM src 
@@ -878,7 +879,7 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
             &query,
             params_from_iter(ids.iter()),
         )?;
-        println!("clear_history; rows deleted {}", rows);
+        dprintln!("clear_history; rows deleted {}", rows);
 
         Ok(())
 
@@ -915,7 +916,7 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
                 let working_dir = std::env::current_dir()?;
                 let file = working_dir.join(&audio_path);
                 if let Ok(exist) = file.try_exists() && exist {
-                    //println!("File to delete: {}", &file.display());
+                    //dprintln!("File to delete: {}", &file.display());
                     match std::fs::remove_file(&file) {
                         Ok(_) => {
                             println!("File deleted: {}", &file.display());
@@ -926,8 +927,8 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
                     }
                 }
             }
-            //println!("IDs: {:?}", ids);
-            //println!("paths: {:?}", paths);
+            //dprintln!("IDs: {:?}", ids);
+            //dprintln!("paths: {:?}", paths);
         }
         Ok(())
     } else {

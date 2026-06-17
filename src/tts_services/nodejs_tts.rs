@@ -1,5 +1,5 @@
 //TODO: async, non-blocking
-
+use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, TTSEngine};
 use std::env;
 use std::io::Write;

@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 //use serde_json::Value;
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict};
 //use ureq::Agent;
@@ -104,7 +105,7 @@ fn send_tr_request(selected_text: String, proxy: Option<wreq::Proxy>) -> Result<
     //let mut response = "".to_string();
 
     let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();
-    println!("{}", req_string);
+    dprintln!("{}", req_string);
 
     let rt = TOKIO_RT.get_or_init(|| {
         tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
@@ -123,7 +124,7 @@ fn send_tr_request(selected_text: String, proxy: Option<wreq::Proxy>) -> Result<
         let client = client.build()?;
         
         let resp = client.get(req_string).query(&[("title", selected_text.to_lowercase())]).send().await?.text().await?;
-        //println!("{}", resp);
+        //dprintln!("{}", resp);
         Ok(resp)
     });
 

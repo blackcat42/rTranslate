@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState};
 //use ureq::Agent;
@@ -70,7 +71,7 @@ impl Translator for GT {
                     let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
                     match transl_result {
                         Ok(t_text) => {
-                            //println!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
+                            //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                             app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text.clone(),
@@ -108,7 +109,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         "auto"
     };
     let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang_ref, target_lang.as_ref());
-    println!("{}", req_string);
+    dprintln!("{}", req_string);
 
     let rt = TOKIO_RT.get_or_init(|| {
         tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
@@ -128,7 +129,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         let client = client.build()?;
         
         let resp = client.get(req_string).query(&[("q", selected_text)]).send().await?.text().await?;
-        println!("{}", resp);
+        dprintln!("{}", resp);
         Ok(resp)
     });
 
@@ -142,7 +143,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                     for item_value in tr_items {
                         if item_value.get(0).is_some() && let Some(text) = item_value[0].as_str() {
                             response.push_str(text);
-                            //println!("{}", text);
+                            //dprintln!("{}", text);
                         }
                     };
                     if let Some(lang) = items.get(2) {
@@ -176,7 +177,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
             for item_value in tr_items {
                 if let Some(text) = item_value[0].as_str() {
                     response.push_str(text);
-                    //println!("{}", text);
+                    //dprintln!("{}", text);
                 }
             }
         }

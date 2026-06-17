@@ -2902,6 +2902,7 @@ name = "rTranslate"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "debug_print",
  "embed-resource",
  "fancy-regex",
  "fltk",

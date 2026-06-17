@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, PRNNService, Lang};
 use std::{thread, time::Duration};
 use std::sync::{Arc };
@@ -135,7 +136,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
         let client = client.build()?;
 
         /*let resp = client.get(req_string).send().await?.text().await?;
-        println!("{}", resp);
+        dprintln!("{}", resp);
         let v: Value = serde_json::from_str(resp.as_str())?;
         let items = v.pointer("/items").and_then(|v| v.as_array());
         dbg!(items);
@@ -151,7 +152,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                         let ii = ii.to_string().replace("File:", "").trim_matches('"').to_string();
                         arr.push(ii);
                     }
-                     //println!("{}", text);
+                     //dprintln!("{}", text);
                 }
             };
         }*/
@@ -182,8 +183,8 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                     let filename = urlencoding::decode(flnm).unwrap_or(selected_text.to_lowercase().into());
                     let filename = filename.into_owned();
                     let filename = sanitize_filename::sanitize(&filename);
-                    println!("{}", filename);
-                    println!("{}", filename.ends_with(".ogg"));
+                    dprintln!("{}", filename);
+                    dprintln!("{}", filename.ends_with(".ogg"));
                     if !filename.ends_with(".ogg") 
                     && !filename.ends_with(".mp3") 
                     && !filename.ends_with(".wav") {
@@ -216,7 +217,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                         //https://wikitech.wikimedia.org/wiki/Robot_policy
                         tokio::time::sleep(tokio::time::Duration::from_millis(5100)).await;
                         let audio_resp = client.get(full_url).send().await?;
-                        println!("{}", audio_resp.status());
+                        dprintln!("{}", audio_resp.status());
                         if audio_resp.status().is_success() {
                             let audio_bytes = audio_resp.bytes().await?;
                             let mut file = File::create(&audio_path_full)?;
@@ -258,7 +259,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                 let val = v.pointer("/query/pages/-1/imageinfo").and_then(|v| v.as_array());
                 if let Some(value) = val && let Some(url) = value.get(0) {
                     arr_url.push(url.to_string());
-                    //println!("{}", url);
+                    //dprintln!("{}", url);
                 }*/
 
 
@@ -275,7 +276,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                 let item0 = regex::escape("upload.wikimedia.org/wikipedia/commons/");
                 let item1 = regex::escape(&urlencoding::encode(&item));
                 let regex_string = format!("(?i){item0}(./../?)({item1})");
-                println!("{}", regex_string);
+                dprintln!("{}", regex_string);
                 let re = regex::Regex::new(&regex_string)?;
 
                 //for caps in re.captures_iter(&resp_full_text) {

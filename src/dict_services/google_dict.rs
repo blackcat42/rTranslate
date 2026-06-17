@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -69,7 +70,7 @@ impl Dictionary for GD {
                         Ok(t_text) => {
                             let tt_text = parse_resp_json_to_dsl(t_text.clone());
                             if let Ok(text_d) = tt_text {
-                                //println!("lng: {}", text_d.1.unwrap_or("".to_string()));
+                                //dprintln!("lng: {}", text_d.1.unwrap_or("".to_string()));
                                 if let Some(lng) = text_d.1 && let Ok(detected_lng) = Lang::from_str(&lng) {
                                     src_lang = detected_lng;
                                 }
@@ -139,7 +140,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
         req_string.push_str(&token);
     }
 
-    println!("{}", req_string);
+    dprintln!("{}", req_string);
 
     let rt = TOKIO_RT.get_or_init(|| {
         tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
@@ -267,7 +268,7 @@ fn parse_resp_json_to_dsl(json_text: String) -> Result<(String, Option<String>)>
                 }
                 /*if item_value.get(0).is_some() && let Some(text) = item_value[0].as_str() {
                     response.push_str(text);
-                    //println!("{}", text);
+                    //dprintln!("{}", text);
                 }*/
             }
         }
@@ -327,7 +328,7 @@ fn parse_resp_json_to_dsl(json_text: String) -> Result<(String, Option<String>)>
                 }
                 /*if item_value.get(0).is_some() && let Some(text) = item_value[0].as_str() {
                     response.push_str(text);
-                    //println!("{}", text);
+                    //dprintln!("{}", text);
                 }*/
             }
         }

@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, PRNNService, Lang};
 use std::{thread, time::Duration};
 use std::sync::{Arc };
@@ -163,7 +164,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
             } else {
                 tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
                 let audio_resp = client.get(url).send().await?;
-                println!("{}", audio_resp.status());
+                dprintln!("{}", audio_resp.status());
                 let status = audio_resp.status();
                 if status.is_success() {
                     let audio_bytes = audio_resp.bytes().await?;

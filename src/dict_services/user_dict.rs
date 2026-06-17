@@ -1,5 +1,6 @@
 //use serde_json::Value;
 #![allow(clippy::len_zero)]
+use debug_print::{debug_println as dprintln};
 
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -43,7 +44,7 @@ impl DSLDict {
         let is_running = Arc::new(AtomicBool::new(false));
 
         //TODO: return result
-        println!("create db");
+        dprintln!("create db");
         let db_ref = db.borrow();
         if db_ref.is_none() {
             //return Err(());
@@ -79,7 +80,7 @@ impl DSLDict {
             return Ok(());
         }
 
-        println!("create db");
+        dprintln!("create db");
         if let Some(db) = &*db_ref {
 
             let q = format!("DROP TABLE IF EXISTS {}", self.uid);
@@ -105,7 +106,7 @@ impl DSLDict {
             )?;
 
 
-            println!("start");
+            dprintln!("start");
             //parse dsl file
             let path = PathBuf::from(self.dict_path.clone());
             let file = File::open(path.clone())?;
@@ -268,7 +269,7 @@ impl Dictionary for DSLDict {
         }
 
         if let Some(db) = &*db_ref {
-            println!("open db dict");
+            dprintln!("open db dict");
             let app_sender = self.app_sender;
             //let name = self.get_name();
 
@@ -290,16 +291,16 @@ impl Dictionary for DSLDict {
                         Ok((title, offset))
                     },
                 );
-            println!("dict query end");
+            dprintln!("dict query end");
             match index {
                     Ok(row) => {
-                        println!("cached src found");
-                        println!("{}", offset);
+                        dprintln!("cached src found");
+                        dprintln!("{}", offset);
                         offset = row.1 as u64;
                     }
                     Err(e) => {
                         //app_sender.send(AppEvent::SetReady());
-                        println!("{}", e);
+                        dprintln!("{}", e);
                     }
                 } 
 
@@ -372,7 +373,7 @@ fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> 
         let utf16_vec = convert_u8_to_u16(buffer.clone());
         match String::from_utf16(&utf16_vec) {
             Ok(decoded_string) => {
-                //println!("{}", decoded_string);
+                //dprintln!("{}", decoded_string);
                 if is_title && (decoded_string.starts_with("\t") || decoded_string.starts_with(" ")) {
                     is_title = false;
                 }

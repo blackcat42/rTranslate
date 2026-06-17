@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -59,8 +60,8 @@ impl Translator for NT {
         }
     }
     fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang, _is_lang_detected: bool) {
-        println!("new src or target lang: {}", (self.src_lang != src_lang || self.target_lang != target_lang));
-        println!("old lng: {} new lng: {}", self.src_lang.as_ref(), src_lang.as_ref());
+        dprintln!("new src or target lang: {}", (self.src_lang != src_lang || self.target_lang != target_lang));
+        dprintln!("old lng: {} new lng: {}", self.src_lang.as_ref(), src_lang.as_ref());
 
         //fallback if src language changed, but process with specific language model is still running
 
@@ -73,7 +74,7 @@ impl Translator for NT {
         self.target_lang = target_lang;
 
         if !self.is_running.load(Ordering::Relaxed) {
-            //println!("!is_brgmt_running");
+            //dprintln!("!is_brgmt_running");
             let shared_receiver = Arc::clone(&self.shared_receiver);
             let is_running = Arc::clone(&self.is_running);
             let current_src_id = Arc::clone(&self.current_src_id);
@@ -91,7 +92,7 @@ impl Translator for NT {
 
             std::thread::spawn(
                 move || {
-                    //println!("---BRGMT OUTER LOOP---");
+                    //dprintln!("---BRGMT OUTER LOOP---");
                     let brgmt_thread = run_node_thread(
                         Arc::clone(&is_running), 
                         s2, 
@@ -109,7 +110,7 @@ impl Translator for NT {
                     );
                     match brgmt_thread.join() {
                         Ok(value) => {
-                            println!("Thread returned");
+                            dprintln!("Thread returned");
                             match value {
                                 Ok(_) => {
                                     s2.send(AppEvent::SetReady(None, false));
@@ -224,8 +225,8 @@ fn run_node_thread(
                     for line in reader.lines() {
                         let service_uid = service_uid.clone();
                         if let Ok(l) = line {
-                            println!("Child says: {}", l.len());
-                            println!("Child says: {}", l.clone());
+                            dprintln!("Child says: {}", l.len());
+                            dprintln!("Child says: {}", l.clone());
                             if l.len() > 2 {
                                 let src_text = current_src_text.read().unwrap();
                                 //let src_text = *src_text;
@@ -275,14 +276,14 @@ fn run_node_thread(
                             }        
                         }
                     }
-                    println!("brgmt_thread_reader stopping");
+                    dprintln!("brgmt_thread_reader stopping");
                     is_running.store(false, Ordering::Relaxed);
                     let _ = tx.send(None);
                 }
             });
 
             while is_running.load(Ordering::Relaxed) {
-                //println!("---BRGMT INNER LOOP---");
+                //dprintln!("---BRGMT INNER LOOP---");
                 let receiver = cloned_receiver.lock();
                 match receiver {
                     Ok(r) => {
@@ -339,8 +340,8 @@ fn run_node_thread(
             } else if exit_code == 53 {
                 return Err(anyhow!("Service error"));
             }
-            println!("Child process exited with status: {}", status);
-            println!("nodejs_thread stopping");
+            dprintln!("Child process exited with status: {}", status);
+            dprintln!("nodejs_thread stopping");
             Ok(())
         }
     })
