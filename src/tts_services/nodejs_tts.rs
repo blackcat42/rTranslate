@@ -38,8 +38,8 @@ impl NTTS {
 }
 
 impl TTSEngine for NTTS {
-    fn get_name(&self) -> String {
-        self.name.clone()
+    fn get_name(&self) -> &str {
+        &self.name
     }
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) {
         if self.is_running.load(Ordering::SeqCst) {

@@ -87,7 +87,7 @@ impl Translator for NT {
             let command = self.command.clone();
             let args = self.args.clone();
             let uid = self.uid.clone();
-            let service_name = self.get_name();
+            let service_name = self.get_name().to_string();
             let use_proxy = self.use_proxy;
 
             std::thread::spawn(
@@ -133,11 +133,11 @@ impl Translator for NT {
         }
     }
 
-    fn get_uid(&self) -> String {
-        self.uid.clone()
+    fn get_uid(&self) -> &str {
+        &self.uid
     }
-    fn get_name(&self) -> String {
-        self.name.clone()
+    fn get_name(&self) -> &str {
+        &self.name
     }
 }
 

@@ -298,7 +298,7 @@ impl AppState {
                 let tr_uid = self.selected_translator.clone();
                 let mut tr_name = "".to_string();
                 if let Some(tr) = self.translators.get(tr_uid.as_str()) {
-                    tr_name = tr.get_name();
+                    tr_name = tr.get_name().to_string();
                 }
 
                 self.app_sender.send(AppEvent::UpdateUi(UIState {
@@ -382,7 +382,7 @@ impl AppState {
                 let dict_uid = self.selected_dict.clone();
                 let mut dict_name = "".to_string();
                 if let Some(d) = self.dictionaries.get(dict_uid.as_str()) {
-                    dict_name = d.get_name();
+                    dict_name = d.get_name().to_string();
                 }
 
                 self.app_sender.send(AppEvent::UpdateUiDict(UIStateDict {

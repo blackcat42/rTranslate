@@ -517,14 +517,14 @@ fn main() {
                 app_state.selected_translator = translator.clone();
                 if let Some(tr_struct) = app_state.translators.get(translator.as_str()) {
                     let tr_name = tr_struct.get_name();
-                    app_view.set_translator(&tr_name, translator.as_str());
+                    app_view.set_translator(tr_name, translator.as_str());
                 }
             }
             Some(AppEvent::SetDict(dict)) => {
                 app_state.selected_dict = dict.clone();
                 if let Some(dict_struct) = app_state.dictionaries.get(dict.as_str()) {
                     let dict_name = dict_struct.get_name();
-                    app_view.set_dict(&dict_name, dict.as_str());
+                    app_view.set_dict(dict_name, dict.as_str());
                 }
             }
             Some(AppEvent::SetTTSEngine(tts, voice)) => {
@@ -533,7 +533,7 @@ fn main() {
 
                 if let Some(tts_struct) = app_state.tts_engines.get(tts.as_str()) {
                     let tts_name = tts_struct.get_name();
-                    app_view.set_tts_engine(&tts_name, &voice);
+                    app_view.set_tts_engine(tts_name, &voice);
                 }
                 
             }
@@ -542,7 +542,7 @@ fn main() {
 
                 if let Some(prnn_struct) = app_state.prnn_services.get(prnn.as_str()) {
                     let prnn_name = prnn_struct.get_name();
-                    app_view.set_prnn_service(&prnn_name);
+                    app_view.set_prnn_service(prnn_name);
                 }
                 
             }

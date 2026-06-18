@@ -121,7 +121,7 @@ impl DSLDict {
                 //let index_db = Arc::clone(&self.db);
                 
                 //let name = self.get_name();
-                let uid = self.get_uid();
+                let uid = self.get_uid().to_string();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                     let mut line_num = 1;
@@ -203,11 +203,11 @@ impl DSLDict {
 impl Dictionary for DSLDict {
     fn terminate(&mut self) {}
 
-    fn get_uid(&self) -> String {
-        self.uid.clone()
+    fn get_uid(&self) -> &str {
+        &self.uid
     }
-    fn get_name(&self) -> String {
-        self.name.clone()
+    fn get_name(&self) -> &str {
+        &self.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, _src_lang: Lang,_target_lang: Lang) {
@@ -233,7 +233,7 @@ impl Dictionary for DSLDict {
             let is_indexed_n = db.query_row(
                     "SELECT is_indexed FROM user_dicts_metadata 
                              WHERE dict_uid = ?1",
-                    params![&self.get_uid()], //text
+                    params![self.get_uid()], //text
                     |row| {
                         Ok(row.get(0).unwrap_or(0))
                     },
@@ -315,12 +315,12 @@ impl Dictionary for DSLDict {
             let transl_result = send_tr_request(&self.dict_path, offset);
             match transl_result {
                 Ok(t_text) => {
-                    app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid(), t_text.clone(), None, None )));
+                    app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
                     app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                         src_id: Some(src_id),
                         src_text_dict: orig_text.clone(),
-                        dict_uid: Some(self.get_uid()), 
-                        dict_name: Some(self.get_name()),
+                        dict_uid: Some(self.get_uid().to_string()), 
+                        dict_name: Some(self.get_name().to_string()),
                         src: None, 
                         target: None, 
                         dict_text: Some(t_text),

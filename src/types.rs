@@ -371,8 +371,8 @@ pub trait Translator {
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();
-    fn get_uid(&self) -> String;
-    fn get_name(&self) -> String;
+    fn get_uid(&self) -> &str;
+    fn get_name(&self) -> &str;
 }
 
 #[allow(dead_code)]
@@ -386,17 +386,17 @@ pub trait Dictionary {
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();
-    fn get_uid(&self) -> String;
-    fn get_name(&self) -> String;
+    fn get_uid(&self) -> &str;
+    fn get_name(&self) -> &str;
 }
 pub trait TTSEngine {
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> ();
-    fn get_name(&self) -> String;
+    fn get_name(&self) -> &str;
 }
 
 pub trait PRNNService {
     fn generate(&self, text: String, src_lang: Lang, src_id: i64) -> Result<()>;
-    fn get_name(&self) -> String;
+    fn get_name(&self) -> &str;
 }
 
 #[derive(Debug)]

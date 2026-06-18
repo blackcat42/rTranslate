@@ -37,8 +37,8 @@ impl GP {
 }
 //TODO! language detect
 impl PRNNService for GP {
-    fn get_name(&self) -> String {
-        self.name.clone()
+    fn get_name(&self) -> &str {
+        &self.name
     }
     
     fn generate(&self, text: String, src_lang: Lang, src_id: i64) -> Result<()> {

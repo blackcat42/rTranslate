@@ -33,12 +33,11 @@ impl WDEn {
 impl Dictionary for WDEn {
     fn terminate(&mut self) {}
 
-    fn get_uid(&self) -> String {
-        self.uid.clone()
+    fn get_uid(&self) -> &str {
+        &self.uid
     }
-    fn get_name(&self) -> String {
-        //"English Wiktionary".to_string()
-        self.name.clone()
+    fn get_name(&self) -> &str {
+        &self.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
@@ -47,8 +46,8 @@ impl Dictionary for WDEn {
             thread::spawn({
                 let app_sender = self.app_sender;
                 let is_running = Arc::clone(&self.is_running);
-                let name = self.get_name();
-                let uid = self.get_uid();
+                let name = self.get_name().to_string();
+                let uid = self.get_uid().to_string();
                 let use_proxy = self.use_proxy;
                 move || {
                     is_running.store(true, Ordering::SeqCst);

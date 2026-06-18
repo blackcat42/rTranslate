@@ -53,6 +53,9 @@ let lang_pair = 'enru';
 let lang_src = params['--src'] ? params['--src'] : 'en';
 let lang_target = params['--target'] ? params['--target'] : 'ru';
 
+if (lang_src === 'auto') {
+  lang_src = 'en'; //TODO
+}
 if (lang_src !== 'en' && lang_target !== 'en') {
   lang_target = 'en'; //TODO
 }
@@ -228,7 +231,7 @@ async function onRuntimeInitialized() {
       } else {
         process.exit(53);
       }
-      translation = src_id_str + '<SRC_LANG_DETECTED=undefined>' + translation;
+      translation = src_id_str + '<SRC_LANG_DETECTED='+lang_src+'>' + translation;
       process.stdout.write(translation.replace(/\r\n|\r|\n/gm, '<ENDOFLINE>') + "\n")
     }
     //process.stdout.write(aaa.replace(/[\r\n]/gm, '') + "\n")
