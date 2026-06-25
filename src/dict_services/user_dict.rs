@@ -6,12 +6,11 @@ use crate::types::{AppEvent, Dictionary, Lang, UIStateDict};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread};
 use std::io::{Seek, SeekFrom};
-use std::io::{BufRead};
+use std::io::{Read, BufRead, BufWriter, Write};
 //use std::path::Path;
 use std::path::PathBuf;
 //use super::GLOBAL_SETTINGS;
-use rusqlite::{params, Connection};
-use anyhow::{Result};
+use anyhow::{anyhow, Result};
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -21,51 +20,29 @@ use std::sync::{Arc};
 use fltk::{app, dialog, };
 use regex::Regex;
 
+use super::app_panic_message;
+
 pub struct DSLDict {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     uid: String,
     name: String,
-    dict_path: String,
-    db: Rc<RefCell<Option<Connection>>>,
+    dict_path: String
 }
 
 //TODO: multiple titles support (not allowed by spec, but widely used)
 
 impl DSLDict {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, uid: String, name: String, dict_path: String, db: Rc<RefCell<Option<Connection>>>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, uid: String, name: String, dict_path: String) -> Self {
 
         let re_uid = Regex::new(r"^\w+$").unwrap();
         if !re_uid.is_match(&uid) {
-            //app_panic_message("settings.json: Failed to parse uid");
+            app_panic_message("settings.json: Failed to parse uid");
             panic!("settings.json: Failed to parse uid");
         }
 
         let is_running = Arc::new(AtomicBool::new(false));
-
-        //TODO: return result
-        dprintln!("create db");
-        let db_ref = db.borrow();
-        if db_ref.is_none() {
-            //return Err(());
-        }
-        if let Some(db) = &*db_ref {
-            db.execute(
-                "CREATE TABLE IF NOT EXISTS user_dicts_metadata (
-                    dict_uid TEXT PRIMARY KEY,
-                    is_indexed INTEGER DEFAULT 0
-                )",
-                params![],
-            ).unwrap();
-
-            db.execute(
-                "INSERT INTO user_dicts_metadata (dict_uid, is_indexed) VALUES (?1, 0)",
-                params![uid],
-            ).unwrap_or(0);
-        }
-        drop(db_ref);
-
-        Self {is_running, app_sender, uid, name, dict_path, db}
+        Self {is_running, app_sender, uid, name, dict_path}
     }
 
     pub fn rebuild_index(&self) -> Result<()> {
@@ -73,72 +50,35 @@ impl DSLDict {
         if self.is_running.load(Ordering::SeqCst) {
             return Ok(());
         }
+
+        dprintln!("rebuild_index start");
+        //parse dsl file
+        let path = PathBuf::from(self.dict_path.clone());
+        let index_path = path.with_extension("idx");
+        let file = File::open(path.clone())?;
+        let mut idx_file = File::create(index_path)?;
+        let metadata = file.metadata()?;
+        let mut reader = BufReader::new(file);
+        let filesize_mb = (metadata.len() / 1048576) as f64;
         
-        let db_ref = self.db.borrow();
-        if db_ref.is_none() {
-            self.app_sender.send(AppEvent::SetStatus("An error occurred while opening the database file".into(), true, true));
-            return Ok(());
-        }
-
-        dprintln!("create db");
-        if let Some(db) = &*db_ref {
-
-            let q = format!("DROP TABLE IF EXISTS {}", self.uid);
-            db.execute(
-                &q,
-                params![],
-            )?;
-
-            let q = format!("CREATE TABLE IF NOT EXISTS {} (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    offset INTEGER NOT NULL
-                )", self.uid);
-            db.execute(
-                &q,
-                params![],
-            )?;
-
-            let q = format!("CREATE INDEX IF NOT EXISTS title_index ON {} (title)", self.uid);
-            db.execute(
-                &q,
-                params![],
-            )?;
-
-
-            dprintln!("start");
-            //parse dsl file
-            let path = PathBuf::from(self.dict_path.clone());
-            let file = File::open(path.clone())?;
-            let metadata = file.metadata().expect("Failed to get file metadata");
-            let mut reader = BufReader::new(file);
-            
-            let filesize_mb = (metadata.len() / 1048576) as f64;
-            
-            thread::spawn({
-                let app_sender = self.app_sender;
-                let is_running = Arc::clone(&self.is_running);
-                //let index_db = Arc::clone(&self.db);
-                
-                //let name = self.get_name();
-                let uid = self.get_uid().to_string();
-                move || {
+        thread::spawn({
+            let app_sender = self.app_sender;
+            let is_running = Arc::clone(&self.is_running);
+            move || {
+                let _ = ( || -> Result<()> {
                     is_running.store(true, Ordering::SeqCst);
                     let mut line_num = 1;
                     let mut articles_num = 0;
                     let mut buffer: Vec<u8> = Vec::new();
                     let mut bom_offset = 2;
 
-                    let mut index_db = Connection::open("dictionary_index.db").unwrap();
-                    let tx = index_db.transaction().unwrap();
-                    //let q = format!("INSERT INTO {} (title, offset) VALUES (?2, ?3)", uid);
-                    //let mut stmt = tx.prepare(&q).unwrap();
+                    let mut writer = BufWriter::with_capacity(512 * 1024, idx_file);
                     loop {
                         buffer.clear();
-                        let position = reader.stream_position().unwrap();
-                        let bytes_read = reader.read_until(0x0A, &mut buffer).unwrap(); //find utf8 lf in utf16
+                        let position = reader.stream_position()?;
+                        let bytes_read = reader.read_until(0x0A, &mut buffer)?; //find utf8 lf in utf16
 
-                        if line_num % 100 == 0 {
+                        if line_num % 1000 == 0 {
                             let pos_in_mb: f64 = position as f64 / 1048576_f64;
                             let status_str = format!("processed {:.2}/{} mb; articles indexed: {}", pos_in_mb, filesize_mb, articles_num);
                             app_sender.send(AppEvent::SetStatus(status_str.as_str().into(), true, true));
@@ -156,10 +96,6 @@ impl DSLDict {
                             //23 00  4E 00  41 00  4D 00  45 00 (#NAME)
                         }
                         if bytes_read == 0 {
-                            let _ = tx.execute(
-                                "REPLACE INTO user_dicts_metadata (dict_uid, is_indexed) VALUES (?1, 1)",
-                                params![uid],
-                            ).unwrap();
                             break; //end of file
                         }
                         
@@ -178,11 +114,7 @@ impl DSLDict {
                             Ok(s) => {
                                 if !s.starts_with("\t") && !s.starts_with(" ") && !s.starts_with("\n") {
                                     let s = s.trim();
-                                    let q = format!("REPLACE INTO {} (title, offset) VALUES (?2, ?3)", uid);
-                                    let _ = tx.execute(
-                                        &q,
-                                        params![uid, &s, position as i64],
-                                    ).unwrap();
+                                    writer.write_all(&position.to_le_bytes())?;
                                     articles_num += 1;
                                 }
                             },
@@ -190,12 +122,14 @@ impl DSLDict {
                         }
                         line_num += 1;
                     }
-                    tx.commit().unwrap();
+                    writer.flush()?;
+                    //tx.commit().unwrap();
                     is_running.store(false, Ordering::SeqCst);
                     app_sender.send(AppEvent::SetStatus("Dictionary index created. Please retry request or make a new one.".into(), true, true));
-                }
-            });
-        };
+                    Ok(())
+                })();
+            }
+        });
         Ok(())
     }
 
@@ -219,27 +153,11 @@ impl Dictionary for DSLDict {
 
         //TODO: from settings
         let text = text.to_lowercase();
-        
-        let db_ref = self.db.borrow();
-        if db_ref.is_none() {
-            self.app_sender.send(AppEvent::SetReady(Some("An error occurred while opening the database file".to_string()), true));
-            //self.app_sender.send(AppEvent::SetStatus("An error occurred while opening the database file".into(), true, true));
-            return;
-        }
 
-        //TODO save check result
-        let mut is_indexed = false;
-        if let Some(db) = &*db_ref {
-            let is_indexed_n = db.query_row(
-                    "SELECT is_indexed FROM user_dicts_metadata 
-                             WHERE dict_uid = ?1",
-                    params![self.get_uid()], //text
-                    |row| {
-                        Ok(row.get(0).unwrap_or(0))
-                    },
-            );
-            is_indexed = is_indexed_n.unwrap_or(0) != 0;
-        }
+        let dsl_path = PathBuf::from(&self.dict_path);
+        let index_path = dsl_path.with_extension("idx"); 
+
+        let mut is_indexed = index_path.exists();
 
         if !is_indexed {
             let pos = screen_center();
@@ -268,82 +186,83 @@ impl Dictionary for DSLDict {
             };
         }
 
-        if let Some(db) = &*db_ref {
-            dprintln!("open db dict");
-            let app_sender = self.app_sender;
-            //let name = self.get_name();
 
-            let mut offset: u64 = 0;
-            let q = format!("SELECT title, offset FROM {} 
-                             WHERE title LIKE ?1 ORDER BY 
-                              CASE 
-                                WHEN title = ?2 THEN 1
-                                ELSE 2 
-                              END,
-                              title;", self.uid);
-            let pattern = format!("{}%", text);
-            let index = db.query_row(
-                    &q,
-                    params![&pattern, &text], //text
-                    |row| {
-                        let title = row.get(0).unwrap_or("".to_string());
-                        let offset = row.get(1).unwrap_or(0_i64);
-                        Ok((title, offset))
-                    },
-                );
-            dprintln!("dict query end");
-            match index {
-                    Ok(row) => {
-                        dprintln!("cached src found");
-                        dprintln!("{}", offset);
-                        offset = row.1 as u64;
-                    }
-                    Err(e) => {
-                        //app_sender.send(AppEvent::SetReady());
-                        dprintln!("{}", e);
-                    }
-                } 
-
-            //get offset by title
-            
-            if offset == 0 {
-                app_sender.send(AppEvent::SetReady(Some("not found".to_string()), true));
-                //app_sender.send(AppEvent::SetStatus("not found".into(), true, true));
-                return;
-                //return anyhow!("error");
+        let transl_result = send_tr_request(&self.dict_path, &text);
+        match transl_result {
+            Ok(t_text) => {
+                self.app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
+                self.app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
+                    src_id: Some(src_id),
+                    src_text_dict: orig_text.clone(),
+                    dict_uid: Some(self.get_uid().to_string()), 
+                    dict_name: Some(self.get_name().to_string()),
+                    src: None, 
+                    target: None, 
+                    dict_text: Some(t_text),
+                    is_fav: None
+                }, false));
+                self.app_sender.send(AppEvent::SetReady(None, true));
             }
-            let transl_result = send_tr_request(&self.dict_path, offset);
-            match transl_result {
-                Ok(t_text) => {
-                    app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
-                    app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
-                        src_id: Some(src_id),
-                        src_text_dict: orig_text.clone(),
-                        dict_uid: Some(self.get_uid().to_string()), 
-                        dict_name: Some(self.get_name().to_string()),
-                        src: None, 
-                        target: None, 
-                        dict_text: Some(t_text),
-                        is_fav: None
-                    }, false));
-                    app_sender.send(AppEvent::SetReady(None, true));
-                }
-                Err(e) => {
-                    app_sender.send(AppEvent::SetReady(Some(e.to_string()), true));
-                    //app_sender.send(AppEvent::SetStatus("error".into(), true, true));
-                }
-            };
+            Err(e) => {
+                self.app_sender.send(AppEvent::SetReady(Some(e.to_string()), true));
+                //app_sender.send(AppEvent::SetStatus("error".into(), true, true));
+            }
         };
     }
 }
 
-fn send_tr_request(path: &str, offset: u64) -> Result<String> {
-    let mut file = File::open(path)?;
-    let response = read_line_at_offset(&mut file, offset)?;
+fn send_tr_request(path: &str, term: &str) -> Result<String> {
+    let path_buf = PathBuf::from(path);
+    let mut file = File::open(&path_buf)?;
+    let index_path = path_buf.with_extension("idx");
+    let mut idx_file = File::open(&index_path)?;
+    //let response = read_line_at_offset(&mut file, offset, false)?;
+    let response = search_term(&mut file, &mut idx_file, term)?;
     Ok(response)
 }
 
-fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> {
+pub fn search_term(mut dsl_file: &mut File, idx_file: &mut File, target_term: &str) -> Result<String> {
+
+    let target_term = target_term.to_lowercase();
+
+    let total_bytes = idx_file.seek(SeekFrom::End(0))?;
+    let total_records = total_bytes / 8;
+
+    if total_records == 0 {
+        return Err(anyhow!("error"));
+    }
+
+    let mut left: i64 = 0;
+    let mut right: i64 = (total_records - 1) as i64;
+
+    while left <= right {
+        let mid = left + (right - left) / 2;
+
+        idx_file.seek(SeekFrom::Start((mid as u64) * 8))?;
+        
+        let mut buf = [0u8; 8];
+        idx_file.read_exact(&mut buf)?;
+
+        let offset = u64::from_le_bytes(buf[0..8].try_into()?);
+
+        //dprintln!("offset: {}", offset);
+        let current_term = read_line_at_offset(dsl_file, offset, true)?;
+        let current_term = current_term.trim().to_lowercase();
+        //dprintln!("current_term: {}", current_term);
+
+        if current_term == target_term {
+            let definition = read_line_at_offset(dsl_file, offset, false)?;
+            return Ok(definition);
+        } else if current_term < target_term {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    Err(anyhow!("error not found"))
+}
+
+fn read_line_at_offset(file: &mut File, offset: u64, title_only: bool) -> std::io::Result<String> {
 
     file.seek(SeekFrom::Start(offset))?;
 
@@ -381,6 +300,9 @@ fn read_line_at_offset(file: &mut File, offset: u64) -> std::io::Result<String> 
                     break;
                 }
                 if line_num > 150 {
+                    break;
+                }
+                if title_only && !is_title {
                     break;
                 }
                 result_string.push_str(&decoded_string);

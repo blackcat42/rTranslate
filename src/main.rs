@@ -126,16 +126,9 @@ pub struct Settings {
 
     #[serde(default = "default_as_minus_one")]
     pub history_max_entries: i32,
-    #[serde(default = "default_as_false")]
-    pub clear_audio_cache_at_startup: bool,
-    #[serde(default = "default_as_minus_one")]
-    pub audio_max_entries: i32,
-
 
     #[serde(default = "default_as_true")]
     pub use_db: bool,
-    #[serde(default = "default_as_true")]
-    pub use_db_dict: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TranslatorOption {
@@ -272,19 +265,11 @@ fn main() {
     } else {
         None
     };
-    let conn_dict = if GLOBAL_SETTINGS.use_db_dict {
-        Connection::open("dictionary_index.db").ok()
-    } else {
-        None
-    };
-    let conn_dict_wrapper = Rc::new(RefCell::new(conn_dict));
 
     if GLOBAL_SETTINGS.history_max_entries >= 0 && conn.is_some() {
         let _ = clear_history(&conn);
     }
-    if GLOBAL_SETTINGS.clear_audio_cache_at_startup && conn.is_some() {
-        let _ = clear_audio_cache(&conn);
-    }
+
     //HOTKEYS
     let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
         app_panic_message("GlobalHotKeyManager");
@@ -368,8 +353,7 @@ fn main() {
         }
         let use_proxy = value.use_proxy;
         if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
-            let conn_dict_clone = Rc::clone(&conn_dict_wrapper);
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone(), conn_dict_clone)));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone())));
         } else if value.uid == "dict_wiktionary_en" {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "dict_google" {
@@ -768,7 +752,7 @@ fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
 
 
 
-fn app_panic_message(e: &str) {
+pub fn app_panic_message(e: &str) {
     let pos = screen_center();
     fltk::dialog::alert(pos.0 - 210, pos.1 - 40, e);
     
@@ -793,51 +777,6 @@ fn open_settings() {
 
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open").arg(path.to_path_buf().into_os_string()).spawn().ok();
-}
-
-fn clear_audio_cache(conn: &Option<Connection>) -> Result<()> {
-    let audio_max_entries = GLOBAL_SETTINGS.audio_max_entries;
-    if !GLOBAL_SETTINGS.clear_audio_cache_at_startup || audio_max_entries < 0 {
-        return Ok(());
-    }
-    if let Some(db) = conn {
-        let count: i32 = db.query_row(
-            "SELECT COUNT(*) FROM tts 
-             INNER JOIN src 
-             ON tts.src_id = src.id 
-             WHERE src.fav = FALSE",
-            params![],
-            |row| row.get(0),
-        )?;
-        if audio_max_entries >= count {
-            return Ok(());
-        }
-        let limit_del = count - audio_max_entries;
-    
-        let mut data_pr = db.prepare(
-            "SELECT tts.src_id, tts.path FROM tts 
-             INNER JOIN src 
-             ON tts.src_id = src.id 
-             WHERE src.fav = FALSE 
-             ORDER BY tts.src_id ASC 
-             LIMIT :limit
-             
-            "
-        )?;
-
-        let mut ids: Vec<u32> = vec![];
-        let mut data = data_pr.query(&[(":limit", &limit_del)])?;
-
-        while let Some(row) = data.next()? {
-            let id: u32 = row.get(0)?;
-            //let path: String = row.get(1)?;
-            //dprintln!("ID: {}", &id);
-            //dprintln!("PATH: {}", &path);
-            ids.push(id);
-        }
-        let _ = delete_audio_files_by_ids(conn, ids);
-    }
-    Ok(())
 }
 
 
@@ -904,34 +843,71 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
 fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result<()> {
     let placeholders: String = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
     if let Some(db) = conn {
-        if GLOBAL_SETTINGS.clear_audio_cache_at_startup {
-            let paths: Vec<Option<String>> = db
-                .prepare(&format!("SELECT path FROM tts WHERE src_id IN ({})", placeholders))?
-                .query_map(params_from_iter(ids.iter()), |row| row.get(0))?
-                .map(|path| path.ok())
-                .collect();
+        let paths: Vec<Option<String>> = db
+            .prepare(&format!("SELECT path FROM tts WHERE src_id IN ({})", placeholders))?
+            .query_map(params_from_iter(ids.iter()), |row| row.get(0))?
+            .map(|path| path.ok())
+            .collect();
+        let paths_prnn: Vec<Option<String>> = db
+            .prepare(&format!("SELECT path FROM prnn WHERE src_id IN ({})", placeholders))?
+            .query_map(params_from_iter(ids.iter()), |row| row.get(0))?
+            .map(|path| path.ok())
+            .collect();
 
-            for path in paths.into_iter().flatten() {
-                let audio_path = format!(r"tts_cache\{path}.ogg");
-                let working_dir = std::env::current_dir()?;
-                let file = working_dir.join(&audio_path);
-                if let Ok(exist) = file.try_exists() && exist {
-                    //dprintln!("File to delete: {}", &file.display());
-                    match std::fs::remove_file(&file) {
-                        Ok(_) => {
-                            println!("File deleted: {}", &file.display());
-                        },
-                        Err(e) => {
-                            eprintln!("Error deleting file: {} ({})", &file.display(), e);
-                        }
-                    }
-                }
+        let mut is_error = false;
+
+        for path in paths.into_iter().flatten() {
+            let audio_path = format!(r"tts_cache\{path}.ogg");
+            let working_dir = std::env::current_dir()?;
+            let file = working_dir.join(&audio_path);
+            if let Err(_) = safe_delete(file) {
+                is_error = true;
             }
-            //dprintln!("IDs: {:?}", ids);
-            //dprintln!("paths: {:?}", paths);
         }
+        for path in paths_prnn.into_iter().flatten() {
+            let audio_path = format!(r"tts_cache\{path}");
+            let working_dir = std::env::current_dir()?;
+            let file = working_dir.join(&audio_path);
+            if let Err(_) = safe_delete(file) {
+                is_error = true;
+            }
+        }
+        if is_error {
+            app_panic_message("Error while clearing audio cache");
+        }
+        //dprintln!("IDs: {:?}", ids);
+        //dprintln!("paths: {:?}", paths);
+        
         Ok(())
     } else {
         Err(anyhow!("db"))
+    }
+}
+
+fn safe_delete(file: std::path::PathBuf) -> Result<()> {
+    let working_dir = std::env::current_dir()?;
+    let cache_dir = working_dir.join("tts_cache");
+    let canonical_path = std::fs::canonicalize(file)?;
+    let canonical_base = std::fs::canonicalize(cache_dir)?;
+    
+    if canonical_path.starts_with(&canonical_base) {
+        if let Ok(exist) = canonical_path.try_exists() && exist {
+            //dprintln!("File to delete: {}", &canonical_path.display());
+            //Ok(())
+            match std::fs::remove_file(&canonical_path) {
+                Ok(_) => {
+                    dprintln!("File deleted: {}", &canonical_path.display());
+                    Ok(())
+                },
+                Err(e) => {
+                    eprintln!("Error deleting file: {} ({})", &canonical_path.display(), e);
+                    Err(e.into())
+                }
+            }
+        } else {
+            Err(anyhow!("Error deleting file (not exist)"))
+        }
+    } else {
+        Err(anyhow!("Error deleting file (not in working directory)"))
     }
 }
