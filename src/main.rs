@@ -32,6 +32,7 @@ use global_hotkey::{
 };
 
 use std::str::FromStr;
+use unicode_segmentation::UnicodeSegmentation;
 
 use rusqlite::{params, params_from_iter, Connection};
 
@@ -596,10 +597,9 @@ fn main() {
                     }
                     match get_selected_text() {
                         Ok(selected_text) => {
-                            //TODO!!! use unicode_segmentation::UnicodeSegmentation; selected_text.trim().unicode_words().count() < 2
-                            if !selected_text.trim().contains(' ') 
+                            if GLOBAL_SETTINGS.single_word_to_dict 
                                && !is_dict 
-                               && GLOBAL_SETTINGS.single_word_to_dict {
+                               && selected_text.trim().unicode_words().count() == 1 {
                                 is_dict = true;
                             }
                             if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {

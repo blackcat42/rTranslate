@@ -32,6 +32,7 @@ fltk-theme = "0.7"
 #colornames = "0.0.6"
 #windows = { version = "0.58.0", features = ["Win32_UI_WindowsAndMessaging"] }
 debug_print = "1.0.0"
+unicode-segmentation = "1.13.3"
 
 tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread"] }
 wreq = { version = "5.3.0", features = ["gzip", "stream", "cookies"] }
