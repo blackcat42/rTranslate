@@ -26,7 +26,7 @@ use std::collections::HashMap;
 
 use strum::IntoEnumIterator;
 //use mouse_position::mouse_position::{Mouse};
-use crate::types::{AppEvent, Lang, LangNames, TTSource, PRNNSource, TranslSource, UIState, UIStateDict };
+use crate::types::{AppEvent, Lang, TTSource, PRNNSource, TranslSource, UIState, UIStateDict };
 
 use crate::bbcode::{dsl_parse};
 
@@ -418,9 +418,8 @@ impl AppView {
         let mut lang_choice_from = fltk::menu::Choice::default().with_size(30, 10).with_label("From:").with_align(fltk::enums::Align::TopLeft);
 
         for lng in Lang::iter() {
-            let name = LangNames::from_str(lng.as_ref()).unwrap();
             lang_choice_from.add(
-                name.as_ref(),
+                lng.clone().name(),
                 fltk::enums::Shortcut::None,
                 fltk::menu::MenuFlag::Normal,
                 {
@@ -435,9 +434,8 @@ impl AppView {
         //let col_left_row1_tr_but1 = button::Button::default().with_label("@<->").with_size(20, 20);
         let mut lang_choice_to = fltk::menu::Choice::default().with_size(30, 10).with_label("To:").with_align(fltk::enums::Align::TopLeft);
         for lng in Lang::iter() {
-            let name = LangNames::from_str(lng.as_ref()).unwrap();
             lang_choice_to.add(
-                name.as_ref(),
+                lng.clone().name(),
                 fltk::enums::Shortcut::None,
                 fltk::menu::MenuFlag::Normal,
                 {
@@ -712,8 +710,7 @@ impl AppView {
         );
         for item in &GLOBAL_SETTINGS.pinned_src_languages {
             let lng = Lang::from_str(item).unwrap_or(Lang::En);
-            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
-            let name_from = format!("&{}", l_name.as_ref());
+            let name_from = format!("&{}", lng.name());
             lng_menu_button.add(
                 name_from.as_ref(),
                 fltk::enums::Shortcut::None,
@@ -742,8 +739,7 @@ impl AppView {
         }
         
         for lng in Lang::iter() {
-            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
-            let name_from = format!("All (source)/{}", l_name.as_ref());
+            let name_from = format!("All (source)/{}", lng.name());
             lng_menu_button.add(
                 name_from.as_ref(),
                 fltk::enums::Shortcut::None,
@@ -786,8 +782,7 @@ impl AppView {
 
         for item in &GLOBAL_SETTINGS.pinned_target_languages {
             let lng = Lang::from_str(item).unwrap_or(Lang::Ru);
-            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
-            let name_to = format!("&{} ", l_name.as_ref());
+            let name_to = format!("&{} ", lng.name());
             lng_menu_button.add(
                 name_to.as_ref(),
                 fltk::enums::Shortcut::None,
@@ -815,8 +810,7 @@ impl AppView {
             );
         }
         for lng in Lang::iter() {
-            let l_name = LangNames::from_str(lng.as_ref()).unwrap();
-            let name_to = format!("All (target)/{}", l_name.as_ref());
+            let name_to = format!("All (target)/{}", lng.name());
             lng_menu_button.add(
                 name_to.as_ref(),
                 fltk::enums::Shortcut::None,
@@ -1273,9 +1267,7 @@ impl AppView {
         }
 
         if let Some(lang_from) = src && let Some(lang_to) = target && let Some(translator_name) = translator {
-            let from = LangNames::from_str(lang_from.as_ref()).unwrap_or(LangNames::En);
-            let to = LangNames::from_str(lang_to.as_ref()).unwrap_or(LangNames::En);
-            let title_text = format!("{}->{} ({})", from.as_ref(), to.as_ref(), translator_name);
+            let title_text = format!("{}->{} ({})", lang_from.name(), lang_to.name(), translator_name);
             self.title_frame.set_label(&title_text);
         }
 
@@ -1504,13 +1496,13 @@ impl AppView {
         app::awake();
     }
 
-    pub fn set_src_lang(&mut self, from: &str) {
-        if let Some(item) = self.lang_choice_from.find_item(from) {
+    pub fn set_src_lang(&mut self, from: Lang) {
+        if let Some(item) = self.lang_choice_from.find_item(from.name()) {
             self.lang_choice_from.set_item(&item);
         }
     }
-    pub fn set_target_lang(&mut self, to: &str) {
-        if let Some(item) = self.lang_choice_to.find_item(to) {
+    pub fn set_target_lang(&mut self, to: Lang) {
+        if let Some(item) = self.lang_choice_to.find_item(to.name()) {
             self.lang_choice_to.set_item(&item);
         }
     }

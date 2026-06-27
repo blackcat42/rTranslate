@@ -272,10 +272,85 @@ impl Lang {
             Lang::Hy => "hye",
         }
     }
+
+    pub fn name(&self) -> &str {
+        match self {
+            Lang::Auto => "Auto",
+            Lang::Epo => "Esperanto",
+            Lang::En => "English",
+            Lang::Ru => "Russian",
+            Lang::Zh => "Chinese",
+            Lang::Es => "Spanish",
+            Lang::Pt => "Portuguese",
+            Lang::It => "Italian",
+            Lang::Bn => "Bengali",
+            Lang::Fr => "French",
+            Lang::De => "German",
+            Lang::Uk => "Ukrainian",
+            Lang::Ka => "Georgian",
+            Lang::Ar => "Arabic",
+            Lang::Hi => "Hindi",
+            Lang::Ja => "Japanese",
+            Lang::He => "Hebrew",
+            Lang::Yi => "Yiddish",
+            Lang::Pl => "Polish",
+            Lang::Am => "Amharic",
+            Lang::Jv => "Javanese",
+            Lang::Ko => "Korean",
+            Lang::Nb => "Norwegian Bokmål",
+            Lang::Da => "Danish",
+            Lang::Sv => "Swedish",
+            Lang::Fi => "Finnish",
+            Lang::Tr => "Turkish",
+            Lang::Nl => "Dutch",
+            Lang::Hu => "Hungarian",
+            Lang::Cs => "Czech",
+            Lang::El => "Greek",
+            Lang::Bg => "Bulgarian",
+            Lang::Be => "Belarusian",
+            Lang::Mr => "Marathi",
+            Lang::Kn => "Kannada",
+            Lang::Ro => "Romanian",
+            Lang::Sl => "Slovenian",
+            Lang::Hr => "Croatian",
+            Lang::Sr => "Serbian",
+            Lang::Mk => "Macedonian",
+            Lang::Lt => "Lithuanian",
+            Lang::Lv => "Latvian",
+            Lang::Et => "Estonian",
+            Lang::Ta => "Tamil",
+            Lang::Vi => "Vietnamese",
+            Lang::Ur => "Urdu",
+            Lang::Th => "Thai",
+            Lang::Gu => "Gujarati",
+            Lang::Uz => "Uzbek",
+            Lang::Pa => "Punjabi",
+            Lang::Az => "Azerbaijani",
+            Lang::Id => "Indonesian",
+            Lang::Te => "Telugu",
+            Lang::Fa => "Persian",
+            Lang::Ml => "Malayalam",
+            Lang::Or => "Oriya",
+            Lang::My => "Burmese",
+            Lang::Ne => "Nepali",
+            Lang::Si => "Sinhala",
+            Lang::Km => "Khmer",
+            Lang::Tk => "Turkmen",
+            Lang::Ak => "Akan",
+            Lang::Zu => "Zulu",
+            Lang::Sn => "Shona",
+            Lang::Af => "Afrikaans",
+            Lang::La => "Latin",
+            Lang::Sk => "Slovak",
+            Lang::Ca => "Catalan",
+            Lang::Tl => "Tagalog",
+            Lang::Hy => "Armenian",
+        }
+    }
 }
 
 //todo: whatlang::Lang::from_code("eng").unwrap().eng_name()
-#[allow(unreachable_patterns)]
+/*#[allow(unreachable_patterns)]
 #[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
 pub enum LangNames {
     #[strum(serialize = "auto", to_string = "Auto")] Auto,
@@ -348,7 +423,7 @@ pub enum LangNames {
     #[strum(serialize = "ca", to_string = "Catalan")] Ca,
     #[strum(serialize = "tl", to_string = "Tagalog")] Tl,
     #[strum(serialize = "hy", to_string = "Armenian")] Hy,
-}
+}*/
 
 
 /*//#[derive(Clone)]

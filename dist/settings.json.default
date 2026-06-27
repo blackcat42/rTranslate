@@ -152,8 +152,6 @@
     "dict_request_max_length": 100,
 
     "history_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
-    "audio_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
-    "clear_audio_cache_at_startup": false, //if false - deleting db entries will not affect audio cache files ("tts_cache" folder)
 
     //sqlite is required for history support; default as true; disabling is not recommended
     //"use_db": true,

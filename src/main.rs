@@ -75,7 +75,7 @@ use types::{AppEvent,
     //UIState, 
     //UIStateDict, 
     //TranslSource, 
-    LangNames
+    //LangNames
 };
 use app_state::{AppState};
 use app_view::{AppView};
@@ -130,6 +130,9 @@ pub struct Settings {
 
     #[serde(default = "default_as_true")]
     pub use_db: bool,
+
+    #[serde(default = "default_as_false")]
+    pub sqlite_vacuum: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TranslatorOption {
@@ -395,12 +398,8 @@ fn main() {
 
 
 
-    app_view.set_src_lang(
-        LangNames::from_str(app_state.selected_src.as_ref()).unwrap_or(LangNames::En).as_ref(), 
-    );
-    app_view.set_target_lang(
-        LangNames::from_str(app_state.selected_target.as_ref()).unwrap_or(LangNames::En).as_ref()
-    );
+    app_view.set_src_lang( app_state.selected_src.clone() );
+    app_view.set_target_lang( app_state.selected_target.clone() );
     app_sender.send(AppEvent::SetTranslator(GLOBAL_SETTINGS.default_translator.clone()));
     app_sender.send(AppEvent::SetDict(GLOBAL_SETTINGS.default_dict.clone()));
     app_sender.send(AppEvent::SetTTSEngine(
@@ -489,14 +488,12 @@ fn main() {
             Some(AppEvent::SetSrcLang(lng)) => {
                 app_state.selected_src = lng.clone();
                 //TODO: update views
-                let lng_name = LangNames::from_str(lng.as_ref()).unwrap_or(LangNames::En);
-                app_view.set_src_lang(lng_name.as_ref());
+                app_view.set_src_lang(lng);
             }
             Some(AppEvent::SetTargetLang(lng)) => {
                 app_state.selected_target = lng.clone();
                 //TODO: update views
-                let lng_name = LangNames::from_str(lng.as_ref()).unwrap_or(LangNames::Ru);
-                app_view.set_target_lang(lng_name.as_ref());
+                app_view.set_target_lang(lng);
             }
             Some(AppEvent::SetTranslator(translator)) => {
                 app_state.selected_translator = translator.clone();
@@ -819,6 +816,9 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
             params_from_iter(ids.iter()),
         )?;
         dprintln!("clear_history; rows deleted {}", rows);
+        if GLOBAL_SETTINGS.sqlite_vacuum {
+            db.execute("VACUUM", ())?;
+        }
 
         Ok(())
 
