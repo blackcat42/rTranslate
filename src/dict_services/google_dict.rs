@@ -2,7 +2,7 @@ use debug_print::{debug_println as dprintln};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 //use ureq::Agent;
 use wreq::{
     Client,
@@ -74,7 +74,14 @@ impl Dictionary for GD {
                                 if let Some(lng) = text_d.1 && let Ok(detected_lng) = Lang::from_str(&lng) {
                                     src_lang = detected_lng;
                                 }
-                                app_sender.send(AppEvent::SaveDictEntry((src_id, t_text.clone(), uid.clone(), text_d.0.clone(), Some(src_lang.clone()), Some(target_lang.clone()))));
+                                //app_sender.send(AppEvent::SaveDictEntry((src_id, t_text.clone(), uid.clone(), text_d.0.clone(), Some(src_lang.clone()), Some(target_lang.clone()))));
+                                app_sender.send(AppEvent::SaveDictEntry(DictResult {
+                                    src_id: src_id, 
+                                    dict_uid: uid.clone(),
+                                    text: text_d.0.clone(),
+                                    src: Some(src_lang.clone()), 
+                                    target: Some(target_lang.clone())
+                                }));
 
                                 app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                                     src_id: Some(src_id),

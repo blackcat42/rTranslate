@@ -26,8 +26,8 @@ pub enum AppEvent {
     TrayMenuEvent(MenuEvent),
 
     //TODO:
-    SaveTranslation((i64, String, String, Lang, Lang, String)),
-    SaveDictEntry((i64, String, String, String, Option<Lang>, Option<Lang>)),
+    SaveTranslation(TranslResult),
+    SaveDictEntry(DictResult),
     PRNNSave((i64, String, String)),
     ToggleFav(bool),
 
@@ -527,3 +527,21 @@ pub struct PRNNSource {
     pub service: String,
 }
 
+#[derive(Debug)]
+pub struct TranslResult {
+    pub src_id: i64,
+    pub text: String,
+    pub tr_uid: String, 
+    pub src: Lang, 
+    pub target: Lang, 
+    pub translation_text: String
+}
+
+#[derive(Debug)]
+pub struct DictResult {
+    pub src_id: i64,
+    pub dict_uid: String,
+    pub text: String, 
+    pub src: Option<Lang>, 
+    pub target: Option<Lang>
+}

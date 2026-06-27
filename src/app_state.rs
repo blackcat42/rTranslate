@@ -29,6 +29,8 @@ use crate::types::{
     TTSource,
     PRNNSource,
     TranslSource,
+    TranslResult,
+    DictResult
 };
 
 use super::GLOBAL_SETTINGS;
@@ -731,7 +733,13 @@ impl AppState {
         }
     }
 
-    pub fn insert_transl(&self, src_id: i64, selected_translator: &str, src: &str, target: &str, text: &str) -> Result<i64> {
+    pub fn insert_transl(&self, tr_result: TranslResult) -> Result<i64> {
+        let TranslResult {src_id, text, tr_uid, src, target, translation_text} = tr_result;
+        let tr_uid = tr_uid.as_str(); 
+        let src = src.as_ref();
+        let target = target.as_ref();
+        let translation_text = translation_text.as_str();
+
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Ok(0);
@@ -739,7 +747,7 @@ impl AppState {
         if let Some(db) = db_ref {
             db.execute(
                 "REPLACE INTO transl (src_id, transl_engine_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![src_id, selected_translator, src, target, text],
+                params![src_id, tr_uid, src, target, translation_text],
             )?;
             dprintln!("transl inserted/replaced");
             Ok(db.last_insert_rowid()) //TODO: RETURNING clause
@@ -747,11 +755,15 @@ impl AppState {
             Ok(0)
         }
     }
-    pub fn insert_dict_entry(&self, src_id: i64, selected_dict: &str, text: &str, src: Option<Lang>, target: Option<Lang>) -> Result<i64> {
+    pub fn insert_dict_entry(&self, dict_result: DictResult) -> Result<i64> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return Ok(0);
         }
+        let DictResult {src_id, dict_uid, text, src, target} = dict_result;
+        let dict_uid = dict_uid.as_str();
+        let text = text.as_str();
+
         if let Some(db) = db_ref {
             //let selected_translator = selected_translator;
             //let src = src.as_ref();
@@ -759,12 +771,12 @@ impl AppState {
             if let Some(src) = src && let Some(target) = target {
                 db.execute(
                     "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![src_id, selected_dict, src.as_ref(), target.as_ref(), text],
+                    params![src_id, dict_uid, src.as_ref(), target.as_ref(), text],
                 )?;
             } else {
                 db.execute(
                     "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, 'undefined', 'undefined', ?3)",
-                    params![src_id, selected_dict, text],
+                    params![src_id, dict_uid, text],
                 )?;
             }
             

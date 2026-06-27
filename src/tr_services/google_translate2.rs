@@ -1,6 +1,6 @@
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
-use crate::types::{AppEvent, Translator, Lang, UIState};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
 //use ureq::Agent;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -73,7 +73,14 @@ impl Translator for GT2 {
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
-                            app_sender.send(AppEvent::SaveTranslation((src_id, text.clone(), uid.clone(), t_text.1.clone(), target_lang.clone(), t_text.0.clone())));
+                             app_sender.send(AppEvent::SaveTranslation(TranslResult {
+                                src_id: src_id, 
+                                text: text.clone(), 
+                                tr_uid: uid.clone(), 
+                                src: t_text.1.clone(), 
+                                target: target_lang.clone(), 
+                                translation_text: t_text.0.clone()
+                            }));
                             app_sender.send(AppEvent::UpdateUi(UIState {
                                 src_text: text,
                                 tr_uid: Some(uid), 

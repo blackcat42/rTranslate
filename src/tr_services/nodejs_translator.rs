@@ -8,7 +8,7 @@ use which::which;
 use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use crate::types::{AppEvent, Translator, Lang, UIState};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, };
@@ -261,7 +261,14 @@ fn run_node_thread(
                                 }
 
                                 if let Some(id) = response_src_id && id == src_id {
-                                    s.send(AppEvent::SaveTranslation((src_id, src_text.clone(), service_uid.clone(), src_lang.clone(), target_lang.clone(), l2.to_string())));
+                                    s.send(AppEvent::SaveTranslation(TranslResult {
+                                        src_id: src_id, 
+                                        text: src_text.clone(), 
+                                        tr_uid: service_uid.clone(), 
+                                        src: src_lang.clone(), 
+                                        target: target_lang.clone(), 
+                                        translation_text: l2.to_string()
+                                    }));
                                     s.send(AppEvent::UpdateUi(UIState {
                                         src_text: src_text.clone(),
                                         tr_uid: Some(service_uid), 

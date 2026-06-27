@@ -2,7 +2,7 @@
 #![allow(clippy::len_zero)]
 use debug_print::{debug_println as dprintln};
 
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread};
 use std::io::{Seek, SeekFrom};
@@ -190,7 +190,14 @@ impl Dictionary for DSLDict {
         let transl_result = send_tr_request(&self.dict_path, &text);
         match transl_result {
             Ok(t_text) => {
-                self.app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
+                //self.app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
+                self.app_sender.send(AppEvent::SaveDictEntry(DictResult {
+                    src_id: src_id, 
+                    dict_uid: self.get_uid().to_string(),
+                    text: t_text.clone(),
+                    src: None, 
+                    target: None
+                }));
                 self.app_sender.send(AppEvent::UpdateUiDict(UIStateDict {
                     src_id: Some(src_id),
                     src_text_dict: orig_text.clone(),

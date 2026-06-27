@@ -71,12 +71,7 @@ mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
-use types::{AppEvent, 
-    //UIState, 
-    //UIStateDict, 
-    //TranslSource, 
-    //LangNames
-};
+use types::{AppEvent};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
@@ -538,13 +533,13 @@ fn main() {
                 let _ = app_state.update_fav_browser();
             }
 
-            Some(AppEvent::SaveTranslation((src_id, _src_text, translator, src, target, translation_text))) => {
-                let _ = app_state.insert_transl(src_id, translator.as_str(), src.as_ref(), target.as_ref(), translation_text.as_str());
+            Some(AppEvent::SaveTranslation(tr_result)) => {
+                let _ = app_state.insert_transl(tr_result);
                 let _ = app_state.update_history_browser();
                 
             }
-            Some(AppEvent::SaveDictEntry((src_id, _src_text, dict, dict_text, src_lang, target_lang))) => {
-                let _ = app_state.insert_dict_entry(src_id, dict.as_str(), dict_text.as_str(), src_lang, target_lang);
+            Some(AppEvent::SaveDictEntry(dict_result)) => {
+                let _ = app_state.insert_dict_entry(dict_result);
                 let _ = app_state.update_history_browser(); 
             }
 
