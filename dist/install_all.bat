@@ -1,6 +1,7 @@
 CHOICE /C YN /M "Install deno runtime? [Y/N]"
 IF %ERRORLEVEL% EQU 1 (
-    powershell -ExecutionPolicy Bypass -File install_deno.ps1
+    powershell -ExecutionPolicy Bypass -Command "irm https://deno.land/install.ps1 | iex"
+    echo Please restart your terminal to apply PATH changes.
 )
 
 CHOICE /C YN /M "Install kokoro-tts runtime? [Y/N]"

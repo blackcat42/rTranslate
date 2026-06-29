@@ -38,6 +38,7 @@ use tray_icon::{
 };
 
 use super::GLOBAL_SETTINGS;
+use super::UICONFIG;
 
 
 pub struct AppView {
@@ -69,8 +70,8 @@ pub struct AppView {
     tts_browser: fltk::browser::HoldBrowser,
     dict_assets_browser: fltk::browser::HoldBrowser,
 
-    win_popup: DoubleWindow,
-    win_popup_dict: DoubleWindow,
+    pub win_popup: DoubleWindow,
+    pub win_popup_dict: DoubleWindow,
     pub main_win: DoubleWindow,
 
     translator_buttons: HashMap<String, fltk::button::RadioButton>,
@@ -220,7 +221,7 @@ impl AppView {
                 button.set_image(Some(image));
                 button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
             }
-            if qwe.uid == GLOBAL_SETTINGS.default_translator {
+            if qwe.uid == UICONFIG.selected_translator {
                 button.set(true);
             }
             button.set_callback({
@@ -356,7 +357,7 @@ impl AppView {
                 button.set_image(Some(image));
                 button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
             }
-            if qwe.uid == GLOBAL_SETTINGS.default_dict {
+            if qwe.uid == UICONFIG.selected_dict {
                 button.set(true);
             }
             button.set_callback({
@@ -1140,7 +1141,9 @@ impl AppView {
             w.platform_hide();
         });
 
-
+        main_win.resize(100, 100, UICONFIG.main_window_w, UICONFIG.main_window_h);
+        win_popup.resize(100, 100, UICONFIG.popup_w, UICONFIG.popup_h);
+        win_popup_dict.resize(100, 100, UICONFIG.popup_dict_w, UICONFIG.popup_dict_h);
 
         AppView {
             //app_sender,

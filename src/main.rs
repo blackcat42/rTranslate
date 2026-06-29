@@ -84,6 +84,27 @@ fn default_as_true() -> bool { true }
 fn default_as_false() -> bool { false } //explicit is better
 fn default_as_minus_one() -> i32 { -1 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UIConfig {
+    //main_window_x: i32,
+    //main_window_y: i32,
+    main_window_w: i32,
+    main_window_h: i32,
+    popup_w: i32,
+    popup_h: i32,
+    popup_dict_w: i32,
+    popup_dict_h: i32,
+
+    selected_translator: String,
+    selected_dict: String,
+    selected_tts_voice: String,
+    selected_tts_engine: String,
+    selected_prnn_service: String,
+
+    selected_src: String,
+    selected_target: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Settings {
     translators: Vec<TranslatorOption>,
@@ -98,9 +119,6 @@ pub struct Settings {
 
     pub pinned_src_languages: Vec<String>,
     pub pinned_target_languages: Vec<String>,
-
-    pub default_translator: String,
-    pub default_dict: String,
 
     pub ui_font_size: i32,
     pub win_bg_color: String,
@@ -192,6 +210,24 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
             panic!("Error: {}", e);
         });
     settings
+});
+static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
+    if !std::path::Path::new("ui_config.json").exists() {
+        std::fs::copy("ui_config.json.default", "ui_config.json").unwrap_or_else(|e| {
+            app_panic_message("Failed to open ui_config.json");
+            panic!("Error: {}", e);
+        });
+    }
+
+    let ui_config_json = std::fs::read_to_string("ui_config.json").unwrap_or_else(|e| {
+            app_panic_message("Failed to open ui_config.json");
+            panic!("Error: {}", e);
+        });
+    let ui_config: UIConfig = json5::from_str(&ui_config_json).unwrap_or_else(|e| {
+            app_panic_message("Failed to parse ui_config.json");
+            panic!("Error: {}", e);
+        });
+    ui_config
 });
 
 static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -392,30 +428,69 @@ fn main() {
     let _ = app_state.update_fav_browser();
 
 
+    if re_uid.is_match(&UICONFIG.selected_src) {
+        app_view.set_src_lang( types::Lang::from_str(&UICONFIG.selected_src).unwrap_or(types::Lang::En) );
+    } else {
+        app_view.set_src_lang( app_state.selected_src.clone() );
+    }
+    if re_uid.is_match(&UICONFIG.selected_target) {
+        app_view.set_target_lang( types::Lang::from_str(&UICONFIG.selected_target).unwrap_or(types::Lang::Ru) );
+    } else {
+        app_view.set_target_lang( app_state.selected_target.clone() );
+    }
 
-    app_view.set_src_lang( app_state.selected_src.clone() );
-    app_view.set_target_lang( app_state.selected_target.clone() );
-    app_sender.send(AppEvent::SetTranslator(GLOBAL_SETTINGS.default_translator.clone()));
-    app_sender.send(AppEvent::SetDict(GLOBAL_SETTINGS.default_dict.clone()));
-    app_sender.send(AppEvent::SetTTSEngine(
-        GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse selected_tts_engine");
+    if re_uid.is_match(&UICONFIG.selected_translator) {
+        app_sender.send(AppEvent::SetTranslator(UICONFIG.selected_translator.clone()));
+    } else {
+        app_sender.send(AppEvent::SetTranslator(
+            GLOBAL_SETTINGS.translators.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse settings.json (translators)");
                 panic!("Error");
-            }).uid.clone(),
-        GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-            app_panic_message("Failed to parse selected_tts_voice");
-            panic!("Error");
-        }).voices.get(0).unwrap_or_else(|| {
-            app_panic_message("Failed to parse selected_tts_voice");
-            panic!("Error");
-        }).clone()
-    ));
-    app_sender.send(AppEvent::SetPRNNEngine(
-        GLOBAL_SETTINGS.prnn_services.get(0).unwrap_or_else(|| {
-            app_panic_message("Failed to parse selected_prnn_source");
-            panic!("Error");
-        }).uid.clone()
-    ));
+            }).uid.clone()
+        ));
+    }
+    
+    if re_uid.is_match(&UICONFIG.selected_dict) {
+        app_sender.send(AppEvent::SetDict(UICONFIG.selected_dict.clone()));
+    } else {
+        app_sender.send(AppEvent::SetDict(
+            GLOBAL_SETTINGS.dictionaries.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse settings.json (dictionaries)");
+                panic!("Error");
+            }).uid.clone()
+        ));
+    }
+
+    if re_uid.is_match(&UICONFIG.selected_tts_engine) && re_uid.is_match(&UICONFIG.selected_tts_voice) {
+        app_sender.send(AppEvent::SetTTSEngine(
+            UICONFIG.selected_tts_engine.clone(),
+            UICONFIG.selected_tts_voice.clone()
+        ));
+    } else {
+        app_sender.send(AppEvent::SetTTSEngine(
+            GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
+                    app_panic_message("Failed to parse settings.json tts_engine");
+                    panic!("Error");
+                }).uid.clone(),
+            GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse settings.json tts_voice");
+                panic!("Error");
+            }).voices.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse settings.json tts_voice");
+                panic!("Error");
+            }).clone()
+        ));
+    }
+    if re_uid.is_match(&UICONFIG.selected_prnn_service) {
+        app_sender.send(AppEvent::SetPRNNEngine(UICONFIG.selected_prnn_service.clone()));
+    } else {
+        app_sender.send(AppEvent::SetPRNNEngine(
+            GLOBAL_SETTINGS.prnn_services.get(0).unwrap_or_else(|| {
+                app_panic_message("Failed to parse settings.json prnn_source");
+                panic!("Error");
+            }).uid.clone()
+        ));
+    }
 
     //HOTKEYS
     //TODO: github.com/iholston/win-hotkeys; github.com/obv-mikhail/InputBot
@@ -565,7 +640,8 @@ fn main() {
                 dprintln!("{:?}", e);
 
                 if e.id == tray_menu_exit.id() {
-                    std::process::exit(0);
+                    //std::process::exit(0);
+                    app::quit();
                 } else if e.id == tray_menu_main_window.id() {
                     app_view.main_win.show();
                 } else if e.id == tray_menu_popup_window.id() {
@@ -718,6 +794,38 @@ fn main() {
 
     // #[cfg(not(target_os = "windows"))]
     // app.run().unwrap();
+
+    if std::path::Path::new("ui_config.json").exists() {
+        let mut config = UICONFIG.clone();
+        config.selected_translator = app_state.selected_translator.clone();
+        config.selected_dict = app_state.selected_dict.clone();
+        config.selected_tts_engine = app_state.selected_tts_engine.clone();
+        config.selected_tts_voice = app_state.selected_tts_voice.clone();
+        config.selected_prnn_service = app_state.selected_prnn_source.clone();
+
+        config.selected_src = app_state.selected_src.as_ref().to_string();
+        config.selected_target = app_state.selected_target.as_ref().to_string();
+
+        config.main_window_w = app_view.main_win.width();
+        config.main_window_h = app_view.main_win.height();
+        //TODO?: app_view.main_win.maximize_active();
+
+        config.popup_w = app_view.win_popup.width();
+        config.popup_h = app_view.win_popup.height();
+        config.popup_dict_w = app_view.win_popup_dict.width();
+        config.popup_dict_h = app_view.win_popup_dict.height();
+
+        let ui_config = serde_json::to_string(&config).unwrap_or_else(|e| {
+            app_panic_message("Failed to serialize UICONFIG");
+            panic!("Error: {}", e);
+        });
+        let _ = std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
+            app_panic_message("Failed to write ui_config.json");
+            panic!("Error: {}", e);
+        });
+    }    
+    dprintln!("exit");
+
 }
 
 

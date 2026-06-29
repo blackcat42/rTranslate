@@ -1,0 +1,19 @@
+{
+    "main_window_w": 800,
+    "main_window_h": 600,
+
+    "popup_w": 550,
+    "popup_h": 200,
+
+    "popup_dict_w": 450,
+    "popup_dict_h": 200,
+
+    "selected_translator": "",
+    "selected_dict": "",
+    "selected_tts_voice": "",
+    "selected_tts_engine": "",
+    "selected_prnn_service": "",
+
+    "selected_src": "",
+    "selected_target": ""
+}

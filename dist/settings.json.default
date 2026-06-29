@@ -28,9 +28,7 @@
             "uid": "tr_bergamot",
             "name": "Bergamot",
 
-            //"command": "deno", //if deno installed and in PATH
-            "command": ".\\deno", //if deno.exe is placed in the same directory as rTranslate.exe
-
+            "command": "deno",
             "args": [
                 "--allow-read=.",
                 "--deny-net",
@@ -38,11 +36,12 @@
             ],
             "reload_if_lang_changed": true
         },
+
+        //EXAMPLES:
         /*{
             "uid": "tr_js_example",
             "name": "JS example",
-            //"command": "deno", //if deno installed and in PATH
-            "command": ".\\deno", //if deno.exe is placed in the same directory as rTranslate.exe
+            "command": "deno",
 
             //working directory of the sideprocess always sets as ".\extensions\{service_uid}\"
             "args": [
@@ -62,21 +61,25 @@
         },*/
 
     ],
+
     "dictionaries": [
-        {
-            "uid": "dict_wiktionary_en",
-            "name": "English Wiktionary",
-        },
         {
             "uid": "dict_google",
             "name": "Google",
         },
+        {
+            "uid": "dict_wiktionary_en",
+            "name": "English Wiktionary",
+        },
+
+        //DSL(LINGVO) OFFLINE DICTIONARIES:
         /*{
             "uid": "dict_example_dsl",
             "name": "Example dict",
             "dict_path": "dictionaries\\example.dsl"
         },*/
     ],
+
     "tts_engines": [
         {
             "uid": "tts_kokoro",
@@ -94,6 +97,7 @@
             "voices": ["af_heart", "af_nicole"]
         }
     ],
+
     "prnn_services": [
         {
             "uid": "prnn_google",
@@ -104,6 +108,7 @@
             "name": "Wiktionary Pronunciations"
         }
     ],
+
 
     //"google_translate_api_key": null, //X-Goog-API-Key 
     "google_translate_api_key": "AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520", //https://github.com/ssut/py-googletrans/issues/268#issuecomment-3220244991
@@ -130,12 +135,9 @@
     "pinned_src_languages": ["auto", "en", "es", "zh", "ja", "ru"],
     "pinned_target_languages": ["ru", "en", "es"],
 
-    "default_translator": "tr_google",
-    "default_dict": "dict_wiktionary_en",
-
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
     "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
-    "single_word_to_dict": true, //if selected text contains no spaces, send it to the dictionary
+    "single_word_to_dict": true, //if selected text contains single word, send it to the dictionary
 
     "ui_font_size": 12,
     "win_bg_color": "#C0C0C0", //"#D6CFC6",
