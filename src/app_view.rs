@@ -1549,17 +1549,13 @@ impl AppView {
     pub fn show_popup(&mut self, show_dict: bool, hotspot: bool) {
         let win = if show_dict { &mut self.win_popup_dict } else { &mut self.win_popup };
         if hotspot {
-            //dbg!(app::get_mouse());
+            //TODO: multi-monitor setup
             let position = app::get_mouse();
-            win.set_pos(position.0, position.1); //TODO: screen edges, offsets, etc.
-            //let position = Mouse::get_mouse_position();
-            /*match position {
-                Mouse::Position { x, y } => {
-                    dprintln!("x: {} y: {}", x, y);
-                    win.set_pos(x, y); //TODO: screen edges, offsets, etc.
-                },
-                Mouse::Error => dprintln!("Error getting mouse position"),
-            }*/
+            let screen_w = app::screen_size().0 as i32;
+            let screen_h = app::screen_size().1 as i32;
+            let x = position.0.clamp(0, screen_w - win.w());
+            let y = position.1.clamp(0, screen_h - win.h());
+            win.set_pos(x, y);
         }
         //win.redraw();
         app::redraw();
@@ -1569,11 +1565,6 @@ impl AppView {
     }
     
 }
-
-/*fn set_w_pos(mut win: DoubleWindow) {    
-    dprintln!("getting mouse position");
-    win.set_pos(x, y);
-}*/
 
 fn borderless_win_frame_handler(event: enums::Event, win_popup: &mut DoubleWindow, is_inner: &Rc<RefCell<bool>>) -> bool {
     match event {
