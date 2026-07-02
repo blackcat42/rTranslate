@@ -213,10 +213,40 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
 });
 static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
     if !std::path::Path::new("ui_config.json").exists() {
-        std::fs::copy("ui_config.json.default", "ui_config.json").unwrap_or_else(|e| {
-            app_panic_message("Failed to open ui_config.json");
+
+        let config_default = UIConfig {
+            main_window_w: 800,
+            main_window_h: 600,
+
+            popup_w: 550,
+            popup_h: 200,
+
+            popup_dict_w: 450,
+            popup_dict_h: 200,
+
+            selected_translator: "".to_string(),
+            selected_dict: "".to_string(),
+            selected_tts_voice: "".to_string(),
+            selected_tts_engine: "".to_string(),
+            selected_prnn_service: "".to_string(),
+
+            selected_src: "".to_string(),
+            selected_target: "".to_string()
+        };
+
+        let ui_config = serde_json::to_string(&config_default).unwrap_or_else(|e| {
+            app_panic_message("Failed to serialize UICONFIG");
             panic!("Error: {}", e);
         });
+        let _ = std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
+            app_panic_message("Failed to write ui_config.json");
+            panic!("Error: {}", e);
+        });
+
+        /*std::fs::copy("ui_config.json.default", "ui_config.json").unwrap_or_else(|e| {
+            app_panic_message("Failed to open ui_config.json");
+            panic!("Error: {}", e);
+        });*/
     }
 
     let ui_config_json = std::fs::read_to_string("ui_config.json").unwrap_or_else(|e| {
@@ -742,8 +772,8 @@ fn main() {
                     app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
                 }
             }
-            Some(AppEvent::PRNNSave((src_id, prnn_source_uid, filename))) => {
-                let _file = app_state.insert_prnn(src_id, &prnn_source_uid, &filename);
+            Some(AppEvent::PRNNSave((src_id, prnn_service_uid, filename))) => {
+                let _file = app_state.insert_prnn(src_id, &prnn_service_uid, &filename);
                 //if let Ok(file) = file {
                     //let filename = format!("{}.ogg", file);
                     //app_sender.send(AppEvent::TTSPlay(file));

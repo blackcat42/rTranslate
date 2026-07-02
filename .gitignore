@@ -34,6 +34,7 @@ target
 /todo.txt
 /todo_api.txt
 /dist/settings.json
+/dist/ui_config.json
 
 /build_win_dbg.bat
 /build_win_release.bat

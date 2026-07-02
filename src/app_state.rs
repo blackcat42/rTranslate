@@ -151,11 +151,11 @@ impl AppState {
             )?;
 
             let mut data_pr = db.prepare(
-                "SELECT path, tts_engine_uid, tts_voice_uid FROM tts
+                "SELECT path, tts_service_uid, tts_voice_uid FROM tts
                  WHERE src_id = :id"
             )?;
             let mut data_pr_prnn = db.prepare(
-                "SELECT path, prnn_source_uid FROM prnn
+                "SELECT path, prnn_service_uid FROM prnn
                  WHERE src_id = :id"
             )?;
 
@@ -460,7 +460,7 @@ impl AppState {
         if let Some(db) = db_ref {
             let tts = db.query_row(
                 "SELECT path FROM tts 
-                 WHERE src_id = ?1 AND tts_engine_uid = ?2 AND tts_voice_uid = ?3",
+                 WHERE src_id = ?1 AND tts_service_uid = ?2 AND tts_voice_uid = ?3",
                 params![src_id, selected_tts_engine, selected_tts_voice],
                 |row| {
                     let text = row.get(0)?;
@@ -544,8 +544,8 @@ impl AppState {
 
         if let Some(db) = db_ref {
             let mut data_pr_prnn = db.prepare(
-                "SELECT path, prnn_source_uid FROM prnn
-                 WHERE src_id = :id AND prnn_source_uid = :prnn_src_uid"
+                "SELECT path, prnn_service_uid FROM prnn
+                 WHERE src_id = :id AND prnn_service_uid = :prnn_src_uid"
             )?;
             let data_prnn = data_pr_prnn.query_map(&[(":id", &src_id as &dyn ToSql), (":prnn_src_uid", &selected_prnn_source as &dyn ToSql)], |row| {
                 Ok(PRNNSource {
@@ -590,7 +590,7 @@ impl AppState {
             let transl = if src_lang != "auto" { 
                 db.query_row(
                     "SELECT text FROM transl 
-                     WHERE src_id = ?1 AND transl_engine_uid = ?2 AND src = ?3 AND target = ?4",
+                     WHERE src_id = ?1 AND transl_service_uid = ?2 AND src = ?3 AND target = ?4",
                     params![src_id, selected_translator, src_lang, target_lang],
                     |row| {
                         let text = row.get(0)?;
@@ -604,7 +604,7 @@ impl AppState {
             } else {
                 db.query_row(
                     "SELECT text, src FROM transl 
-                     WHERE src_id = ?1 AND transl_engine_uid = ?2 AND target = ?3",
+                     WHERE src_id = ?1 AND transl_service_uid = ?2 AND target = ?3",
                     params![src_id, selected_translator, target_lang],
                     |row| {
                         let text = row.get(0)?;
@@ -641,7 +641,7 @@ impl AppState {
             let transl = if src_lang != "auto" {
                 db.query_row(
                     "SELECT text FROM dict 
-                     WHERE src_id = ?1 AND dict_uid = ?2 AND src = ?3 AND target = ?4",
+                     WHERE src_id = ?1 AND dict_service_uid = ?2 AND src = ?3 AND target = ?4",
                     params![src_id, selected_dict, src_lang, target_lang],
                     |row| {
                         let text = row.get(0)?;
@@ -655,7 +655,7 @@ impl AppState {
             } else {
                 db.query_row(
                     "SELECT text, src FROM dict 
-                     WHERE src_id = ?1 AND dict_uid = ?2 AND target = ?3",
+                     WHERE src_id = ?1 AND dict_service_uid = ?2 AND target = ?3",
                     params![src_id, selected_dict, target_lang],
                     |row| {
                         let text = row.get(0)?;
@@ -674,7 +674,7 @@ impl AppState {
             } else {
                 db.query_row(
                     "SELECT text FROM dict 
-                     WHERE src_id = ?1 AND dict_uid = ?2 AND src = 'undefined' AND target = 'undefined'",
+                     WHERE src_id = ?1 AND dict_service_uid = ?2 AND src = 'undefined' AND target = 'undefined'",
                     params![src_id, selected_dict],
                     |row| {
                         let text = row.get(0)?;
@@ -705,7 +705,7 @@ impl AppState {
             let zxc = src_id.clone().to_string();
             let path = format!(r"{zxc}_{tts_engine}_{tts_voice}");
             db.execute(
-                "REPLACE INTO tts (src_id, path, tts_engine_uid, tts_voice_uid) VALUES (?1, ?2, ?3, ?4)",
+                "REPLACE INTO tts (src_id, path, tts_service_uid, tts_voice_uid) VALUES (?1, ?2, ?3, ?4)",
                 params![src_id, path, tts_engine, tts_voice],
             )?;
             dprintln!("tts inserted/replaced");
@@ -722,7 +722,7 @@ impl AppState {
         }
         if let Some(db) = db_ref {
             db.execute(
-                "REPLACE INTO prnn (src_id, path, prnn_source_uid) VALUES (?1, ?2, ?3)",
+                "REPLACE INTO prnn (src_id, path, prnn_service_uid) VALUES (?1, ?2, ?3)",
                 params![src_id, filename, prnn_source],
             )?;
             dprintln!("prnn inserted/replaced");
@@ -746,7 +746,7 @@ impl AppState {
         }
         if let Some(db) = db_ref {
             db.execute(
-                "REPLACE INTO transl (src_id, transl_engine_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
+                "REPLACE INTO transl (src_id, transl_service_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![src_id, tr_uid, src, target, translation_text],
             )?;
             dprintln!("transl inserted/replaced");
@@ -770,12 +770,12 @@ impl AppState {
             //let target = target.as_ref();
             if let Some(src) = src && let Some(target) = target {
                 db.execute(
-                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    "REPLACE INTO dict (src_id, dict_service_uid, src, target, text) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![src_id, dict_uid, src.as_ref(), target.as_ref(), text],
                 )?;
             } else {
                 db.execute(
-                    "REPLACE INTO dict (src_id, dict_uid, src, target, text) VALUES (?1, ?2, 'undefined', 'undefined', ?3)",
+                    "REPLACE INTO dict (src_id, dict_service_uid, src, target, text) VALUES (?1, ?2, 'undefined', 'undefined', ?3)",
                     params![src_id, dict_uid, text],
                 )?;
             }
@@ -963,8 +963,8 @@ impl AppState {
                     text TEXT NOT NULL,
                     src TEXT NOT NULL,
                     target TEXT NOT NULL,
-                    transl_engine_uid TEXT NOT NULL,
-                    PRIMARY KEY (src_id, transl_engine_uid, src, target)
+                    transl_service_uid TEXT NOT NULL,
+                    PRIMARY KEY (src_id, transl_service_uid, src, target)
                     FOREIGN KEY (src_id) REFERENCES src (id) ON DELETE CASCADE
                 )",
                 (),
@@ -974,9 +974,9 @@ impl AppState {
                 "CREATE TABLE IF NOT EXISTS tts (
                     src_id INTEGER NOT NULL,
                     path TEXT NOT NULL,
-                    tts_engine_uid TEXT NOT NULL,
+                    tts_service_uid TEXT NOT NULL,
                     tts_voice_uid TEXT NOT NULL,
-                    PRIMARY KEY (src_id, tts_engine_uid, tts_voice_uid)
+                    PRIMARY KEY (src_id, tts_service_uid, tts_voice_uid)
                     FOREIGN KEY (src_id) REFERENCES src (id) ON DELETE CASCADE
                 )",
                 (),
@@ -986,8 +986,8 @@ impl AppState {
                 "CREATE TABLE IF NOT EXISTS prnn (
                     src_id INTEGER NOT NULL,
                     path TEXT NOT NULL,
-                    prnn_source_uid TEXT NOT NULL,
-                    PRIMARY KEY (src_id, path, prnn_source_uid)
+                    prnn_service_uid TEXT NOT NULL,
+                    PRIMARY KEY (src_id, path, prnn_service_uid)
                     FOREIGN KEY (src_id) REFERENCES src (id) ON DELETE CASCADE
                 )",
                 (),
@@ -997,10 +997,10 @@ impl AppState {
                 "CREATE TABLE IF NOT EXISTS dict (
                     src_id INTEGER NOT NULL,
                     text TEXT NOT NULL,
-                    dict_uid TEXT NOT NULL,
+                    dict_service_uid TEXT NOT NULL,
                     src TEXT NOT NULL,
                     target TEXT NOT NULL,
-                    PRIMARY KEY (src_id, dict_uid, src, target)
+                    PRIMARY KEY (src_id, dict_service_uid, src, target)
                     FOREIGN KEY (src_id) REFERENCES src(id) ON DELETE CASCADE
                 )",
                 (),
