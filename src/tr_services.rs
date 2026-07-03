@@ -3,5 +3,5 @@ use super::TOKIO_RT;
 
 pub mod google_translate;
 pub mod google_translate2;
-pub mod nodejs_translator;
+pub mod sidecar_translator;
 pub mod deepl_translate;

@@ -22,7 +22,7 @@ use crate::types::{
     Lang, 
     Translator, 
     Dictionary, 
-    TTSEngine, 
+    TTService, 
     PRNNService, 
     UIState, 
     UIStateDict, 
@@ -45,7 +45,7 @@ pub struct AppState {
     pub selected_translator: String,
     pub selected_dict: String,
     pub selected_tts_voice: String,
-    pub selected_tts_engine: String,
+    pub selected_tts_service: String,
     pub selected_prnn_source: String,
 
     pub selected_src: Lang,
@@ -53,7 +53,7 @@ pub struct AppState {
 
     pub translators: HashMap<String, Box<dyn Translator>>,
     pub dictionaries: HashMap<String, Box<dyn Dictionary>>,
-    pub tts_engines: HashMap<String, Box<dyn TTSEngine>>,
+    pub tts_services: HashMap<String, Box<dyn TTService>>,
     pub prnn_services: HashMap<String, Box<dyn PRNNService>>,
 
     pub db: Option<Connection>,
@@ -162,7 +162,7 @@ impl AppState {
             let data = data_pr.query_map(&[(":id", &src_id)], |row| {
                 Ok(TTSource {
                     path: row.get(0)?,
-                    engine: row.get(1)?,
+                    service: row.get(1)?,
                     voice: row.get(2)?,
                 })
             })?;
@@ -421,7 +421,7 @@ impl AppState {
     pub fn run_tts(&mut self) -> Result<()> {
         //let text = self.src_text.clone();
         let (text, src_id, _is_fav) = self.insert_src(&self.src_text)?;
-        let tts_file = self.check_tts_cache(src_id, &self.selected_tts_engine, &self.selected_tts_voice);
+        let tts_file = self.check_tts_cache(src_id, &self.selected_tts_service, &self.selected_tts_voice);
         //15_kkr_af-heart.ogg
 
         match tts_file {
@@ -437,7 +437,7 @@ impl AppState {
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, false));
-                if let Some(engine) = self.tts_engines.get_mut(self.selected_tts_engine.clone().as_str()) {
+                if let Some(engine) = self.tts_services.get_mut(self.selected_tts_service.clone().as_str()) {
                     engine.generate(
                         text.clone(), 
                         src_id, 

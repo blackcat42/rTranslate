@@ -20,7 +20,7 @@ use std::sync::{Arc};
 use fltk::{app, dialog, };
 use regex::Regex;
 
-use super::app_panic_message;
+use super::app_message;
 
 pub struct DSLDict {
     is_running: Arc<AtomicBool>,
@@ -37,7 +37,7 @@ impl DSLDict {
 
         let re_uid = Regex::new(r"^\w+$").unwrap();
         if !re_uid.is_match(&uid) {
-            app_panic_message("settings.json: Failed to parse uid");
+            app_message("settings.json: Failed to parse uid");
             panic!("settings.json: Failed to parse uid");
         }
 

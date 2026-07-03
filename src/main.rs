@@ -50,7 +50,7 @@ use tray_icon::{
 };*/
 
 mod tr_services;
-use tr_services::nodejs_translator;
+use tr_services::sidecar_translator;
 use tr_services::google_translate;
 use tr_services::google_translate2;
 use tr_services::deepl_translate;
@@ -98,7 +98,7 @@ pub struct UIConfig {
     selected_translator: String,
     selected_dict: String,
     selected_tts_voice: String,
-    selected_tts_engine: String,
+    selected_tts_service: String,
     selected_prnn_service: String,
 
     selected_src: String,
@@ -109,7 +109,7 @@ pub struct UIConfig {
 pub struct Settings {
     translators: Vec<TranslatorOption>,
     dictionaries: Vec<DictOption>,
-    tts_engines: Vec<TTSEngineOption>,
+    tts_services: Vec<TTServiceOption>,
     prnn_services: Vec<PRNNSourceOption>,
 
     pub download_all_pronunciations: bool,
@@ -171,7 +171,7 @@ struct DictOption {
     pub dict_path: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
-struct TTSEngineOption {
+struct TTServiceOption {
     pub uid: String,
     pub name: String,
     pub command: Option<String>,
@@ -182,7 +182,6 @@ struct TTSEngineOption {
 struct PRNNSourceOption {
     pub uid: String,
     pub name: String,
-
     #[serde(default = "default_as_false")]
     pub use_proxy: bool,
 }
@@ -196,17 +195,17 @@ pub struct ProxyOption {
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     if !std::path::Path::new("settings.json").exists() {
         std::fs::copy("settings.json.default", "settings.json").unwrap_or_else(|e| {
-            app_panic_message("Failed to open settings.json");
+            app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
     }
 
     let settings_json = std::fs::read_to_string("settings.json").unwrap_or_else(|e| {
-            app_panic_message("Failed to open settings.json");
+            app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
     let settings: Settings = json5::from_str(&settings_json).unwrap_or_else(|e| {
-            app_panic_message("Failed to parse settings.json");
+            app_message("Failed to parse settings.json");
             panic!("Error: {}", e);
         });
     settings
@@ -227,7 +226,7 @@ static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
             selected_translator: "".to_string(),
             selected_dict: "".to_string(),
             selected_tts_voice: "".to_string(),
-            selected_tts_engine: "".to_string(),
+            selected_tts_service: "".to_string(),
             selected_prnn_service: "".to_string(),
 
             selected_src: "".to_string(),
@@ -235,26 +234,21 @@ static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
         };
 
         let ui_config = serde_json::to_string(&config_default).unwrap_or_else(|e| {
-            app_panic_message("Failed to serialize UICONFIG");
+            app_message("Failed to serialize UICONFIG");
             panic!("Error: {}", e);
         });
         std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
-            app_panic_message("Failed to write ui_config.json");
+            app_message("Failed to write ui_config.json");
             panic!("Error: {}", e);
         });
-
-        /*std::fs::copy("ui_config.json.default", "ui_config.json").unwrap_or_else(|e| {
-            app_panic_message("Failed to open ui_config.json");
-            panic!("Error: {}", e);
-        });*/
     }
 
     let ui_config_json = std::fs::read_to_string("ui_config.json").unwrap_or_else(|e| {
-            app_panic_message("Failed to open ui_config.json");
+            app_message("Failed to open ui_config.json");
             panic!("Error: {}", e);
         });
     let ui_config: UIConfig = json5::from_str(&ui_config_json).unwrap_or_else(|e| {
-            app_panic_message("Failed to parse ui_config.json");
+            app_message("Failed to parse ui_config.json");
             panic!("Error: {}", e);
         });
     ui_config
@@ -279,7 +273,7 @@ fn main() {
 
     //PATHS
     let working_dir = std::env::current_dir().unwrap_or_else(|e| {
-            app_panic_message("current_dir");
+            app_message("current_dir");
             panic!("Error: {}", e);
         });
 
@@ -321,7 +315,7 @@ fn main() {
         .with_icon(icon)
         .build()
         .unwrap_or_else(|e| {
-            app_panic_message("Tray icon builder error");
+            app_message("Tray icon builder error");
             panic!("Error: {}", e);
         });
 
@@ -337,7 +331,7 @@ fn main() {
 
     //HOTKEYS
     let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
-        app_panic_message("GlobalHotKeyManager");
+        app_message("GlobalHotKeyManager");
         panic!("Error: {}", e);
     });
     let tr_hotkey_id: Option<u32> = if let Some(translate_hotkey) = &GLOBAL_SETTINGS.translate_hotkey {
@@ -345,7 +339,7 @@ fn main() {
             let _ = manager.register(hotkey);
             Some(hotkey.id())
         } else {
-            app_panic_message("Failed to parse translate hotkey");
+            app_message("Failed to parse translate hotkey");
             None
         }
     } else {
@@ -356,7 +350,7 @@ fn main() {
             let _ = manager.register(hotkey_dict);
             Some(hotkey_dict.id())
         } else {
-            app_panic_message("Failed to parse dict hotkey");
+            app_message("Failed to parse dict hotkey");
             None
         }
     } else {
@@ -373,7 +367,7 @@ fn main() {
         selected_translator: "".to_string(),
         selected_dict: "".to_string(),
         selected_tts_voice: "".to_string(),
-        selected_tts_engine: "".to_string(),
+        selected_tts_service: "".to_string(),
         selected_prnn_source: "".to_string(),
         selected_src: types::Lang::from_str(GLOBAL_SETTINGS.pinned_src_languages.first().unwrap_or(&"en".to_string())).unwrap_or(types::Lang::En),
         selected_target: types::Lang::from_str(GLOBAL_SETTINGS.pinned_target_languages.first().unwrap_or(&"ru".to_string())).unwrap_or(types::Lang::Ru),
@@ -382,7 +376,7 @@ fn main() {
 
         translators: HashMap::new(),
         dictionaries: HashMap::new(),
-        tts_engines: HashMap::new(),
+        tts_services: HashMap::new(),
         prnn_services: HashMap::new(),
     };
     let _ = app_state.init_db();
@@ -392,7 +386,7 @@ fn main() {
     let re_uid = Regex::new(r"^\w+$").unwrap();
     for value in GLOBAL_SETTINGS.translators.iter() {
         if !re_uid.is_match(&value.uid) {
-            app_panic_message("settings.json: Failed to parse uid");
+            app_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
         let use_proxy = value.use_proxy;
@@ -400,7 +394,7 @@ fn main() {
         && command.chars().count() > 0
         && let Some(args) = &value.args 
         && let Some(reload) = &value.reload_if_lang_changed {
-            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), *reload, use_proxy )));
+            app_state.translators.insert(value.uid.clone(), Box::new(sidecar_translator::ST::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), *reload, use_proxy )));
         } else if value.uid == "tr_google" {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "tr_google2" {
@@ -413,7 +407,7 @@ fn main() {
 
     for value in GLOBAL_SETTINGS.dictionaries.iter() {
         if !re_uid.is_match(&value.uid) {
-            app_panic_message("settings.json: Failed to parse uid");
+            app_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
         let use_proxy = value.use_proxy;
@@ -427,9 +421,9 @@ fn main() {
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
 
-    for value in GLOBAL_SETTINGS.tts_engines.iter() {
+    for value in GLOBAL_SETTINGS.tts_services.iter() {
         if !re_uid.is_match(&value.uid) {
-            app_panic_message("settings.json: Failed to parse uid");
+            app_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
 
@@ -437,7 +431,7 @@ fn main() {
         && command.chars().count() > 0
         && let Some(args) = &value.args {
             dbg!(value);
-            app_state.tts_engines.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone())));
+            app_state.tts_services.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone())));
         }
     }
     
@@ -452,7 +446,6 @@ fn main() {
             app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone(), use_proxy)));
         }
     }
-    //app_state.prnn_services.entry(String::from("prnn_wiki")).or_insert_with(|| Box::new(prnn_wiki::WP::new(app_sender, "Wiktionary Pronunciations".to_string())));
 
     let _ = app_state.update_history_browser();
     let _ = app_state.update_fav_browser();
@@ -474,7 +467,7 @@ fn main() {
     } else {
         app_sender.send(AppEvent::SetTranslator(
             GLOBAL_SETTINGS.translators.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse settings.json (translators)");
+                app_message("Failed to parse settings.json (translators)");
                 panic!("Error");
             }).uid.clone()
         ));
@@ -485,28 +478,28 @@ fn main() {
     } else {
         app_sender.send(AppEvent::SetDict(
             GLOBAL_SETTINGS.dictionaries.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse settings.json (dictionaries)");
+                app_message("Failed to parse settings.json (dictionaries)");
                 panic!("Error");
             }).uid.clone()
         ));
     }
 
-    if re_uid.is_match(&UICONFIG.selected_tts_engine) && re_uid.is_match(&UICONFIG.selected_tts_voice) {
+    if re_uid.is_match(&UICONFIG.selected_tts_service) && re_uid.is_match(&UICONFIG.selected_tts_voice) {
         app_sender.send(AppEvent::SetTTSEngine(
-            UICONFIG.selected_tts_engine.clone(),
+            UICONFIG.selected_tts_service.clone(),
             UICONFIG.selected_tts_voice.clone()
         ));
     } else {
         app_sender.send(AppEvent::SetTTSEngine(
-            GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-                    app_panic_message("Failed to parse settings.json tts_engine");
+            GLOBAL_SETTINGS.tts_services.get(0).unwrap_or_else(|| {
+                    app_message("Failed to parse settings.json tts_engine");
                     panic!("Error");
                 }).uid.clone(),
-            GLOBAL_SETTINGS.tts_engines.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse settings.json tts_voice");
+            GLOBAL_SETTINGS.tts_services.get(0).unwrap_or_else(|| {
+                app_message("Failed to parse settings.json tts_voice");
                 panic!("Error");
             }).voices.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse settings.json tts_voice");
+                app_message("Failed to parse settings.json tts_voice");
                 panic!("Error");
             }).clone()
         ));
@@ -516,7 +509,7 @@ fn main() {
     } else {
         app_sender.send(AppEvent::SetPRNNEngine(
             GLOBAL_SETTINGS.prnn_services.get(0).unwrap_or_else(|| {
-                app_panic_message("Failed to parse settings.json prnn_source");
+                app_message("Failed to parse settings.json prnn_source");
                 panic!("Error");
             }).uid.clone()
         ));
@@ -610,10 +603,10 @@ fn main() {
                 }
             }
             Some(AppEvent::SetTTSEngine(tts, voice)) => {
-                app_state.selected_tts_engine = tts.clone();
+                app_state.selected_tts_service = tts.clone();
                 app_state.selected_tts_voice = voice.clone();
 
-                if let Some(tts_struct) = app_state.tts_engines.get(tts.as_str()) {
+                if let Some(tts_struct) = app_state.tts_services.get(tts.as_str()) {
                     let tts_name = tts_struct.get_name();
                     app_view.set_tts_engine(tts_name, &voice);
                 }
@@ -652,7 +645,7 @@ fn main() {
                 app_view.set_status(&text, is_error, is_dict);
             }
             Some(AppEvent::Message(text)) => {
-                app_panic_message(&text);
+                app_message(&text);
             }
 
             Some(AppEvent::TrayIcon(e)) => {
@@ -828,7 +821,7 @@ fn main() {
         let mut config = UICONFIG.clone();
         config.selected_translator = app_state.selected_translator.clone();
         config.selected_dict = app_state.selected_dict.clone();
-        config.selected_tts_engine = app_state.selected_tts_engine.clone();
+        config.selected_tts_service = app_state.selected_tts_service.clone();
         config.selected_tts_voice = app_state.selected_tts_voice.clone();
         config.selected_prnn_service = app_state.selected_prnn_source.clone();
 
@@ -845,11 +838,11 @@ fn main() {
         config.popup_dict_h = app_view.win_popup_dict.height();
 
         let ui_config = serde_json::to_string(&config).unwrap_or_else(|e| {
-            app_panic_message("Failed to serialize UICONFIG");
+            app_message("Failed to serialize UICONFIG");
             panic!("Error: {}", e);
         });
         std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
-            app_panic_message("Failed to write ui_config.json");
+            app_message("Failed to write ui_config.json");
             panic!("Error: {}", e);
         });
     }    
@@ -865,7 +858,7 @@ fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
     let (icon_rgba, icon_width, icon_height) = {
         let image1 = ::image::open(path)
             .unwrap_or_else(|e| {
-                app_panic_message("Failed to open icon path");
+                app_message("Failed to open icon path");
                 panic!("Error: {}", e);
                 })
             .into_rgba8();
@@ -874,14 +867,14 @@ fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
         (rgba, width, height)
     };
     tray_icon::Icon::from_rgba(icon_rgba, icon_width, icon_height).unwrap_or_else(|e| {
-        app_panic_message("Failed to load tray icon");
+        app_message("Failed to load tray icon");
         panic!("Error: {}", e);
     })
 }
 
 
 
-pub fn app_panic_message(e: &str) {
+pub fn app_message(e: &str) {
     let pos = screen_center();
     fltk::dialog::alert(pos.0 - 210, pos.1 - 40, e);
     
@@ -1005,7 +998,7 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
             }
         }
         if is_error {
-            app_panic_message("Error while clearing audio cache");
+            app_message("Error while clearing audio cache");
         }
         //dprintln!("IDs: {:?}", ids);
         //dprintln!("paths: {:?}", paths);

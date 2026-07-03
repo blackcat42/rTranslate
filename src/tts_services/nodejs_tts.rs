@@ -1,6 +1,6 @@
 //TODO: async, non-blocking
 //use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, TTSEngine};
+use crate::types::{AppEvent, TTService};
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -37,7 +37,7 @@ impl NTTS {
     }
 }
 
-impl TTSEngine for NTTS {
+impl TTService for NTTS {
     fn get_name(&self) -> &str {
         &self.name
     }

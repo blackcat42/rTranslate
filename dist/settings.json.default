@@ -80,7 +80,7 @@
         },*/
     ],
 
-    "tts_engines": [
+    "tts_services": [
         {
             "uid": "tts_kokoro",
             "name": "Kokoro",

@@ -338,7 +338,7 @@ pub trait Dictionary {
     fn get_uid(&self) -> &str;
     fn get_name(&self) -> &str;
 }
-pub trait TTSEngine {
+pub trait TTService {
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> ();
     fn get_name(&self) -> &str;
 }
@@ -390,7 +390,7 @@ pub struct TranslSource {
 #[allow(dead_code)]
 pub struct TTSource {
     pub path: String,
-    pub engine: String,
+    pub service: String,
     pub voice: String,
 }
 

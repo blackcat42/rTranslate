@@ -22,7 +22,7 @@ use std::str::FromStr;
 //TODO: catch thread panics
 
 #[allow(clippy::type_complexity)]
-pub struct NT {
+pub struct ST {
     tx: mpsc::Sender<Option<(String, i64, Lang, Lang)>>,
     shared_receiver: Arc<Mutex<Receiver<Option<(String, i64, Lang, Lang)>>>>,
     is_running: Arc<AtomicBool>,
@@ -39,7 +39,7 @@ pub struct NT {
     use_proxy: bool
 }
 
-impl NT {
+impl ST {
     pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>, reload_if_lang_changed: bool, use_proxy: bool) -> Self {
         let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
         let shared_receiver = Arc::new(Mutex::new(rx));
@@ -52,7 +52,7 @@ impl NT {
     }
 }
 
-impl Translator for NT {
+impl Translator for ST {
     fn terminate(&mut self) {
         if self.is_running.load(Ordering::Relaxed) {
             self.is_running.store(false, Ordering::Relaxed);
@@ -121,7 +121,7 @@ impl Translator for NT {
                             }
                         },
                         Err(_e) => {
-                            s2.send(AppEvent::SetReady(Some("Error: nodejs thread panic".to_string()), false));
+                            s2.send(AppEvent::SetReady(Some("Error: Child process thread panic".to_string()), false));
                             is_running.store(false, Ordering::Relaxed);
                         },
                     };
@@ -343,7 +343,7 @@ fn run_node_thread(
             let exit_code = status.code().unwrap();
             if exit_code == 1 {
                 //s.send(AppEvent::SetReady());
-                panic!("nodejs thread panic");
+                panic!("Child process thread panic");
             } else if exit_code == 73 {
                 return Err(anyhow!("Error: unsupported language"));
             } else if exit_code == 53 {

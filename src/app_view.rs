@@ -518,9 +518,9 @@ impl AppView {
         let mut col_left_row_tts = group::Flex::default().row();
         let mut tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("TTS engine/voice:").with_align(fltk::enums::Align::TopLeft);
 
-        for qwe in GLOBAL_SETTINGS.tts_engines.iter() {
-            for tts_voice in qwe.voices.iter() {
-                let name = format!("{}-{}", &*qwe.name, tts_voice);
+        for srvc in GLOBAL_SETTINGS.tts_services.iter() {
+            for tts_voice in srvc.voices.iter() {
+                let name = format!("{}-{}", &*srvc.name, tts_voice);
                 tts_choice.add(
                     &name,
                     fltk::enums::Shortcut::None,
@@ -528,7 +528,7 @@ impl AppView {
                     {
                         let s = app_sender;
                         move |_b| {
-                            s.send(AppEvent::SetTTSEngine(qwe.uid.clone(), tts_voice.clone()));
+                            s.send(AppEvent::SetTTSEngine(srvc.uid.clone(), tts_voice.clone()));
                         }
                     },
                 );

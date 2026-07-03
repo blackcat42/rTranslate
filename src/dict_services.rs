@@ -1,6 +1,6 @@
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
-use super::app_panic_message;
+use super::app_message;
 
 pub mod google_dict;
 pub mod wiktionary_en;
