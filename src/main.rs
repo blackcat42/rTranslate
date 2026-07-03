@@ -12,8 +12,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File; 
 use std::io::BufReader;
-use std::rc::Rc;
-use std::cell::RefCell;
+//use std::rc::Rc;
+//use std::cell::RefCell;
 use std::ffi::OsString;
 
 use anyhow::{anyhow, Result};
@@ -187,7 +187,7 @@ struct PRNNSourceOption {
     pub use_proxy: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
-struct ProxyOption {
+pub struct ProxyOption {
     pub url: String,
     pub username: Option<String>,
     pub password: Option<String>,
@@ -238,7 +238,7 @@ static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
             app_panic_message("Failed to serialize UICONFIG");
             panic!("Error: {}", e);
         });
-        let _ = std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
+        std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
             app_panic_message("Failed to write ui_config.json");
             panic!("Error: {}", e);
         });
@@ -400,7 +400,7 @@ fn main() {
         && command.chars().count() > 0
         && let Some(args) = &value.args 
         && let Some(reload) = &value.reload_if_lang_changed {
-            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), reload.clone(), use_proxy )));
+            app_state.translators.insert(value.uid.clone(), Box::new(nodejs_translator::NT::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), *reload, use_proxy )));
         } else if value.uid == "tr_google" {
             app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
         } else if value.uid == "tr_google2" {
@@ -726,11 +726,10 @@ fn main() {
             }
             Some(AppEvent::Translate(fail_if_not_exist, force, check_buf)) => 'translate_arm: {
                 //app_view.clear_ui(false);
-                if check_buf && (app_view.src_buf.text() != app_view.src) {
-                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
+                if check_buf && (app_view.src_buf.text() != app_view.src)
+                    && let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
                         app_view.set_status(set_src_error.to_string().as_str(), true, false);
                         break 'translate_arm;
-                    }
                 }
                 if let Err(error) = app_state.translate(fail_if_not_exist, force) {
                     app_sender.send(AppEvent::SetReady(Some(error.to_string()), false));
@@ -849,7 +848,7 @@ fn main() {
             app_panic_message("Failed to serialize UICONFIG");
             panic!("Error: {}", e);
         });
-        let _ = std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
+        std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
             app_panic_message("Failed to write ui_config.json");
             panic!("Error: {}", e);
         });
@@ -993,7 +992,7 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
             let audio_path = format!(r"tts_cache\{path}.ogg");
             let working_dir = std::env::current_dir()?;
             let file = working_dir.join(&audio_path);
-            if let Err(_) = safe_delete(file) {
+            if safe_delete(file).is_err() {
                 is_error = true;
             }
         }
@@ -1001,7 +1000,7 @@ fn delete_audio_files_by_ids(conn: &Option<Connection>, ids: Vec<u32>) -> Result
             let audio_path = format!(r"tts_cache\{path}");
             let working_dir = std::env::current_dir()?;
             let file = working_dir.join(&audio_path);
-            if let Err(_) = safe_delete(file) {
+            if safe_delete(file).is_err() {
                 is_error = true;
             }
         }

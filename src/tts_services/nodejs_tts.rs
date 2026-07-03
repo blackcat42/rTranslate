@@ -1,5 +1,5 @@
 //TODO: async, non-blocking
-use debug_print::{debug_println as dprintln};
+//use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, TTSEngine};
 use std::env;
 use std::io::Write;
@@ -22,7 +22,7 @@ pub struct NTTS {
     args: Vec<String>
 }
 
-use anyhow::{anyhow, Result};
+//use anyhow::{anyhow, Result};
 
 //TODO: platform-specific
 use std::os::windows::process::CommandExt;
@@ -57,7 +57,7 @@ impl TTSEngine for NTTS {
         std::thread::spawn(move || {
             
             let working_dir = env::current_dir().unwrap();
-            let directory = working_dir.join(&format!("extensions\\{engine_uid}"));
+            let directory = working_dir.join(format!("extensions\\{engine_uid}"));
 
             let voice = speaker_uid;
             let mut child;

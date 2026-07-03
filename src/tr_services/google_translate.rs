@@ -4,7 +4,7 @@ use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
 //use ureq::Agent;
 use wreq::{
     Client,
-    Version
+    //Version
 };
 /*use wreq_util::{
     Emulation
@@ -72,7 +72,7 @@ impl Translator for GT {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                             app_sender.send(AppEvent::SaveTranslation(TranslResult {
-                                src_id: src_id, 
+                                src_id, 
                                 text: text.clone(), 
                                 tr_uid: uid.clone(), 
                                 src: t_text.1.clone(), 

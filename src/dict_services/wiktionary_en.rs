@@ -4,7 +4,7 @@ use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 //use ureq::Agent;
 use wreq::{
     Client,
-    Version
+    //Version
 };
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -40,7 +40,7 @@ impl Dictionary for WDEn {
         &self.name
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
+    fn translate(&mut self, src_id: i64, text: String, _src_lang: Lang,_target_langg: Lang) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -69,7 +69,7 @@ impl Dictionary for WDEn {
                         Ok(t_text) => {
                             //app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), uid.clone(), t_text.clone(), None, None)));
                             app_sender.send(AppEvent::SaveDictEntry(DictResult {
-                                src_id: src_id,
+                                src_id,
                                 dict_uid: uid.clone(),
                                 text: t_text.clone(),
                                 src: None, 
@@ -90,7 +90,7 @@ impl Dictionary for WDEn {
                         }
                         Err(e) => {
                             app_sender.send(AppEvent::SetReady(Some(e.to_string()), true));
-                            let error_str = format!(r"Error: {e}");
+                            //let error_str = format!(r"Error: {e}");
                             //app_sender.send(AppEvent::SetStatus(error_str.into(), true, true));
                             //TODO?: if Err(Error::StatusCode(404)) --> SaveDictEntry("not found")
                         }

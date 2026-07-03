@@ -11,8 +11,8 @@ use std::io::{Read, BufRead, BufWriter, Write};
 use std::path::PathBuf;
 //use super::GLOBAL_SETTINGS;
 use anyhow::{anyhow, Result};
-use std::rc::Rc;
-use std::cell::RefCell;
+//use std::rc::Rc;
+//use std::cell::RefCell;
 
 use std::fs::File; 
 use std::io::BufReader;
@@ -56,7 +56,7 @@ impl DSLDict {
         let path = PathBuf::from(self.dict_path.clone());
         let index_path = path.with_extension("idx");
         let file = File::open(path.clone())?;
-        let mut idx_file = File::create(index_path)?;
+        let idx_file = File::create(index_path)?;
         let metadata = file.metadata()?;
         let mut reader = BufReader::new(file);
         let filesize_mb = (metadata.len() / 1048576) as f64;
@@ -70,7 +70,7 @@ impl DSLDict {
                     let mut line_num = 1;
                     let mut articles_num = 0;
                     let mut buffer: Vec<u8> = Vec::new();
-                    let mut bom_offset = 2;
+                    let mut bom_offset: usize;
 
                     let mut writer = BufWriter::with_capacity(512 * 1024, idx_file);
                     loop {
@@ -89,7 +89,7 @@ impl DSLDict {
                         if line_num == 1 && buffer[0] != 0xFF && buffer[1] != 0xFE {
                             bom_offset = 0; //utf-16le w/o BOM or not a utf-16le
                             if buffer.len() >= (10 + bom_offset) 
-                               && buffer[0 + bom_offset] != 0x23 
+                               && buffer[bom_offset] != 0x23 
                                && buffer[2 + bom_offset] != 0x4E { 
                                 break;
                             }
@@ -113,7 +113,7 @@ impl DSLDict {
                         match String::from_utf16(&utf16_vec) {
                             Ok(s) => {
                                 if !s.starts_with("\t") && !s.starts_with(" ") && !s.starts_with("\n") {
-                                    let s = s.trim();
+                                    //let s = s.trim();
                                     writer.write_all(&position.to_le_bytes())?;
                                     articles_num += 1;
                                 }
@@ -157,7 +157,7 @@ impl Dictionary for DSLDict {
         let dsl_path = PathBuf::from(&self.dict_path);
         let index_path = dsl_path.with_extension("idx"); 
 
-        let mut is_indexed = index_path.exists();
+        let is_indexed = index_path.exists();
 
         if !is_indexed {
             let pos = screen_center();
@@ -192,7 +192,7 @@ impl Dictionary for DSLDict {
             Ok(t_text) => {
                 //self.app_sender.send(AppEvent::SaveDictEntry((src_id, orig_text.clone(), self.get_uid().to_string(), t_text.clone(), None, None )));
                 self.app_sender.send(AppEvent::SaveDictEntry(DictResult {
-                    src_id: src_id, 
+                    src_id, 
                     dict_uid: self.get_uid().to_string(),
                     text: t_text.clone(),
                     src: None, 
@@ -228,7 +228,7 @@ fn send_tr_request(path: &str, term: &str) -> Result<String> {
     Ok(response)
 }
 
-pub fn search_term(mut dsl_file: &mut File, idx_file: &mut File, target_term: &str) -> Result<String> {
+pub fn search_term(dsl_file: &mut File, idx_file: &mut File, target_term: &str) -> Result<String> {
 
     let target_term = target_term.to_lowercase();
 

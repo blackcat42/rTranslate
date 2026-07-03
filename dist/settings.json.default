@@ -84,7 +84,7 @@
         {
             "uid": "tts_kokoro",
             "name": "Kokoro",
-            "command": ".\\deno",
+            "command": "deno",
             "args": [
                 "--allow-read=.",
                 "--deny-net",

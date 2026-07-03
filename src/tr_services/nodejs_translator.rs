@@ -173,7 +173,7 @@ fn run_node_thread(
 
         move || {
             //let full_path = working_dir.join(entry_point.as_str());
-            let directory = working_dir.join(&format!("extensions\\{service_uid}"));
+            let directory = working_dir.join(format!("extensions\\{service_uid}"));
             let mut child;
             let src_lang_str = src_lang.as_ref();
             let target_lang_str = target_lang.as_ref();
@@ -219,7 +219,7 @@ fn run_node_thread(
                 let name = service_name.clone();
                 let is_running = is_running.clone();
                 let mut src_lang = src_lang.clone();
-                let mut target_lang = target_lang.clone();
+                let target_lang = target_lang.clone();
                 move || {
                     let reader = BufReader::new(stdout);
                     for line in reader.lines() {
@@ -235,8 +235,9 @@ fn run_node_thread(
                                 let mut l2 = l.replace("<ENDOFLINE>", "\n");
 
                                 let mut response_src_id: Option<i64> = None;
-                                let regex_string = format!(r"<SRC_ID=(\d+)>");
+                                let regex_string = r"<SRC_ID=(\d+)>".to_string();
                                 let re = regex::Regex::new(&regex_string).unwrap();
+                                #[allow(clippy::collapsible_if)]
                                 if let Some(caps) = re.captures(&l2) {
                                     if let Some(matched_group) = caps.get(1) {
                                         response_src_id = Some(matched_group.as_str().parse::<i64>().unwrap());
@@ -247,8 +248,9 @@ fn run_node_thread(
                                 
 
                                 let mut src_lang_detected: Option<String> = None;
-                                let regex_string = format!(r"<SRC_LANG_DETECTED=(..|auto|null|undefined)>");
+                                let regex_string = r"<SRC_LANG_DETECTED=(..|auto|null|undefined)>".to_string();
                                 let re = regex::Regex::new(&regex_string).unwrap();
+                                #[allow(clippy::collapsible_if)]
                                 if let Some(caps) = re.captures(&l2) {
                                     if let Some(matched_group) = caps.get(1) {
                                         src_lang_detected = Some(matched_group.as_str().to_string());
@@ -262,7 +264,7 @@ fn run_node_thread(
 
                                 if let Some(id) = response_src_id && id == src_id {
                                     s.send(AppEvent::SaveTranslation(TranslResult {
-                                        src_id: src_id, 
+                                        src_id, 
                                         text: src_text.clone(), 
                                         tr_uid: service_uid.clone(), 
                                         src: src_lang.clone(), 
@@ -299,7 +301,7 @@ fn run_node_thread(
                             Ok(res) => {
                                 match res {
                                     Some((text, src_id, src_lng, target_lng)) => {
-                                        current_src_id.store(src_id.clone(), Ordering::Relaxed);
+                                        current_src_id.store(src_id, Ordering::Relaxed);
                                         let mut data = current_src_text.write().unwrap();
                                         *data = text.clone();
                                         let src_lng = src_lng.as_ref();

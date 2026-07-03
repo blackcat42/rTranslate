@@ -1,5 +1,5 @@
 use debug_print::{debug_println as dprintln};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
 //use ureq::Agent;
@@ -13,8 +13,8 @@ use super::TOKIO_RT;
 use std::str::FromStr;
 
 use wreq::{
-    Client,
-    Version,
+    //Client,
+    //Version,
     header,
     StatusCode
 };
@@ -76,7 +76,7 @@ impl Translator for DL {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                              app_sender.send(AppEvent::SaveTranslation(TranslResult {
-                                src_id: src_id, 
+                                src_id, 
                                 text: text.clone(), 
                                 tr_uid: uid.clone(), 
                                 src: t_text.1.clone(), 
@@ -268,7 +268,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
 
                     if let Some(text) = text_obj.get("text") 
                     && let Some(text_str) = text.as_str() 
-                    && text_str.len() > 0 {
+                    && !text_str.is_empty() {
                         response.push_str(text_str);
                     }
 
@@ -362,6 +362,7 @@ fn format_post_string(post_data: PostData) -> String {
 
 // handlerBodyMethod manipulates the request body based on random number calculation
 fn handler_body_method(random: u32, body: &str) -> String {
+    #[allow(clippy::manual_is_multiple_of)]
     let calc = ((random + 5) % 29 == 0) || ((random + 3) % 13 == 0);
     if calc {
         body.replacen("\"method\":\"", "\"method\" : \"", 1)

@@ -420,7 +420,7 @@ impl AppState {
     
     pub fn run_tts(&mut self) -> Result<()> {
         //let text = self.src_text.clone();
-        let (text, src_id, is_fav) = self.insert_src(&self.src_text)?;
+        let (text, src_id, _is_fav) = self.insert_src(&self.src_text)?;
         let tts_file = self.check_tts_cache(src_id, &self.selected_tts_engine, &self.selected_tts_voice);
         //15_kkr_af-heart.ogg
 
@@ -438,7 +438,7 @@ impl AppState {
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, false));
                 if let Some(engine) = self.tts_engines.get_mut(self.selected_tts_engine.clone().as_str()) {
-                    let a = engine.generate(
+                    engine.generate(
                         text.clone(), 
                         src_id, 
                         self.selected_tts_voice.clone()
@@ -490,7 +490,7 @@ impl AppState {
 
     pub fn run_prnn(&mut self, index: i32, force: bool) -> Result<()> {
         //let text = self.src_text_dict.clone();
-        let (text, src_id, is_fav) = self.insert_src(&self.src_text_dict)?;
+        let (text, src_id, _is_fav) = self.insert_src(&self.src_text_dict)?;
         let tts_file = if !force {
             self.check_prnn_cache(src_id, &self.selected_prnn_source, index)
         } else {
@@ -581,7 +581,7 @@ impl AppState {
         }
     }
     
-    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, mut src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
+    pub fn check_transl_cache(&self, src_id: i64, selected_translator: &str, src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return None;
@@ -618,21 +618,13 @@ impl AppState {
                     },
                 )
             };
-
-            match transl {
-                Ok(t) => {
-                    Some(t)
-                }
-                Err(_) => {
-                    None
-                }
-            }
+            transl.ok()
         } else {
             None
         }
     }
 
-    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str, mut src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
+    pub fn check_dict_cache(&self, src_id: i64, selected_dict: &str, src_lang: &str, target_lang: &str) -> Option<(String, Option<Lang>, Option<Lang>)> {
         let db_ref = &self.db;
         if !GLOBAL_SETTINGS.use_db || db_ref.is_none() {
             return None;
@@ -682,15 +674,7 @@ impl AppState {
                     },
                 )
             };
-
-            match transl {
-                Ok(t) => {
-                    Some(t)
-                }
-                Err(_) => {
-                    None
-                }
-            }
+            transl.ok()
         } else {
             None
         }
@@ -734,7 +718,7 @@ impl AppState {
     }
 
     pub fn insert_transl(&self, tr_result: TranslResult) -> Result<i64> {
-        let TranslResult {src_id, text, tr_uid, src, target, translation_text} = tr_result;
+        let TranslResult {src_id, text: _, tr_uid, src, target, translation_text} = tr_result;
         let tr_uid = tr_uid.as_str(); 
         let src = src.as_ref();
         let target = target.as_ref();
@@ -926,10 +910,10 @@ impl AppState {
                     )
                 },
             );
-            return lang.ok();
+            lang.ok()
         } else {
-            return None;
-        };
+            None
+        }
     }
 
     pub fn init_db(&self) -> Result<()> {

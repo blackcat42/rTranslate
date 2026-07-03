@@ -6,19 +6,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::fs::File;
 use std::io::Write;
 use anyhow::{anyhow, Result};
-use serde_json::Value;
+//use serde_json::Value;
 use wreq::{
     Client,
-    Version,
+    //Version,
     header,
     StatusCode
 };
-use wreq_util::{
-    Emulation
-};
+//use wreq_util::{
+    //Emulation
+//};
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 
 //#[allow(dead_code)]
 //#[allow(clippy::upper_case_acronyms)]
@@ -105,7 +105,7 @@ struct MediaItem {
     type: String
 }*/
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, _src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
     
     //let req_string = format!("https://en.wiktionary.org/api/rest_v1/page/media-list/{}", selected_text.to_lowercase());
 
@@ -119,7 +119,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
     headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
 
     let result = rt.block_on(async {
-        let mut arr: Vec<String> = vec![];
+        //let mut arr: Vec<String> = vec![];
         let mut arr_filenames: Vec<String> = vec![];
 
         let mut client = Client::builder()
@@ -193,6 +193,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
 
                     //TODO: language detect
                     let lowercase_filename = filename.to_lowercase();
+                    #[allow(clippy::if_same_then_else)]
                     if !GLOBAL_SETTINGS.download_all_pronunciations {
                         if !lowercase_filename.contains(src_lang.as_ref()) 
                         && !lowercase_filename.contains(src_lang.code_3()) {

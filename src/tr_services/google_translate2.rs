@@ -11,7 +11,7 @@ use super::TOKIO_RT;
 use std::str::FromStr;
 
 use wreq::{
-    Client,
+    //Client,
     Version,
     header
 };
@@ -74,7 +74,7 @@ impl Translator for GT2 {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
                              app_sender.send(AppEvent::SaveTranslation(TranslResult {
-                                src_id: src_id, 
+                                src_id, 
                                 text: text.clone(), 
                                 tr_uid: uid.clone(), 
                                 src: t_text.1.clone(), 
@@ -173,7 +173,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                     for item_value in tr_items {
                         if let Some(text) = item_value.as_str() {
                             response.push_str(text);
-                            response.push_str("\n");
+                            response.push('\n');
                         }
                     };
 

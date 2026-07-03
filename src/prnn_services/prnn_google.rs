@@ -6,19 +6,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::fs::File;
 use std::io::Write;
 use anyhow::{anyhow, Result};
-use serde_json::Value;
+//use serde_json::Value;
 use wreq::{
     Client,
-    Version,
+    //Version,
     header,
     StatusCode
 };
-use wreq_util::{
-    Emulation
-};
+//use wreq_util::{
+//    Emulation
+//};
 use super::GLOBAL_SETTINGS;
 use super::TOKIO_RT;
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 
 //#[allow(dead_code)]
 //#[allow(clippy::upper_case_acronyms)]
@@ -96,12 +96,12 @@ impl PRNNService for GP {
 }
 
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, _src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
 
     let selected_text = selected_text.to_lowercase();
     let first_two_chars: String = selected_text.chars().take(2).collect();
-    let date1 = "2021-03-01";
-    let date2 = "2021-06-17";
+    //let date1 = "2021-03-01";
+    //let date2 = "2021-06-17";
     let date3 = "2024-04-19";
     //TODO: settings
     let mut arr_urls: Vec<String> = vec![];
@@ -149,11 +149,12 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
         let mut count = 1;
         let urls_len = arr_urls.len();
         for url in arr_urls {
+            #[allow(clippy::double_ended_iterator_last)]
             let filename = url.trim_end_matches('/').split('/').last().unwrap_or("tmp.mp3");
             let filename = sanitize_filename::sanitize(filename);
 
             let status_str = format!("Downloading pronunciation files ({}/{})...", count, urls_len);
-            count = count + 1;
+            count += 1;
             app_sender.send(AppEvent::SetStatus(status_str.as_str().into(), true, true));
             
             let audio_path = format!(r"tts_cache\{filename}");
@@ -184,7 +185,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                 }
             }
         }
-        if arr_filenames.len() > 0 {
+        if !arr_filenames.is_empty() {
             Ok(arr_filenames)
         } else {
             Err(anyhow!(format!("no pronunciations were found for the selected language ({src_lang})")))

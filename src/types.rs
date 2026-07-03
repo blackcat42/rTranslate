@@ -1,4 +1,4 @@
-
+#![allow(unreachable_patterns)]
 
 use global_hotkey::{
     GlobalHotKeyEvent, 
@@ -46,9 +46,7 @@ pub enum AppEvent {
     
     //TODO:
     UpdateUi(UIState, bool),
-    //UpdateUiSrc(String, bool),
     UpdateUiDict(UIStateDict, bool),
-    //SetUiFavState(bool),
     ClearUi(bool),
 
 
@@ -62,64 +60,14 @@ pub enum AppEvent {
     SetDict(String),
     SetTTSEngine(String, String),
     SetPRNNEngine(String),
-    //SetTTSVoice(String),
     UpdateTTState(i32),
 
 }
-
-//#[derive(AsRefStr, Clone)]
-// pub enum TranslateServices {
-//     Bergamot,
-//     Google,
-// }
-
-// #[derive(AsRefStr, Clone)]
-// pub enum TTService {
-//     KokoroAfHeart,
-//     KokoroAfNicole,
-// }
-
-// #[derive(AsRefStr, Clone)]
-// pub enum TTSVoice {
-//     AfHeart,
-//     AfNicole,
-// }
 
 
 //from ISO 639_3 or ISO 639_1 str:    Lang::from_str
 //Lang --> ISO 639_1 str:             .as_ref()
 //https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
-/*#[allow(unused)]
-#[derive(Debug, AsRefStr, EnumString, Clone, PartialEq, Eq, EnumIter)]
-pub enum Lang {
-    #[strum(serialize = "eng", to_string="en")]
-    En,
-    #[strum(serialize = "rus", to_string="ru")]
-    Ru,
-    #[strum(serialize = "spa", to_string="es")]
-    Es,
-    #[strum(serialize = "fra", to_string="fr")]
-    Fr,
-    #[strum(serialize = "jpn", to_string="ja")]
-    Ja,
-
-}
-
-#[allow(unreachable_patterns)]
-#[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
-pub enum LangNames {
-    #[strum(serialize = "en", to_string="English")]
-    En,
-    #[strum(serialize = "ru", to_string="Russian")]
-    Ru,
-    #[strum(serialize = "es", to_string="Spanish")]
-    Es,
-    #[strum(serialize = "fr", to_string="French")]
-    Fr,
-    #[strum(serialize = "ja", to_string="Japanese")]
-    Ja,
-
-}*/
 
 //TODO: llm-generated, need to verify
 #[allow(unused)]
@@ -350,80 +298,6 @@ impl Lang {
 }
 
 //todo: whatlang::Lang::from_code("eng").unwrap().eng_name()
-/*#[allow(unreachable_patterns)]
-#[derive(AsRefStr, EnumString, Clone, PartialEq, Eq)]
-pub enum LangNames {
-    #[strum(serialize = "auto", to_string = "Auto")] Auto,
-    #[strum(serialize = "eo", to_string = "Esperanto")] Epo,
-    #[strum(serialize = "en", to_string = "English")] En,
-    #[strum(serialize = "ru", to_string = "Russian")] Ru,
-    #[strum(serialize = "zh", to_string = "Chinese")] Zh,
-    #[strum(serialize = "es", to_string = "Spanish")] Es,
-    #[strum(serialize = "pt", to_string = "Portuguese")] Pt,
-    #[strum(serialize = "it", to_string = "Italian")] It,
-    #[strum(serialize = "bn", to_string = "Bengali")] Bn,
-    #[strum(serialize = "fr", to_string = "French")] Fr,
-    #[strum(serialize = "de", to_string = "German")] De,
-    #[strum(serialize = "uk", to_string = "Ukrainian")] Uk,
-    #[strum(serialize = "ka", to_string = "Georgian")] Ka,
-    #[strum(serialize = "ar", to_string = "Arabic")] Ar,
-    #[strum(serialize = "hi", to_string = "Hindi")] Hi,
-    #[strum(serialize = "ja", to_string = "Japanese")] Ja,
-    #[strum(serialize = "he", to_string = "Hebrew")] He,
-    #[strum(serialize = "yi", to_string = "Yiddish")] Yi,
-    #[strum(serialize = "pl", to_string = "Polish")] Pl,
-    #[strum(serialize = "am", to_string = "Amharic")] Am,
-    #[strum(serialize = "jv", to_string = "Javanese")] Jv,
-    #[strum(serialize = "ko", to_string = "Korean")] Ko,
-    #[strum(serialize = "nb", to_string = "Norwegian Bokmål")] Nb,
-    #[strum(serialize = "da", to_string = "Danish")] Da,
-    #[strum(serialize = "sv", to_string = "Swedish")] Sv,
-    #[strum(serialize = "fi", to_string = "Finnish")] Fi,
-    #[strum(serialize = "tr", to_string = "Turkish")] Tr,
-    #[strum(serialize = "nl", to_string = "Dutch")] Nl,
-    #[strum(serialize = "hu", to_string = "Hungarian")] Hu,
-    #[strum(serialize = "cs", to_string = "Czech")] Cs,
-    #[strum(serialize = "el", to_string = "Greek")] El,
-    #[strum(serialize = "bg", to_string = "Bulgarian")] Bg,
-    #[strum(serialize = "be", to_string = "Belarusian")] Be,
-    #[strum(serialize = "mr", to_string = "Marathi")] Mr,
-    #[strum(serialize = "kn", to_string = "Kannada")] Kn,
-    #[strum(serialize = "ro", to_string = "Romanian")] Ro,
-    #[strum(serialize = "sl", to_string = "Slovenian")] Sl,
-    #[strum(serialize = "hr", to_string = "Croatian")] Hr,
-    #[strum(serialize = "sr", to_string = "Serbian")] Sr,
-    #[strum(serialize = "mk", to_string = "Macedonian")] Mk,
-    #[strum(serialize = "lt", to_string = "Lithuanian")] Lt,
-    #[strum(serialize = "lv", to_string = "Latvian")] Lv,
-    #[strum(serialize = "et", to_string = "Estonian")] Et,
-    #[strum(serialize = "ta", to_string = "Tamil")] Ta,
-    #[strum(serialize = "vi", to_string = "Vietnamese")] Vi,
-    #[strum(serialize = "ur", to_string = "Urdu")] Ur,
-    #[strum(serialize = "th", to_string = "Thai")] Th,
-    #[strum(serialize = "gu", to_string = "Gujarati")] Gu,
-    #[strum(serialize = "uz", to_string = "Uzbek")] Uz,
-    #[strum(serialize = "pa", to_string = "Punjabi")] Pa,
-    #[strum(serialize = "az", to_string = "Azerbaijani")] Az,
-    #[strum(serialize = "id", to_string = "Indonesian")] Id,
-    #[strum(serialize = "te", to_string = "Telugu")] Te,
-    #[strum(serialize = "fa", to_string = "Persian")] Fa,
-    #[strum(serialize = "ml", to_string = "Malayalam")] Ml,
-    #[strum(serialize = "or", to_string = "Odia")] Or,
-    #[strum(serialize = "my", to_string = "Burmese")] My,
-    #[strum(serialize = "ne", to_string = "Nepali")] Ne,
-    #[strum(serialize = "si", to_string = "Sinhala")] Si,
-    #[strum(serialize = "km", to_string = "Khmer")] Km,
-    #[strum(serialize = "tk", to_string = "Turkmen")] Tk,
-    #[strum(serialize = "ak", to_string = "Akan")] Ak,
-    #[strum(serialize = "zu", to_string = "Zulu")] Zu,
-    #[strum(serialize = "sn", to_string = "Shona")] Sn,
-    #[strum(serialize = "af", to_string = "Afrikaans")] Af,
-    #[strum(serialize = "la", to_string = "Latin")] La,
-    #[strum(serialize = "sk", to_string = "Slovak")] Sk,
-    #[strum(serialize = "ca", to_string = "Catalan")] Ca,
-    #[strum(serialize = "tl", to_string = "Tagalog")] Tl,
-    #[strum(serialize = "hy", to_string = "Armenian")] Hy,
-}*/
 
 
 /*//#[derive(Clone)]
@@ -528,6 +402,7 @@ pub struct PRNNSource {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct TranslResult {
     pub src_id: i64,
     pub text: String,

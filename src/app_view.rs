@@ -193,7 +193,7 @@ impl AppView {
         flex.set_spacing(7);
 
         /////TEXTAREA
-        let mut src_buf = text::TextBuffer::default();
+        let src_buf = text::TextBuffer::default();
         let translation_buf = text::TextBuffer::default();
         let waiting_buf = text::TextBuffer::default();
         let error_buf = text::TextBuffer::default();
@@ -398,7 +398,7 @@ impl AppView {
         let mut main_win = window::Window::default().with_size(800, 600).with_label("rTranslate");
         let mut main_flex_wrapper = group::Flex::new(0,0,800,600,None);
         main_flex_wrapper.set_type(group::FlexType::Column);
-        let mut main_flex_wrapper_inner = group::Flex::default().row();
+        let main_flex_wrapper_inner = group::Flex::default().row();
 
         let mut main_flex_left = group::Flex::new(0,0,400,585,None);
         main_flex_left.set_type(group::FlexType::Column);
@@ -459,7 +459,7 @@ impl AppView {
 
         for transl_ch in GLOBAL_SETTINGS.translators.iter() {
             transl_choice.add(
-                &*transl_ch.name,
+                &transl_ch.name,
                 fltk::enums::Shortcut::None,
                 fltk::menu::MenuFlag::Normal,
                 {
@@ -490,7 +490,7 @@ impl AppView {
 
         for dict_ch in GLOBAL_SETTINGS.dictionaries.iter() {
             dict_choice.add(
-                &*dict_ch.name,
+                &dict_ch.name,
                 fltk::enums::Shortcut::None,
                 fltk::menu::MenuFlag::Normal,
                 {
@@ -551,7 +551,7 @@ impl AppView {
         let mut prnn_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("Pronunciation:").with_align(fltk::enums::Align::TopLeft);
 
         for qwe in GLOBAL_SETTINGS.prnn_services.iter() {
-            let name = format!("{}", &*qwe.name);
+            let name = (*qwe.name).to_string();
             prnn_choice.add(
                 &name,
                 fltk::enums::Shortcut::None,
@@ -842,18 +842,15 @@ impl AppView {
         lng_menu_button.hide();
         lng_menu_button_dict.hide();
         lng_menu_button_wrapper.set_callback(move |b| {
-            if let Some(item) = lng_menu_button.menu() {
-                if let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+            if let Some(item) = lng_menu_button.menu()
+                && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
                     selected.do_callback(&lng_menu_button); 
-                }
-                
             }
         });
         lng_menu_button_wrapper_dict.set_callback(move |b| {
-            if let Some(item) = lng_menu_button_dict.menu() {
-                if let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+            if let Some(item) = lng_menu_button_dict.menu()
+                && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
                     selected.do_callback(&lng_menu_button_dict); 
-                }
             }
         });
 
@@ -1114,18 +1111,18 @@ impl AppView {
             }
         });*/
         open_button.set_callback({
-            let s = app_sender;
+            //let s = app_sender;
             let mut main_win = main_win.clone();
-            let mut win_popup = win_popup.clone();
+            let win_popup = win_popup.clone();
             move |_| {
                 main_win.show();
                 win_popup.platform_hide();
             }
         });
         open_button_dict.set_callback({
-            let s = app_sender;
+            //let s = app_sender;
             let mut main_win = main_win.clone();
-            let mut win_popup_dict = win_popup_dict.clone();
+            let win_popup_dict = win_popup_dict.clone();
             move |_| {
                 main_win.show();
                 win_popup_dict.platform_hide();
