@@ -123,6 +123,7 @@ pub struct Settings {
 
     pub pinned_src_languages: Vec<String>,
     pub pinned_target_languages: Vec<String>,
+    pub switch_target_lang: bool,
 
     pub ui_font_size: i32,
     pub text_font_size: i32,

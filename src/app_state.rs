@@ -289,13 +289,7 @@ impl AppState {
             //dprintln!("{:?}", info.lang().code()); 
             //dprintln!("{:?}", info.is_reliable());
             if info.is_reliable() {
-                let lng = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
-                if lng == target_lang {
-                    target_lang = src_lang;
-                    src_lang = lng;
-                } else {
-                    src_lang = lng;
-                }
+                src_lang = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
                 
                 let qwe = format!("Language detected as {}", info.lang().eng_name());
                 self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, false));
@@ -319,7 +313,13 @@ impl AppState {
             }*/
         }
 
-        
+        if src_lang == target_lang && GLOBAL_SETTINGS.switch_target_lang {
+            target_lang = if let Some(value) = GLOBAL_SETTINGS.pinned_src_languages.iter().find(|&s| s != "auto") {
+                Lang::from_str(value).unwrap_or(Lang::En)
+            } else {
+                Lang::En
+            }
+        }
 
         //self.app_sender.send(AppEvent::SetWaiting());
 

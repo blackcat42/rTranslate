@@ -134,12 +134,14 @@
     //ISO 639_3 or ISO 639_1 or "auto"; first item is used as the default
     "pinned_src_languages": ["auto", "en", "es", "zh", "ja", "ru"],
     "pinned_target_languages": ["ru", "en", "es"],
+    "switch_target_lang": true, //IF target language == source language THEN target langage = first pinned src lang that is not 'auto'
 
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
     "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
     "single_word_to_dict": true, //if selected text contains single word, send it to the dictionary
 
     "ui_font_size": 12,
+    "text_font_size": 13,
     "win_bg_color": "#C0C0C0", //"#D6CFC6",
     "win_bg2_color": "#C0C0C0",
     "text_bg_color": "#F0F0F0",
