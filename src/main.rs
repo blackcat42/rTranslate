@@ -125,6 +125,7 @@ pub struct Settings {
     pub pinned_target_languages: Vec<String>,
 
     pub ui_font_size: i32,
+    pub text_font_size: i32,
     pub win_bg_color: String,
     pub text_bg_color: String,
     pub popup_opacity: f64,

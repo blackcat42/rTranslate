@@ -199,6 +199,7 @@ impl AppView {
         let error_buf = text::TextBuffer::default();
 
         let mut txt = text::TextDisplay::default();
+        txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
         txt.set_frame(fltk::enums::FrameType::FlatBox);
         txt.set_buffer(translation_buf.clone());
@@ -335,6 +336,7 @@ impl AppView {
         let dict_buf = text::TextBuffer::default();
 
         let mut txt_dict = text::TextDisplay::default();
+        txt_dict.set_text_size(GLOBAL_SETTINGS.text_font_size);
         txt_dict.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
         txt_dict.set_frame(fltk::enums::FrameType::FlatBox);
         txt_dict.set_buffer(dict_buf.clone());
@@ -404,7 +406,8 @@ impl AppView {
         main_flex_left.set_type(group::FlexType::Column);
 
         let mut main_src_txt_wrapper = group::Flex::default().column();
-        let mut main_src_txt = text::TextEditor::default().with_label("Source:").with_align(fltk::enums::Align::TopLeft);
+        let mut main_src_txt = text::TextEditor::default().with_label("Source text (editable):").with_align(fltk::enums::Align::TopLeft);
+        main_src_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_src_txt.set_buffer(src_buf.clone());
         main_src_txt.wrap_mode(text::WrapMode::AtBounds, 0);
         /*src_buf.add_modify_callback(|pos, inserted, deleted, restyled, text| {
@@ -649,11 +652,13 @@ impl AppView {
         main_flex_right.set_type(group::FlexType::Column);
         
         let mut main_transl_txt = text::TextDisplay::default().with_label("Translation:").with_align(fltk::enums::Align::TopLeft);
+        main_transl_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_transl_txt.set_buffer(translation_buf.clone());
         main_transl_txt.wrap_mode(text::WrapMode::AtBounds, 0);
         //main_transl_txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
 
         let mut main_dict_txt = text::TextDisplay::default().with_label("Dictionary entry:").with_align(fltk::enums::Align::TopLeft);
+        main_dict_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_dict_txt.set_buffer(dict_buf.clone());
         main_dict_txt.wrap_mode(text::WrapMode::AtBounds, 0);
         //main_dict_txt.above_of(&dict_assets_browser, 20);
@@ -1318,37 +1323,37 @@ impl AppView {
             let style_a = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::Black,
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_b = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::Black,
                 font: fltk::enums::Font::HelveticaBold,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_c = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::Red,
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_d = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::DarkGreen,
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_e = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::DarkBlue,
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_f = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::from_hex(0x008080), //teal
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
             let style_g = fltk::text::StyleTableEntry {
                 color: fltk::enums::Color::from_hex(0x4B0082), //indigo
                 font: fltk::enums::Font::Helvetica,
-                size: 12,
+                size: GLOBAL_SETTINGS.text_font_size,
             };
         
 
