@@ -35,6 +35,8 @@ use crate::types::{
 
 use super::GLOBAL_SETTINGS;
 
+use crate::utils::app_message;
+
 pub struct AppState {
     pub app_sender: fltk::app::Sender<AppEvent>,
 
@@ -57,9 +59,46 @@ pub struct AppState {
     pub prnn_services: HashMap<String, Box<dyn PRNNService>>,
 
     pub db: Option<Connection>,
+    src_preprocessing_regex: Option<Regex>,
 }
 
 impl AppState {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, conn: Option<Connection>) -> Self {
+        let src_preprocessing_regex = if let Some(re_str_find) = &GLOBAL_SETTINGS.re_str_find 
+            && !re_str_find.is_empty() {
+                let re = Regex::new(re_str_find);
+                let re = re.unwrap_or_else(|e| {
+                    let error_str = format!("settings.json re_str_find error: {}", e);
+                    app_message(&error_str);
+                    panic!("settings.json error");
+                });
+                Some(re)
+            } else {
+                None
+            };
+
+        Self {
+            app_sender,
+            src_id: 0,
+            src_text: "".to_string(),
+            src_text_dict: "".to_string(),
+            selected_translator: "".to_string(),
+            selected_dict: "".to_string(),
+            selected_tts_voice: "".to_string(),
+            selected_tts_service: "".to_string(),
+            selected_prnn_source: "".to_string(),
+            selected_src: Lang::from_str(GLOBAL_SETTINGS.pinned_src_languages.first().unwrap_or(&"en".to_string())).unwrap_or(Lang::En),
+            selected_target: Lang::from_str(GLOBAL_SETTINGS.pinned_target_languages.first().unwrap_or(&"ru".to_string())).unwrap_or(Lang::Ru),
+
+            db: conn,
+            src_preprocessing_regex,
+
+            translators: HashMap::new(),
+            dictionaries: HashMap::new(),
+            tts_services: HashMap::new(),
+            prnn_services: HashMap::new(),
+        }
+    }
 
     pub fn update_fav_browser(&mut self) -> Result<()> {
         let db_ref = &self.db;
@@ -775,11 +814,16 @@ impl AppState {
         let text = text.replace("\r\n", "\n");
 
         //remove hardcoded line-breaks
-        //TODO more accurate??? Optionable
-        //TODO custom regex?
         let request_limit = GLOBAL_SETTINGS.source_text_max_length; //TODO: chunking, statusbar
-        let re = Regex::new(r"\n(?=[a-z])")?;
-        let text = re.replace_all(&text, "").to_string();
+
+        let text = if let Some(re) = &self.src_preprocessing_regex 
+            && let Some(re_str_replace) = &GLOBAL_SETTINGS.re_str_replace {
+                re.replace_all(&text, re_str_replace).to_string()
+        } else {
+            text
+        };
+        //let re = Regex::new(r"\n(?=[a-z])")?;
+        //let text = re.replace_all(&text, re_str_replace).to_string();
         let text = text.unicode_truncate(request_limit).0.trim().to_string();
 
         if text.chars().count() < 1 {

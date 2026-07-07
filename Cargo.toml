@@ -11,7 +11,7 @@ fltk = "^1.5"
 anyhow = "1.0.100"
 #ureq = "=3.1.4"
 image = "0.25.9"
-tray-icon = "0.21.1"
+tray-icon = "0.24.1"
 get-selected-text = "=0.1.6" #todo: high ram usage
 unicode-truncate = "2.0.1"
 global-hotkey = "0.7.0"

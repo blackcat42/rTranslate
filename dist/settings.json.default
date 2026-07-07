@@ -150,6 +150,12 @@
     "http_request_timeout": 30, //in seconds
 
     "source_text_max_length": 4500, //Source text will be truncated to this size. The recommend value is 5000 or less (google translate api limit).
+
+    //regex for text preprocessing
+    //comment out to disable
+    "re_str_find": "\\n(?=[a-z])", //default: "\\n(?=[a-z])"
+    "re_str_replace": "",
+
     "transl_request_min_length": 3,
     "dict_request_max_length": 100,
 

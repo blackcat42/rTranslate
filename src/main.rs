@@ -8,7 +8,7 @@ use fltk::{
     prelude::*,
 };
 
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use std::env;
 use std::fs::File; 
 use std::io::BufReader;
@@ -71,12 +71,16 @@ mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
+mod utils;
 use types::{AppEvent};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
 use std::sync::{OnceLock};
-
+use utils::{
+    app_message, 
+    //screen_center
+};
 
 
 //SETTINGS
@@ -135,6 +139,10 @@ pub struct Settings {
     pub proxy: Option<ProxyOption>,
 
     pub source_text_max_length: usize, //TODO: chunking
+
+    pub re_str_find: Option<String>,
+    pub re_str_replace: Option<String>,
+    
     pub transl_request_min_length: usize,
     pub dict_request_max_length: usize,
 
@@ -359,26 +367,8 @@ fn main() {
 
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
 
-    let mut app_state = AppState {
-        app_sender,
-        src_id: 0,
-        src_text: "".to_string(),
-        src_text_dict: "".to_string(),
-        selected_translator: "".to_string(),
-        selected_dict: "".to_string(),
-        selected_tts_voice: "".to_string(),
-        selected_tts_service: "".to_string(),
-        selected_prnn_source: "".to_string(),
-        selected_src: types::Lang::from_str(GLOBAL_SETTINGS.pinned_src_languages.first().unwrap_or(&"en".to_string())).unwrap_or(types::Lang::En),
-        selected_target: types::Lang::from_str(GLOBAL_SETTINGS.pinned_target_languages.first().unwrap_or(&"ru".to_string())).unwrap_or(types::Lang::Ru),
-
-        db: conn,
-
-        translators: HashMap::new(),
-        dictionaries: HashMap::new(),
-        tts_services: HashMap::new(),
-        prnn_services: HashMap::new(),
-    };
+    let mut app_state = AppState::new(app_sender, conn);
+    
     let _ = app_state.init_db();
 
     let mut app_view = AppView::new(app_sender);
@@ -874,17 +864,6 @@ fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
 
 
 
-pub fn app_message(e: &str) {
-    let pos = screen_center();
-    fltk::dialog::alert(pos.0 - 210, pos.1 - 40, e);
-    
-}
-pub fn screen_center() -> (i32, i32) {
-    (
-        (app::screen_size().0 / 2.0) as i32,
-        (app::screen_size().1 / 2.0) as i32,
-    )
-}
 fn open_settings() {
     let path = std::path::Path::new("settings.json");
     if !path.exists() {
