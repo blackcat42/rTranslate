@@ -141,7 +141,7 @@
     "single_word_to_dict": true, //if selected text contains single word, send it to the dictionary
 
     "ui_font_size": 12,
-    "text_font_size": 13,
+    "text_font_size": 14,
     "win_bg_color": "#C0C0C0", //"#D6CFC6",
     "win_bg2_color": "#C0C0C0",
     "text_bg_color": "#F0F0F0",

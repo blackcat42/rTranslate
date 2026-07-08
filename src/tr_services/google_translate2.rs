@@ -192,7 +192,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
             } 
 
             if response.chars().count() > 1 {
-                //TODO!: parse html entities
+                response = html_escape::decode_html_entities(&response).to_string();
                 Ok((response, src_lng_suggested))
             } else {
                 Err(anyhow!("error"))
