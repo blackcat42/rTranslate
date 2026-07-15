@@ -239,7 +239,11 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                     }
                 }
             }
-            Ok(arr_filenames)
+            if !arr_filenames.is_empty() {
+                Ok(arr_filenames)
+            } else {
+                Err(anyhow!(format!("no pronunciations were found for the selected language")))
+            }
         } else {
             Err(anyhow!(status.to_string()))
         }

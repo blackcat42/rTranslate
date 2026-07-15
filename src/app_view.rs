@@ -30,13 +30,6 @@ use crate::types::{AppEvent, Lang, TTSource, PRNNSource, TranslSource, UIState, 
 
 use crate::bbcode::{dsl_parse};
 
-use tray_icon::{
-    menu::{
-        MenuEvent,
-    },
-    TrayIconEvent,
-};
-
 use super::GLOBAL_SETTINGS;
 use super::UICONFIG;
 
@@ -106,6 +99,17 @@ impl AppView {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>) -> Self {
 
         let working_dir = std::env::current_dir().unwrap();
+
+        //GLOBAL COLORS
+        let win_bg_color = enums::Color::from_hex_str(&GLOBAL_SETTINGS.win_bg_color).unwrap_or(enums::Color::from_hex(0xD6CFC6));
+        let win_bg_color_rgb = win_bg_color.to_rgb();
+        app::set_background_color(win_bg_color_rgb.0, win_bg_color_rgb.1, win_bg_color_rgb.2);
+
+        let text_bg_color_main = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_main).unwrap_or(enums::Color::from_hex(0xFFFFFF));
+        let text_bg_color_main_rgb = text_bg_color_main.to_rgb();
+        app::set_background2_color(text_bg_color_main_rgb.0, text_bg_color_main_rgb.1, text_bg_color_main_rgb.2);
+
+        let text_bg_color_popup = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_popup).unwrap_or(enums::Color::from_hex(0xF0F0F0));
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
         ////////////////////---------------BEGIN POPUP WIN---------------/////////////////////
@@ -200,7 +204,7 @@ impl AppView {
 
         let mut txt = text::TextDisplay::default();
         txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
-        txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
+        txt.set_color(text_bg_color_popup);
         txt.set_frame(fltk::enums::FrameType::FlatBox);
         txt.set_buffer(translation_buf.clone());
         txt.wrap_mode(text::WrapMode::AtBounds, 0);
@@ -337,7 +341,7 @@ impl AppView {
 
         let mut txt_dict = text::TextDisplay::default();
         txt_dict.set_text_size(GLOBAL_SETTINGS.text_font_size);
-        txt_dict.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
+        txt_dict.set_color(text_bg_color_popup);
         txt_dict.set_frame(fltk::enums::FrameType::FlatBox);
         txt_dict.set_buffer(dict_buf.clone());
         txt_dict.wrap_mode(text::WrapMode::AtBounds, 0);
@@ -655,14 +659,12 @@ impl AppView {
         main_transl_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_transl_txt.set_buffer(translation_buf.clone());
         main_transl_txt.wrap_mode(text::WrapMode::AtBounds, 0);
-        //main_transl_txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
 
         let mut main_dict_txt = text::TextDisplay::default().with_label("Dictionary entry:").with_align(fltk::enums::Align::TopLeft);
         main_dict_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_dict_txt.set_buffer(dict_buf.clone());
         main_dict_txt.wrap_mode(text::WrapMode::AtBounds, 0);
         //main_dict_txt.above_of(&dict_assets_browser, 20);
-        //main_dict_txt.set_color(enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color).unwrap_or(enums::Color::from_hex(0xF0F0F0)));
         main_flex_right.fixed(&main_dict_txt, 125);
 
         let mut dict_assets_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label("Pronunciations (cached), click to play:").with_align(fltk::enums::Align::TopLeft);
@@ -877,14 +879,18 @@ impl AppView {
                 app::awake();
             }
         });*/
-        app::add_timeout3(0.1, {
+        app::flush();
+        //app::wait_for(0.0);
+        win_popup.platform_hide();
+        win_popup_dict.platform_hide();
+        /*app::add_timeout3(0.1, {
             let win_popup = win_popup.clone();
             let win_popup_dict = win_popup_dict.clone();
             move|_| {
                 win_popup.platform_hide();
                 win_popup_dict.platform_hide();
             }
-        });
+        });*/
 
         browser.set_callback({
             move |b| {
@@ -949,38 +955,7 @@ impl AppView {
             }
         });
 
-        //TRAY ICON EVENTS
-        //TODO bug: sometimes, after mouse hover on the tray icon, something starts triggering the app's main loop infinitely. difficult to reproduce, cpu load 0,12%, 7KK cycles delta
-        std::thread::spawn({
-            move || loop {
-                dprintln!("TrayIconEvent loop");
-                if let Ok(e) = TrayIconEvent::receiver().recv() {
-                    app_sender.send(AppEvent::TrayIcon(e));
-                }
-                /*if let Ok(e) = TrayIconEvent::receiver().recv() {
-                    match e {
-                        //TODO
-                        TrayIconEvent::DoubleClick{..} => {
-                            dprintln!("{:?}", e);
-                            app_sender.send(AppEvent::ShowPopup(false));
-                        }
-                        TrayIconEvent::Click {..} => {
-                            
-                        }
-                        _ =>  {}
-                    }
-                }   */
-            }
-        });
-        //TRAY MENU EVENTS
-        std::thread::spawn({
-            move || loop {
-                dprintln!("TrayMenuEvent loop");
-                if let Ok(e) = MenuEvent::receiver().recv() {
-                    app_sender.send(AppEvent::TrayMenuEvent(e));
-                }
-        }});
-
+        
         //IMPL RESIZING/DRAGGING BHVR FOR BORDELESS WINDOW
         let is_inner = Rc::new(RefCell::new(false));
         let is_inner_dict = Rc::new(RefCell::new(false));
@@ -1559,11 +1534,11 @@ impl AppView {
             let y = position.1.clamp(0, screen_h - win.h());
             win.set_pos(x, y);
         }
-        //win.redraw();
-        app::redraw();
-        app::awake();
-        win.set_on_top();
+
         win.platform_show();
+        win.set_on_top();
+        //app::redraw();
+        //app::awake();
     }
     
 }

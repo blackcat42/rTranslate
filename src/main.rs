@@ -36,18 +36,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use rusqlite::{params, params_from_iter, Connection};
 
-use tray_icon::{
-    menu::{
-        Menu, MenuItem,
-    },
-    TrayIconBuilder, TrayIconEvent,
-};
-/*use tray_icon::{
-    menu::{
-        AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem
-    },
-    TrayIcon, TrayIconBuilder, TrayIconEvent, TrayIconEventReceiver,
-};*/
+use tray_item::{IconSource, TrayItem};
 
 mod tr_services;
 use tr_services::sidecar_translator;
@@ -72,7 +61,7 @@ mod bbcode;
 mod app_state;
 mod app_view;
 mod utils;
-use types::{AppEvent};
+use types::{AppEvent, TrayEvent};
 use app_state::{AppState};
 use app_view::{AppView};
 use std::sync::{LazyLock};
@@ -128,7 +117,8 @@ pub struct Settings {
     pub ui_font_size: i32,
     pub text_font_size: i32,
     pub win_bg_color: String,
-    pub text_bg_color: String,
+    pub text_bg_color_popup: String,
+    pub text_bg_color_main: String,
     pub popup_opacity: f64,
 
     pub translate_hotkey: Option<String>,
@@ -269,65 +259,7 @@ static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 fn main() {
 
     let app = app::App::default().with_scheme(app::Scheme::Base);
-
-    //COLORS
-    //app::set_frame_color();
-    //app::set_background2_color(); //Set the background color for input and text widgets
-    let str_color = &GLOBAL_SETTINGS.win_bg_color.strip_prefix('#').unwrap_or(&GLOBAL_SETTINGS.win_bg_color);
-    if let Ok(bg_color) = u32::from_str_radix(str_color, 16) {
-        let bg_color = fltk::utils::hex2rgb(bg_color);
-        app::set_background_color(bg_color.0, bg_color.1, bg_color.2);
-    } else {
-        app::set_background_color(214, 207, 198);
-    };
-
-    //PATHS
-    let working_dir = std::env::current_dir().unwrap_or_else(|e| {
-            app_message("current_dir");
-            panic!("Error: {}", e);
-        });
-
-    //create directories
-    let audio_path = working_dir.join("tts_cache");
-    if let Err(err) = std::fs::create_dir_all(audio_path) {
-        dprintln!("{err:?}");
-    }
-
-    //TRAY
-    let tray_menu = Menu::new();
-
-    let tray_menu_main_window = MenuItem::new("rTranslate", true, None); //TODO: make bold
-    if let Err(err) = tray_menu.append(&tray_menu_main_window) {
-        dprintln!("{err:?}");
-    }
-    let tray_menu_popup_window = MenuItem::new("Show popup window", true, None);
-    if let Err(err) = tray_menu.append(&tray_menu_popup_window) {
-        dprintln!("{err:?}");
-    }
-    let tray_menu_popup_dict_window = MenuItem::new("Show dict. popup window", true, None);
-    if let Err(err) = tray_menu.append(&tray_menu_popup_dict_window) {
-        dprintln!("{err:?}");
-    }
-    let tray_menu_settings = MenuItem::new("Settings", true, None);
-    if let Err(err) = tray_menu.append(&tray_menu_settings) {
-        dprintln!("{err:?}");
-    }
-    let tray_menu_exit = MenuItem::new("Exit", true, None);
-    if let Err(err) = tray_menu.append(&tray_menu_exit) {
-        dprintln!("{err:?}");
-    }
-
-    let icon = load_icon(working_dir.join(r"icons\tray_icon.png").as_path());
-    let _tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(tray_menu))
-        .with_menu_on_left_click(false)
-        .with_tooltip("rTranslate")
-        .with_icon(icon)
-        .build()
-        .unwrap_or_else(|e| {
-            app_message("Tray icon builder error");
-            panic!("Error: {}", e);
-        });
+    let (app_sender, app_receiver) = app::channel::<AppEvent>();
 
     let conn = if GLOBAL_SETTINGS.use_db {
         Connection::open("history.db").ok()
@@ -339,42 +271,62 @@ fn main() {
         let _ = clear_history(&conn);
     }
 
-    //HOTKEYS
-    let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
-        app_message("GlobalHotKeyManager");
-        panic!("Error: {}", e);
-    });
-    let tr_hotkey_id: Option<u32> = if let Some(translate_hotkey) = &GLOBAL_SETTINGS.translate_hotkey {
-        if let Ok(hotkey) = translate_hotkey.parse::<HotKey>() {
-            let _ = manager.register(hotkey);
-            Some(hotkey.id())
-        } else {
-            app_message("Failed to parse translate hotkey");
-            None
-        }
-    } else {
-        None
-    };
-    let dict_hotkey_id: Option<u32> = if let Some(dict_hotkey) = &GLOBAL_SETTINGS.dict_hotkey {
-        if let Ok(hotkey_dict) = dict_hotkey.parse::<HotKey>() {
-            let _ = manager.register(hotkey_dict);
-            Some(hotkey_dict.id())
-        } else {
-            app_message("Failed to parse dict hotkey");
-            None
-        }
-    } else {
-        None
-    };
-
-    let (app_sender, app_receiver) = app::channel::<AppEvent>();
-
+    let mut app_view = AppView::new(app_sender);
     let mut app_state = AppState::new(app_sender, conn);
-    
     let _ = app_state.init_db();
 
-    let mut app_view = AppView::new(app_sender);
+    //PATHS
+    let working_dir = std::env::current_dir().unwrap_or_else(|e| {
+        app_message("current_dir");
+        panic!("Error: {}", e);
+    });
 
+    //create directories
+    let audio_path = working_dir.join("tts_cache");
+    if let Err(err) = std::fs::create_dir_all(audio_path) {
+        dprintln!("{err:?}");
+    }
+
+    //TRAY
+    let mut tray = TrayItem::new(
+        "rTranslate",
+        IconSource::Resource("tray-default"),
+    ).unwrap();
+    //tray.add_label("rTranslate").unwrap();
+    tray.add_menu_item("rTranslate", {
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowMainWin));
+        }
+    }).unwrap();
+    tray.inner_mut().add_separator().unwrap();
+    tray.add_menu_item("Show popup window", {
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowPopupWin));
+        }
+    }).unwrap();
+    tray.add_menu_item("Show dict. popup window", {
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowPopupDictWin));
+        }
+    }).unwrap();
+    tray.add_menu_item("Settings", {
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::Settings));
+        }
+    }).unwrap();
+    tray.add_menu_item("Exit", {
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::Exit));
+        }
+    }).unwrap();
+
+    tray.set_doubleclick_callback({
+        move || {
+            app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowMainWin));
+        }
+    });
+
+    //APP STATE
     let re_uid = Regex::new(r"^\w+$").unwrap();
     for value in GLOBAL_SETTINGS.translators.iter() {
         if !re_uid.is_match(&value.uid) {
@@ -509,6 +461,33 @@ fn main() {
 
     //HOTKEYS
     //TODO: github.com/iholston/win-hotkeys; github.com/obv-mikhail/InputBot
+    let manager = GlobalHotKeyManager::new().unwrap_or_else(|e| {
+        app_message("GlobalHotKeyManager");
+        panic!("Error: {}", e);
+    });
+    let tr_hotkey_id: Option<u32> = if let Some(translate_hotkey) = &GLOBAL_SETTINGS.translate_hotkey {
+        if let Ok(hotkey) = translate_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey);
+            Some(hotkey.id())
+        } else {
+            app_message("Failed to parse translate hotkey");
+            None
+        }
+    } else {
+        None
+    };
+    let dict_hotkey_id: Option<u32> = if let Some(dict_hotkey) = &GLOBAL_SETTINGS.dict_hotkey {
+        if let Ok(hotkey_dict) = dict_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey_dict);
+            Some(hotkey_dict.id())
+        } else {
+            app_message("Failed to parse dict hotkey");
+            None
+        }
+    } else {
+        None
+    };
+
     std::thread::spawn(move || loop {
         //dprintln!("hotkeys event loop");
         if let Ok(event) = GlobalHotKeyEvent::receiver().recv() { 
@@ -527,288 +506,312 @@ fn main() {
         }
     }*/
 
-
-
-    while app.wait() {
-        //dprintln!("app main loop");
-        match app_receiver.recv() {
-
-            //TODO: get ui_state from database by given src- and translation id's (single source of truth)
-            //or use global object (?) if db is not supported
-            Some(AppEvent::UpdateUi(state, is_new_source)) => {
-                app_view.update_ui(state, is_new_source);
-            }
-            Some(AppEvent::UpdateUiDict(state, is_new_source)) => {
-                app_view.update_ui_dict(state, is_new_source);
-            }
-            Some(AppEvent::ClearUi(is_dict)) => {
-                app_view.clear_ui(is_dict);
-            }
-
-            Some(AppEvent::SetWaiting(text, is_dict)) => {
-                app_view.set_waiting(text, is_dict);
-            }
-            Some(AppEvent::SetReady(error, is_dict)) => {
-                app_view.set_ready(error, is_dict);
-            }
-            Some(AppEvent::UpdateHistoryBrowserView(state)) => {
-                app_view.update_history_browser(state);
-            }
-            Some(AppEvent::UpdateFavBrowserView(state)) => {
-                app_view.update_fav_browser(state);
-            }
-            Some(AppEvent::UpdateTTSBrowser(src_text, tts_arr, prnn_arr)) => {
-                let _ = app_state.set_src_text(&src_text, false);
-                let _ = app_state.set_src_text(&src_text, true);
-                let _ = app_state.translate(true, false);
-                let _ = app_state.request_dict_entry(true, false);
-                app_view.set_tts_browser_data(tts_arr);
-                app_view.set_dict_assets_browser_data(prnn_arr);
-            }
-            Some(AppEvent::UpdateTTState(id)) => {
-                if let Err(e) = app_state.update_tts_list(id) {
-                    app_view.set_status(e.to_string().as_str(), true, false);
-                };
-            }
-            Some(AppEvent::SetSrcLang(lng)) => {
-                app_state.selected_src = lng.clone();
-                //TODO: update views
-                app_view.set_src_lang(lng);
-            }
-            Some(AppEvent::SetTargetLang(lng)) => {
-                app_state.selected_target = lng.clone();
-                //TODO: update views
-                app_view.set_target_lang(lng);
-            }
-            Some(AppEvent::SetTranslator(translator)) => {
-                app_state.selected_translator = translator.clone();
-                if let Some(tr_struct) = app_state.translators.get(translator.as_str()) {
-                    let tr_name = tr_struct.get_name();
-                    app_view.set_translator(tr_name, translator.as_str());
+    /*let watchdog_counter = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    std::thread::spawn({
+        let watchdog_counter = watchdog_counter.clone();
+        move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(10));
+                let iterations = watchdog_counter.swap(0, std::sync::atomic::Ordering::Relaxed);
+                dprintln!("{}", iterations);
+                if iterations > 500 {
+                    app_sender.send(AppEvent::Message("The application detected an internal event loop error that was causing high CPU usage. Please restart rTranslate.".into()));
+                    //break;
                 }
-            }
-            Some(AppEvent::SetDict(dict)) => {
-                app_state.selected_dict = dict.clone();
-                if let Some(dict_struct) = app_state.dictionaries.get(dict.as_str()) {
-                    let dict_name = dict_struct.get_name();
-                    app_view.set_dict(dict_name, dict.as_str());
-                }
-            }
-            Some(AppEvent::SetTTSEngine(tts, voice)) => {
-                app_state.selected_tts_service = tts.clone();
-                app_state.selected_tts_voice = voice.clone();
-
-                if let Some(tts_struct) = app_state.tts_services.get(tts.as_str()) {
-                    let tts_name = tts_struct.get_name();
-                    app_view.set_tts_engine(tts_name, &voice);
-                }
-                
-            }
-            Some(AppEvent::SetPRNNEngine(prnn)) => {
-                app_state.selected_prnn_source = prnn.clone();
-
-                if let Some(prnn_struct) = app_state.prnn_services.get(prnn.as_str()) {
-                    let prnn_name = prnn_struct.get_name();
-                    app_view.set_prnn_service(prnn_name);
-                }
-                
-            }
-
-            Some(AppEvent::ToggleFav(is_dict)) => {
-                if is_dict {
-                    let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
-                } else {
-                    let _ = app_state.toggle_fav(&app_view.src, is_dict);
-                }
-                let _ = app_state.update_fav_browser();
-            }
-
-            Some(AppEvent::SaveTranslation(tr_result)) => {
-                let _ = app_state.insert_transl(tr_result);
-                let _ = app_state.update_history_browser();
-                
-            }
-            Some(AppEvent::SaveDictEntry(dict_result)) => {
-                let _ = app_state.insert_dict_entry(dict_result);
-                let _ = app_state.update_history_browser(); 
-            }
-
-            Some(AppEvent::SetStatus(text, is_error, is_dict)) => {
-                app_view.set_status(&text, is_error, is_dict);
-            }
-            Some(AppEvent::Message(text)) => {
-                app_message(&text);
-            }
-
-            Some(AppEvent::TrayIcon(e)) => {
-                match e {
-                    TrayIconEvent::DoubleClick{..} => {
-                        app_view.main_win.show();
-                    }
-                    TrayIconEvent::Click{..} => {
-                        //...
-                    }
-                    _ =>  {}
-                }
-            }
-            Some(AppEvent::TrayMenuEvent(e)) => {
-                dprintln!("{:?}", e);
-
-                if e.id == tray_menu_exit.id() {
-                    //std::process::exit(0);
-                    app::quit();
-                } else if e.id == tray_menu_main_window.id() {
-                    app_view.main_win.show();
-                } else if e.id == tray_menu_popup_window.id() {
-                    app_view.show_popup(false, false);
-                } else if e.id ==  tray_menu_popup_dict_window.id() {
-                    app_view.show_popup(true, false);
-                } else if e.id ==  tray_menu_settings.id() {
-                    open_settings();
-                }
-            }
-            Some(AppEvent::HotKey(e)) => 'hotkey_arm: {
-                //dbg!(e);
-                if e.state == HotKeyState::Released {
-                    let mut is_dict: bool;
-                    if Some(e.id) == tr_hotkey_id {
-                        is_dict = false;
-                    } else if Some(e.id) == dict_hotkey_id {
-                        is_dict = true;
-                    } else {
-                        break 'hotkey_arm;
-                    }
-                    match get_selected_text() {
-                        Ok(selected_text) => {
-                            if GLOBAL_SETTINGS.single_word_to_dict 
-                               && !is_dict 
-                               && selected_text.trim().unicode_words().count() == 1 {
-                                is_dict = true;
-                            }
-                            if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {
-                                app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
-                            } else {
-                                app_view.show_popup(is_dict, true);
-                                //app_view.clear_ui(is_dict); //clear status, title and translation buffer
-
-                                if !is_dict {
-                                    if let Err(tr_error) = app_state.translate(false, false) {
-                                        app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
-                                        //app_view.set_status(tr_error.to_string().as_str(), true, false);
-                                    }
-                                } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                                    app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
-                                    //app_view.set_status(dict_error.to_string().as_str(), true, true);
-                                }
-                            }
-                        },
-                        Err(_) => {
-                            app_view.set_status("An error occurred while getting the selected text", true, false);
-                            dprintln!("An error occurred while getting the selected text");
-                        }
-                    }
-                }
-            }
-            Some(AppEvent::Translate(fail_if_not_exist, force, check_buf)) => 'translate_arm: {
-                //app_view.clear_ui(false);
-                if check_buf && (app_view.src_buf.text() != app_view.src)
-                    && let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
-                        app_view.set_status(set_src_error.to_string().as_str(), true, false);
-                        break 'translate_arm;
-                }
-                if let Err(error) = app_state.translate(fail_if_not_exist, force) {
-                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), false));
-                    //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, false));
-                    //app_view.set_status(error.to_string().as_str(), true, false);
-                }
-            }
-            Some(AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf)) => 'request_dict_arm: {
-                //app_view.clear_ui(true);
-                if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
-                    if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), true) {
-                        app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                        break 'request_dict_arm;
-                    }
-                }
-                if let Err(error) = app_state.request_dict_entry(fail_if_not_exist, force) {
-                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
-                    //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, true));
-                    //app_view.set_status(error.to_string().as_str(), true, true);
-                }
-            }
-            Some(AppEvent::SendToDict()) => {
-                //app_view.clear_ui(true);
-                if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
-                    app_sender.send(AppEvent::SetReady(Some(set_src_error.to_string()), false));
-                    //app_view.set_status(set_src_error.to_string().as_str(), true, true);
-                } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                    app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
-                    //app_view.set_status(dict_error.to_string().as_str(), true, true);
-                }
-            }
-
-            Some(AppEvent::TTString()) => {
-                let _ = app_state.run_tts();
-            }
-            Some(AppEvent::PRNNString(force)) => {
-                app_view.prnn_index += 1;
-                if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {
-                    app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
-                }
-            }
-            Some(AppEvent::PRNNSave((src_id, prnn_service_uid, filename))) => {
-                let _file = app_state.insert_prnn(src_id, &prnn_service_uid, &filename);
-                //if let Ok(file) = file {
-                    //let filename = format!("{}.ogg", file);
-                    //app_sender.send(AppEvent::TTSPlay(file));
-                //}
-                //let _ = app_state.update_browser(); 
-            }
-            Some(AppEvent::TTSave(src_id, tts_engine, tts_voice, filename)) => {
-                let file = app_state.insert_tts(
-                    src_id, 
-                    &tts_engine, 
-                    &tts_voice,
-                    &filename
-                );
-                if let Ok(file) = file {
-                    let filename = format!("{}.ogg", file);
-                    app_sender.send(AppEvent::TTSPlay(filename));
-                }
-            }
-            Some(AppEvent::TTSPlay(filename)) => {
-                app_view.set_ready(None, false);
-
-                let audio_path = format!(r"tts_cache\{filename}");
-
-                std::thread::spawn({
-                    let working_dir = env::current_dir().expect("current_dir");
-                    let audio_path = working_dir.join(audio_path);
-
-                    move || {
-                        let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
-                            .expect("open default audio stream");
-                        let file = BufReader::new(File::open(audio_path)
-                            .expect("BufReader"));
-                        // Note that the playback stops when the sink is dropped
-                        let sink = rodio::play(stream_handle.mixer(), file)
-                            .expect("rodio::play");
-                        sink.sleep_until_end();
-                        //TODO: statusbar
-                    }
-                });
-                app::awake();
-            }
-            _other =>  {
+                break;
             }
         }
+    });*/
 
+    while app.wait() {
+        let ev = fltk::app::event(); 
+        dprintln!("Main loop awoken by event: {:?}", &ev);
+        loop {
+            if let Some(msg) = app_receiver.recv() {
+                dprintln!("app main loop - recv");
+                //dbg!(&msg);
+                match msg {
+                    //TODO: get ui_state from database by given src- and translation id's (single source of truth)
+                    //or use global object (?) if db is not supported
+                    AppEvent::UpdateUi(state, is_new_source) => {
+                        app_view.update_ui(state, is_new_source);
+                    }
+                    AppEvent::UpdateUiDict(state, is_new_source) => {
+                        app_view.update_ui_dict(state, is_new_source);
+                    }
+                    AppEvent::ClearUi(is_dict) => {
+                        app_view.clear_ui(is_dict);
+                    }
 
+                    AppEvent::SetWaiting(text, is_dict) => {
+                        app_view.set_waiting(text, is_dict);
+                    }
+                    AppEvent::SetReady(error, is_dict) => {
+                        app_view.set_ready(error, is_dict);
+                    }
+                    AppEvent::UpdateHistoryBrowserView(state) => {
+                        app_view.update_history_browser(state);
+                    }
+                    AppEvent::UpdateFavBrowserView(state) => {
+                        app_view.update_fav_browser(state);
+                    }
+                    AppEvent::UpdateTTSBrowser(src_text, tts_arr, prnn_arr) => {
+                        let _ = app_state.set_src_text(&src_text, false);
+                        let _ = app_state.set_src_text(&src_text, true);
+                        let _ = app_state.translate(true, false);
+                        let _ = app_state.request_dict_entry(true, false);
+                        app_view.set_tts_browser_data(tts_arr);
+                        app_view.set_dict_assets_browser_data(prnn_arr);
+                    }
+                    AppEvent::UpdateTTState(id) => {
+                        if let Err(e) = app_state.update_tts_list(id) {
+                            app_view.set_status(e.to_string().as_str(), true, false);
+                        };
+                    }
+                    AppEvent::SetSrcLang(lng) => {
+                        app_state.selected_src = lng.clone();
+                        //TODO: update views
+                        app_view.set_src_lang(lng);
+                    }
+                    AppEvent::SetTargetLang(lng) => {
+                        app_state.selected_target = lng.clone();
+                        //TODO: update views
+                        app_view.set_target_lang(lng);
+                    }
+                    AppEvent::SetTranslator(translator) => {
+                        app_state.selected_translator = translator.clone();
+                        if let Some(tr_struct) = app_state.translators.get(translator.as_str()) {
+                            let tr_name = tr_struct.get_name();
+                            app_view.set_translator(tr_name, translator.as_str());
+                        }
+                    }
+                    AppEvent::SetDict(dict) => {
+                        app_state.selected_dict = dict.clone();
+                        if let Some(dict_struct) = app_state.dictionaries.get(dict.as_str()) {
+                            let dict_name = dict_struct.get_name();
+                            app_view.set_dict(dict_name, dict.as_str());
+                        }
+                    }
+                    AppEvent::SetTTSEngine(tts, voice) => {
+                        app_state.selected_tts_service = tts.clone();
+                        app_state.selected_tts_voice = voice.clone();
+
+                        if let Some(tts_struct) = app_state.tts_services.get(tts.as_str()) {
+                            let tts_name = tts_struct.get_name();
+                            app_view.set_tts_engine(tts_name, &voice);
+                        }
+                        
+                    }
+                    AppEvent::SetPRNNEngine(prnn) => {
+                        app_state.selected_prnn_source = prnn.clone();
+
+                        if let Some(prnn_struct) = app_state.prnn_services.get(prnn.as_str()) {
+                            let prnn_name = prnn_struct.get_name();
+                            app_view.set_prnn_service(prnn_name);
+                        }
+                        
+                    }
+
+                    AppEvent::ToggleFav(is_dict) => {
+                        if is_dict {
+                            let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
+                        } else {
+                            let _ = app_state.toggle_fav(&app_view.src, is_dict);
+                        }
+                        let _ = app_state.update_fav_browser();
+                    }
+
+                    AppEvent::SaveTranslation(tr_result) => {
+                        let _ = app_state.insert_transl(tr_result);
+                        let _ = app_state.update_history_browser();
+                        
+                    }
+                    AppEvent::SaveDictEntry(dict_result) => {
+                        let _ = app_state.insert_dict_entry(dict_result);
+                        let _ = app_state.update_history_browser(); 
+                    }
+
+                    AppEvent::SetStatus(text, is_error, is_dict) => {
+                        app_view.set_status(&text, is_error, is_dict);
+                    }
+                    AppEvent::Message(text) => {
+                        //TODO: use winapi and raw window handle? native dialog?
+                        if !app_view.main_win.shown() {
+                            app_view.main_win.show();
+                            app_message(&text);
+                            app_view.main_win.hide();
+                        } else {
+                            app_message(&text);
+                        }                             
+                    }
+
+                    AppEvent::TrayMenuEvent(tray_event) => {
+                        dprintln!("{:?}", tray_event);
+                        match tray_event {
+                            TrayEvent::ShowMainWin => {
+                                app_view.main_win.show();
+                            }
+                            TrayEvent::ShowPopupWin => {
+                                app_view.show_popup(false, false);
+                            }
+                            TrayEvent::ShowPopupDictWin => {
+                                app_view.show_popup(true, false);
+                            }
+                            TrayEvent::Settings => {
+                                open_settings();
+                            }
+                            TrayEvent::Exit => {
+                                app::quit();
+                            }
+                            //_ =>  {}
+                        }
+                    }
+                    AppEvent::HotKey(e) => 'hotkey_arm: {
+                        dbg!(e);
+                        if e.state == HotKeyState::Released {
+                            let mut is_dict: bool;
+                            if Some(e.id) == tr_hotkey_id {
+                                is_dict = false;
+                            } else if Some(e.id) == dict_hotkey_id {
+                                is_dict = true;
+                            } else {
+                                break 'hotkey_arm;
+                            }
+                            match get_selected_text() {
+                                Ok(selected_text) => {
+                                    if GLOBAL_SETTINGS.single_word_to_dict 
+                                       && !is_dict 
+                                       && selected_text.trim().unicode_words().count() == 1 {
+                                        is_dict = true;
+                                    }
+                                    if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {
+                                        app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
+                                    } else {
+                                        app_view.show_popup(is_dict, true);
+                                        //app_view.clear_ui(is_dict); //clear status, title and translation buffer
+
+                                        if !is_dict {
+                                            if let Err(tr_error) = app_state.translate(false, false) {
+                                                app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
+                                                //app_view.set_status(tr_error.to_string().as_str(), true, false);
+                                            }
+                                        } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
+                                            app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
+                                            //app_view.set_status(dict_error.to_string().as_str(), true, true);
+                                        }
+                                    }
+                                },
+                                Err(_) => {
+                                    app_view.set_status("An error occurred while getting the selected text", true, false);
+                                    dprintln!("An error occurred while getting the selected text");
+                                }
+                            }
+                        }
+                    }
+                    AppEvent::Translate(fail_if_not_exist, force, check_buf) => 'translate_arm: {
+                        //app_view.clear_ui(false);
+                        if check_buf && (app_view.src_buf.text() != app_view.src)
+                            && let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
+                                app_view.set_status(set_src_error.to_string().as_str(), true, false);
+                                break 'translate_arm;
+                        }
+                        if let Err(error) = app_state.translate(fail_if_not_exist, force) {
+                            app_sender.send(AppEvent::SetReady(Some(error.to_string()), false));
+                            //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, false));
+                            //app_view.set_status(error.to_string().as_str(), true, false);
+                        }
+                    }
+                    AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf) => 'request_dict_arm: {
+                        //app_view.clear_ui(true);
+                        if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
+                            if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), true) {
+                                app_view.set_status(set_src_error.to_string().as_str(), true, true);
+                                break 'request_dict_arm;
+                            }
+                        }
+                        if let Err(error) = app_state.request_dict_entry(fail_if_not_exist, force) {
+                            app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
+                            //app_sender.send(AppEvent::SetStatus(error.to_string().as_str().into(), true, true));
+                            //app_view.set_status(error.to_string().as_str(), true, true);
+                        }
+                    }
+                    AppEvent::SendToDict() => {
+                        //app_view.clear_ui(true);
+                        if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
+                            app_sender.send(AppEvent::SetReady(Some(set_src_error.to_string()), false));
+                            //app_view.set_status(set_src_error.to_string().as_str(), true, true);
+                        } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
+                            app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
+                            //app_view.set_status(dict_error.to_string().as_str(), true, true);
+                        }
+                    }
+
+                    AppEvent::TTString() => {
+                        let _ = app_state.run_tts();
+                    }
+                    AppEvent::PRNNString(force) => {
+                        app_view.prnn_index += 1;
+                        if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {
+                            app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
+                        }
+                    }
+                    AppEvent::PRNNSave((src_id, prnn_service_uid, filename)) => {
+                        let _file = app_state.insert_prnn(src_id, &prnn_service_uid, &filename);
+                        //if let Ok(file) = file {
+                            //let filename = format!("{}.ogg", file);
+                            //app_sender.send(AppEvent::TTSPlay(file));
+                        //}
+                        //let _ = app_state.update_browser(); 
+                    }
+                    AppEvent::TTSave(src_id, tts_engine, tts_voice, filename) => {
+                        let file = app_state.insert_tts(
+                            src_id, 
+                            &tts_engine, 
+                            &tts_voice,
+                            &filename
+                        );
+                        if let Ok(file) = file {
+                            let filename = format!("{}.ogg", file);
+                            app_sender.send(AppEvent::TTSPlay(filename));
+                        }
+                    }
+                    AppEvent::TTSPlay(filename) => {
+                        app_view.set_ready(None, false);
+
+                        let audio_path = format!(r"tts_cache\{filename}");
+
+                        std::thread::spawn({
+                            let working_dir = env::current_dir().expect("current_dir");
+                            let audio_path = working_dir.join(audio_path);
+
+                            move || {
+                                let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
+                                    .expect("open default audio stream");
+                                let file = BufReader::new(File::open(audio_path)
+                                    .expect("BufReader"));
+                                // Note that the playback stops when the sink is dropped
+                                let sink = rodio::play(stream_handle.mixer(), file)
+                                    .expect("rodio::play");
+                                sink.sleep_until_end();
+                                //TODO: statusbar
+                            }
+                        });
+                        app::awake();
+                    }
+                }
+            } else {
+                /*if ev != fltk::enums::Event::Move && ev != fltk::enums::Event::Drag {
+                    watchdog_counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }*/
+                break;
+            }
+        }
     }
 
     // #[cfg(not(target_os = "windows"))]
     // app.run().unwrap();
 
+    //write config before exit
     if std::path::Path::new("ui_config.json").exists() {
         let mut config = UICONFIG.clone();
         config.selected_translator = app_state.selected_translator.clone();
@@ -840,28 +843,6 @@ fn main() {
     }    
     dprintln!("exit");
 
-}
-
-
-
-
-fn load_icon(path: &std::path::Path) -> tray_icon::Icon {
-    //TODO fallback
-    let (icon_rgba, icon_width, icon_height) = {
-        let image1 = ::image::open(path)
-            .unwrap_or_else(|e| {
-                app_message("Failed to open icon path");
-                panic!("Error: {}", e);
-                })
-            .into_rgba8();
-        let (width, height) = image1.dimensions();
-        let rgba = image1.into_raw();
-        (rgba, width, height)
-    };
-    tray_icon::Icon::from_rgba(icon_rgba, icon_width, icon_height).unwrap_or_else(|e| {
-        app_message("Failed to load tray icon");
-        panic!("Error: {}", e);
-    })
 }
 
 

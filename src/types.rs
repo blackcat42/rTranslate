@@ -3,12 +3,7 @@
 use global_hotkey::{
     GlobalHotKeyEvent, 
 };
-use tray_icon::{
-    menu::{
-        MenuEvent,
-    },
-    TrayIconEvent,
-};
+
 //use std::str::FromStr;
 use strum_macros::AsRefStr;
 use strum_macros::EnumString;
@@ -17,13 +12,20 @@ use anyhow::Result;
 use strum_macros::EnumIter;
 //use strum::IntoEnumIterator;
 
+#[derive(Debug)]
+pub enum TrayEvent {
+    ShowMainWin,
+    ShowPopupWin,
+    ShowPopupDictWin,
+    Settings,
+    Exit
+}
 
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum AppEvent {
     HotKey(GlobalHotKeyEvent),
-    TrayIcon(TrayIconEvent),
-    TrayMenuEvent(MenuEvent),
+    TrayMenuEvent(TrayEvent),
 
     //TODO:
     SaveTranslation(TranslResult),

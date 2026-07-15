@@ -1,6 +1,6 @@
 [package]
 name = "rTranslate"
-version = "0.0.1"
+version = "0.1.1"
 authors = ["sergey gapchenko <gapchenko42@gmail.com>"]
 edition = "2024"
 publish = false
@@ -11,7 +11,8 @@ fltk = "^1.5"
 anyhow = "1.0.100"
 #ureq = "=3.1.4"
 image = "0.25.9"
-tray-icon = "0.24.1"
+#tray-icon = "0.24.1"
+tray-item = { git = "https://github.com/blackcat42/tray-item-rs.git", rev = "ea1eb80" }
 get-selected-text = "=0.1.6" #todo: high ram usage
 unicode-truncate = "2.0.1"
 global-hotkey = "0.7.0"
@@ -45,7 +46,7 @@ html-escape = "0.2.14"
 #native-windows-gui = { version = "1.0.10", default-features=false, features=["tray-notification", "message-window", "menu", "cursor"] }
 
 [build-dependencies]
-embed-resource = "1.8"
+embed-resource = "2.3"
 winres = "0.1.12"
 
 [profile.release]
