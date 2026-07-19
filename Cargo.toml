@@ -1,6 +1,6 @@
 [package]
 name = "rTranslate"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["sergey gapchenko <gapchenko42@gmail.com>"]
 edition = "2024"
 publish = false
@@ -41,6 +41,8 @@ wreq-util = "2.2.6"
 sanitize-filename = "0.6.0"
 urlencoding = "2.1.3"
 html-escape = "0.2.14"
+
+xcap = "0.9.6"
 
 #[target.'cfg(target_os = "windows")'.dependencies]
 #native-windows-gui = { version = "1.0.10", default-features=false, features=["tray-notification", "message-window", "menu", "cursor"] }

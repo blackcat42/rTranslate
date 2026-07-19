@@ -11,7 +11,7 @@
     "translators": [
         {
             "uid": "tr_google",
-            "name": "Google (legacy)",
+            "name": "Google (old api)",
             //"use_proxy": false
         },
         {
@@ -136,8 +136,11 @@
     "pinned_target_languages": ["ru", "en", "es"],
     "switch_target_lang": true, //IF target language == source language THEN target langage = first pinned src lang that is not 'auto'
 
+    //HOTKEYS
+    //Key Codes: https://docs.rs/global-hotkey/0.8.0/global_hotkey/hotkey/enum.Code.html
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
     "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
+    "ocr_hotkey": "ctrl+Backquote",
     "single_word_to_dict": true, //if selected text contains single word, send it to the dictionary
 
     "ui_font_size": 12,
@@ -162,6 +165,8 @@
     "transl_request_min_length": 3,
     "dict_request_max_length": 100,
 
+    "ocr_fullscreen": true,
+    
     "history_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
 
     //sqlite is required for history support; default as true; disabling is not recommended

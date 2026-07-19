@@ -60,10 +60,12 @@ mod types;
 mod bbcode;
 mod app_state;
 mod app_view;
+mod screen_ocr;
 mod utils;
 use types::{AppEvent, TrayEvent};
 use app_state::{AppState};
 use app_view::{AppView};
+use screen_ocr::{ScreenOCR};
 use std::sync::{LazyLock};
 use std::sync::{OnceLock};
 use utils::{
@@ -123,6 +125,7 @@ pub struct Settings {
 
     pub translate_hotkey: Option<String>,
     pub dict_hotkey: Option<String>,
+    pub ocr_hotkey: Option<String>,
     pub single_word_to_dict: bool,
 
     pub ext_service_unload_timeout: u64,
@@ -141,6 +144,9 @@ pub struct Settings {
     #[serde(default = "default_as_minus_one")]
     pub history_max_entries: i32,
 
+    #[serde(default = "default_as_true")]
+    pub ocr_fullscreen: bool,
+    
     #[serde(default = "default_as_true")]
     pub use_db: bool,
 
@@ -273,6 +279,8 @@ fn main() {
 
     let mut app_view = AppView::new(app_sender);
     let mut app_state = AppState::new(app_sender, conn);
+    let mut screen_ocr = ScreenOCR::new(app_sender);
+
     let _ = app_state.init_db();
 
     //PATHS
@@ -296,6 +304,11 @@ fn main() {
     tray.add_menu_item("rTranslate", {
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowMainWin));
+        }
+    }).unwrap();
+    tray.add_menu_item("Screen OCR", {
+        move || {
+            app_sender.send(AppEvent::OCRInit);
         }
     }).unwrap();
     tray.inner_mut().add_separator().unwrap();
@@ -487,6 +500,17 @@ fn main() {
     } else {
         None
     };
+    let ocr_hotkey_id: Option<u32> = if let Some(ocr_hotkey) = &GLOBAL_SETTINGS.ocr_hotkey {
+        if let Ok(ocr_hotkey) = ocr_hotkey.parse::<HotKey>() {
+            let _ = manager.register(ocr_hotkey);
+            Some(ocr_hotkey.id())
+        } else {
+            app_message("Failed to parse ocr hotkey");
+            None
+        }
+    } else {
+        None
+    };
 
     std::thread::spawn(move || loop {
         //dprintln!("hotkeys event loop");
@@ -525,7 +549,7 @@ fn main() {
 
     while app.wait() {
         let ev = fltk::app::event(); 
-        dprintln!("Main loop awoken by event: {:?}", &ev);
+        //dprintln!("Main loop awoken by event: {:?}", &ev);
         loop {
             if let Some(msg) = app_receiver.recv() {
                 dprintln!("app main loop - recv");
@@ -674,37 +698,43 @@ fn main() {
                                 is_dict = false;
                             } else if Some(e.id) == dict_hotkey_id {
                                 is_dict = true;
+                            } else if Some(e.id) == ocr_hotkey_id {
+                                app_sender.send(AppEvent::OCRInit);
+                                break 'hotkey_arm;
                             } else {
                                 break 'hotkey_arm;
                             }
                             match get_selected_text() {
                                 Ok(selected_text) => {
-                                    if GLOBAL_SETTINGS.single_word_to_dict 
-                                       && !is_dict 
-                                       && selected_text.trim().unicode_words().count() == 1 {
-                                        is_dict = true;
-                                    }
-                                    if let Err(set_src_error) = app_state.set_src_text(&selected_text, is_dict) {
-                                        app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
-                                    } else {
-                                        app_view.show_popup(is_dict, true);
-                                        //app_view.clear_ui(is_dict); //clear status, title and translation buffer
-
-                                        if !is_dict {
-                                            if let Err(tr_error) = app_state.translate(false, false) {
-                                                app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
-                                                //app_view.set_status(tr_error.to_string().as_str(), true, false);
-                                            }
-                                        } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
-                                            app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
-                                            //app_view.set_status(dict_error.to_string().as_str(), true, true);
-                                        }
-                                    }
+                                    app_sender.send(AppEvent::TranslateText(selected_text, is_dict));
                                 },
                                 Err(_) => {
                                     app_view.set_status("An error occurred while getting the selected text", true, false);
                                     dprintln!("An error occurred while getting the selected text");
                                 }
+                            }
+                        }
+                    }
+                    AppEvent::TranslateText(text, mut is_dict) => {
+                        if GLOBAL_SETTINGS.single_word_to_dict 
+                           && !is_dict 
+                           && text.trim().unicode_words().count() == 1 {
+                            is_dict = true;
+                        }
+                        if let Err(set_src_error) = app_state.set_src_text(&text, is_dict) {
+                            app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
+                        } else {
+                            app_view.show_popup(is_dict, true);
+                            //app_view.clear_ui(is_dict); //clear status, title and translation buffer
+
+                            if !is_dict {
+                                if let Err(tr_error) = app_state.translate(false, false) {
+                                    app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
+                                    //app_view.set_status(tr_error.to_string().as_str(), true, false);
+                                }
+                            } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
+                                app_sender.send(AppEvent::SetReady(Some(dict_error.to_string()), true));
+                                //app_view.set_status(dict_error.to_string().as_str(), true, true);
                             }
                         }
                     }
@@ -749,6 +779,25 @@ fn main() {
                     AppEvent::TTString() => {
                         let _ = app_state.run_tts();
                     }
+
+                    AppEvent::OCRInit => {
+                        screen_ocr.process_image();
+                        screen_ocr.win.hide();
+                        screen_ocr.win.show();
+                    }
+                    AppEvent::OCRDrop => {
+                        screen_ocr.clear();
+                    }
+                    AppEvent::OCRCropUpdate(crop) => {
+                        screen_ocr.update_crop(crop);
+                    }
+                    AppEvent::OCRun => {
+                        screen_ocr.run_ocr();
+                    }
+                    AppEvent::OCRSuccess(s) => {
+                        screen_ocr.set_ocr_results(s);
+                    }
+
                     AppEvent::PRNNString(force) => {
                         app_view.prnn_index += 1;
                         if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {

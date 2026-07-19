@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-release-windows:
     name: Build Windows
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Configure Git Line Endings
         run: |
@@ -48,6 +48,7 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item "target\i686-pc-windows-msvc\release\rTranslate.exe" -Destination "dist\" -Force
+          gh release download --repo "blackcat42/rtranslate-utils" --pattern "rt_ocr.exe" --dir "dist\"
           Compress-Archive -Path "dist\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows-x86.zip"
 
       - name: Upload Release
@@ -56,6 +57,6 @@ jobs:
           files: rtranslate-${{github.ref_name}}-windows-x86.zip
           tag_name: ${{ github.ref }}
           draft: false
-          prerelease: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

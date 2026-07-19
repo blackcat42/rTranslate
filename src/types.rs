@@ -11,6 +11,7 @@ use anyhow::Result;
 
 use strum_macros::EnumIter;
 //use strum::IntoEnumIterator;
+use crate::screen_ocr::CropSegment;
 
 #[derive(Debug)]
 pub enum TrayEvent {
@@ -26,6 +27,11 @@ pub enum TrayEvent {
 pub enum AppEvent {
     HotKey(GlobalHotKeyEvent),
     TrayMenuEvent(TrayEvent),
+    OCRInit,
+    OCRDrop,
+    OCRSuccess(String),
+    OCRCropUpdate(CropSegment),
+    OCRun,
 
     //TODO:
     SaveTranslation(TranslResult),
@@ -33,6 +39,7 @@ pub enum AppEvent {
     PRNNSave((i64, String, String)),
     ToggleFav(bool),
 
+    TranslateText(String, bool),
     Translate(bool, bool, bool),
     RequestDictEntry(bool, bool, bool),
     SendToDict(),
@@ -421,4 +428,18 @@ pub struct DictResult {
     pub text: String, 
     pub src: Option<Lang>, 
     pub target: Option<Lang>
+}
+
+#[derive(Default)]
+pub struct BLWCoords {
+    pub x: i32,
+    pub y: i32,
+    pub x_start: i32,
+    pub y_start: i32,
+    pub initial_window_height: i32,
+    pub initial_window_width: i32,
+    pub init_on_border_left: bool,
+    pub init_on_border_right: bool,
+    pub init_on_border_top: bool,
+    pub init_on_border_bottom: bool,
 }
