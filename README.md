@@ -4,9 +4,9 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 ![popup_window](assets/scrnshts/s1.png) ![popup_dict](assets/scrnshts/s2.png)
 
 ## Default global hotkeys
-**Translate the selected text:** Ctrl + Q
-**Dictionary:** Ctrl + Shift + Q
-**OCR:** Ctrl + ~
+- **Translate the selected text:** Ctrl + Q
+- **Dictionary:** Ctrl + Shift + Q
+- **OCR:** Ctrl + ~
 
 ## Features
 
