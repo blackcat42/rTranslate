@@ -35,7 +35,7 @@ use crate::types::{
 
 use super::GLOBAL_SETTINGS;
 
-use crate::utils::app_message;
+use crate::utils::helpers::app_message;
 
 pub struct AppState {
     pub app_sender: fltk::app::Sender<AppEvent>,

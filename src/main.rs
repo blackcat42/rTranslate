@@ -68,7 +68,7 @@ use app_view::{AppView};
 use screen_ocr::{ScreenOCR};
 use std::sync::{LazyLock};
 use std::sync::{OnceLock};
-use utils::{
+use utils::helpers::{
     app_message, 
     //screen_center
 };

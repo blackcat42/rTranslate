@@ -27,7 +27,7 @@ use crate::types::{
     AppEvent,
     BLWCoords
 };
-use crate::utils::{
+use crate::utils::helpers::{
     borderless_win_handler, 
     borderless_win_frame_handler
 };
