@@ -1,4 +1,4 @@
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
 
 pub mod helpers;
+pub mod rt_request;

@@ -7,17 +7,12 @@ use std::fs::File;
 use std::io::Write;
 use anyhow::{anyhow, Result};
 //use serde_json::Value;
-use wreq::{
+
+use crate::utils::rt_request::{
     Client,
-    //Version,
-    header,
-    StatusCode
 };
-//use wreq_util::{
-    //Emulation
-//};
+
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
 //use serde::{Deserialize, Serialize};
 
 //#[allow(dead_code)]
@@ -26,13 +21,14 @@ pub struct WP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    use_proxy: bool
+    use_proxy: bool,
+    emulation: Option<String>
 }
 
 impl WP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool, emulation: Option<String>) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender, name, use_proxy}
+        Self { is_running, app_sender, name, use_proxy, emulation}
     }
 }
 //TODO! language detect
@@ -47,22 +43,11 @@ impl PRNNService for WP {
                 let app_sender = self.app_sender;
                 let is_running = Arc::clone(&self.is_running);
                 let use_proxy = self.use_proxy;
+                let emulation = self.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                    let mut proxy: Option<wreq::Proxy> = None;
-                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-                        let proxy_url = &proxy_settings.url;
-                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
-                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-                                wreq_proxy.basic_auth(username, password)
-                            } else {
-                                wreq_proxy
-                            };
-                            proxy = Some(wreq_proxy);
-                        }
-                        
-                    }
-                    let filenames = send_pr_request(app_sender, text.clone(), src_lang, src_id, proxy);
+
+                    let filenames = send_pr_request(app_sender, text.clone(), src_lang, src_id, use_proxy, emulation);
                     match filenames {
                         Ok(p_files) => {
                             //dbg!(&p_file);
@@ -105,20 +90,18 @@ struct MediaItem {
     type: String
 }*/
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, _src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, _src_id: i64, proxy: bool, emulation: Option<String>) -> Result<Vec<String>> {
     
     //let req_string = format!("https://en.wiktionary.org/api/rest_v1/page/media-list/{}", selected_text.to_lowercase());
 
-    let rt = TOKIO_RT.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
-    });
 
-    let mut headers = header::HeaderMap::new();
-    headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip"));
-    headers.insert("Host", header::HeaderValue::from_static("en.wiktionary.org"));
-    headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
 
-    let result = rt.block_on(async {
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("Accept-Encoding".into(), "gzip".into());
+    headers.insert("Host".into(), "en.wiktionary.org".into());
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36".into());
+
+
         //let mut arr: Vec<String> = vec![];
         let mut arr_filenames: Vec<String> = vec![];
 
@@ -127,12 +110,10 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
             //.cookie_store(true)
-            .gzip(true);
-        client = if let Some(proxy) = proxy {
-            client.proxy(proxy)
-        } else {
-            client
-        };
+            .gzip(true).proxy(proxy);
+        if let Some(e) = emulation {
+            client = client.emulation(e);
+        }
         let client = client.build()?;
 
         /*let resp = client.get(req_string).send().await?.text().await?;
@@ -161,10 +142,10 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
 
         
         let req_string2 = format!("https://en.wiktionary.org/wiki/{}", selected_text.to_lowercase());
-        let resp = client.get(req_string2).send().await?;
+        let resp = client.clone().get(req_string2).send()?;
         let status = resp.status();
-        if status.is_success() {
-            let resp_full_text = resp.text().await?;
+        let result = if status.is_success() {
+            let resp_full_text = resp.text()?;
             let working_dir = std::env::current_dir()?;
         
             let item0 = regex::escape("upload.wikimedia.org/wikipedia/commons/");
@@ -216,18 +197,18 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                         continue;
                     } else {
                         //https://wikitech.wikimedia.org/wiki/Robot_policy
-                        tokio::time::sleep(tokio::time::Duration::from_millis(5100)).await;
-                        let audio_resp = client.get(full_url).send().await?;
+                        std::thread::sleep(Duration::from_millis(5100));
+                        let audio_resp = client.clone().get(full_url).expect_binary(true).send()?; //TODO cloning
                         dprintln!("{}", audio_resp.status());
                         if audio_resp.status().is_success() {
-                            let audio_bytes = audio_resp.bytes().await?;
+                            let audio_bytes = audio_resp.bytes()?;
                             let mut file = File::create(&audio_path_full)?;
                             file.write_all(&audio_bytes)?;
                             arr_filenames.push(filename);
                         } else {
                             //TODO! 429 Too Many Requests
-                            match status {
-                                StatusCode::NOT_FOUND => {
+                            match audio_resp.status().to_u16() {
+                                404 => {
                                     continue;
                                 }
                                 code => {
@@ -246,7 +227,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
             }
         } else {
             Err(anyhow!(status.to_string()))
-        }
+        };
         
 
         /*if arr.len() > 0 {
@@ -320,7 +301,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
         } else {
             return Err(anyhow!("error"));
         }*/
-    });
+
 
 
     /*

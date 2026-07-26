@@ -33,10 +33,6 @@ jobs:
       - name: Install dependencies on Windows
         run: |
           choco install cmake -y
-          choco install strawberryperl -y
-          choco install pkgconfiglite -y
-          choco install llvm -y
-          choco install nasm -y
         shell: cmd
 
       - name: Build on Windows with Static Linking
@@ -49,6 +45,7 @@ jobs:
         run: |
           Copy-Item "target\i686-pc-windows-msvc\release\rTranslate.exe" -Destination "dist\" -Force
           gh release download --repo "blackcat42/rtranslate-utils" --pattern "rt_ocr.exe" --dir "dist\"
+          gh release download --repo "blackcat42/rtranslate-utils" --pattern "wreq_cli.exe" --dir "dist\"
           Compress-Archive -Path "dist\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows-x86.zip"
 
       - name: Upload Release

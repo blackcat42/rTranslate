@@ -7,17 +7,12 @@ use std::fs::File;
 use std::io::Write;
 use anyhow::{anyhow, Result};
 //use serde_json::Value;
-use wreq::{
+
+use crate::utils::rt_request::{
     Client,
-    //Version,
-    header,
-    StatusCode
 };
-//use wreq_util::{
-//    Emulation
-//};
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
+
 //use serde::{Deserialize, Serialize};
 
 //#[allow(dead_code)]
@@ -26,13 +21,14 @@ pub struct GP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
-    use_proxy: bool
+    use_proxy: bool,
+    emulation: Option<String>
 }
 
 impl GP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool, emulation: Option<String>) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender, name, use_proxy}
+        Self { is_running, app_sender, name, use_proxy, emulation}
     }
 }
 //TODO! language detect
@@ -48,22 +44,11 @@ impl PRNNService for GP {
                 let is_running = Arc::clone(&self.is_running);
                 let src_lang = src_lang.clone();
                 let use_proxy = self.use_proxy;
+                let emulation = self.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                    let mut proxy: Option<wreq::Proxy> = None;
-                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-                        let proxy_url = &proxy_settings.url;
-                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
-                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-                                wreq_proxy.basic_auth(username, password)
-                            } else {
-                                wreq_proxy
-                            };
-                            proxy = Some(wreq_proxy);
-                        }
-                        
-                    }
-                    let filenames = send_pr_request(app_sender, text.clone(), src_lang.as_ref(), src_id, proxy);
+                    
+                    let filenames = send_pr_request(app_sender, text.clone(), src_lang.as_ref(), src_id, use_proxy, emulation);
                     match filenames {
                         Ok(p_files) => {
                             //dbg!(&p_file);
@@ -96,7 +81,7 @@ impl PRNNService for GP {
 }
 
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, _src_id: i64, proxy: Option<wreq::Proxy>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, _src_id: i64, proxy: bool, emulation: Option<String>) -> Result<Vec<String>> {
 
     let selected_text = selected_text.to_lowercase();
     let first_two_chars: String = selected_text.chars().take(2).collect();
@@ -122,28 +107,24 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
     }
 
 
-    let rt = TOKIO_RT.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
-    });
 
-    let mut headers = header::HeaderMap::new();
-    headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip"));
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("Accept-Encoding".into(), "gzip".into());
     //headers.insert("Host", header::HeaderValue::from_static("en.wiktionary.org"));
-    headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36".into());
 
-    let result = rt.block_on(async {
+
         let mut arr_filenames: Vec<String> = vec![];
         let working_dir = std::env::current_dir()?;
 
         let mut client = Client::builder()
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .gzip(true);
-        client = if let Some(proxy) = proxy {
-            client.proxy(proxy)
-        } else {
-            client
-        };
+            .gzip(true)
+            .proxy(proxy);
+        if let Some(e) = emulation {
+            client = client.emulation(e);
+        }
         let client = client.build()?;
 
         let mut count = 1;
@@ -163,18 +144,18 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                 arr_filenames.push(filename);
                 continue;
             } else {
-                tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
-                let audio_resp = client.get(url).send().await?;
+                std::thread::sleep(Duration::from_millis(3000));
+                let audio_resp = client.clone().get(url).expect_binary(true).send()?; //TODO cloning
                 dprintln!("{}", audio_resp.status());
                 let status = audio_resp.status();
                 if status.is_success() {
-                    let audio_bytes = audio_resp.bytes().await?;
+                    let audio_bytes = audio_resp.bytes()?;
                     let mut file = File::create(&audio_path_full)?;
                     file.write_all(&audio_bytes)?;
                     arr_filenames.push(filename);
                 } else {
-                    match status {
-                        StatusCode::NOT_FOUND => {
+                    match status.to_u16() {
+                        404 => {
                             continue;
                         }
                         code => {
@@ -185,13 +166,12 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
                 }
             }
         }
-        if !arr_filenames.is_empty() {
+        let result = if !arr_filenames.is_empty() {
             Ok(arr_filenames)
         } else {
             Err(anyhow!(format!("no pronunciations were found for the selected language ({src_lang})")))
-        }
+        };
         
-    });
 
     let result = result?;
     Ok(result)

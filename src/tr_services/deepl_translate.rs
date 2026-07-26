@@ -9,31 +9,24 @@ use std::{thread, time::Duration};
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
 use std::str::FromStr;
+use std::collections::HashMap;
 
-use wreq::{
-    //Client,
-    //Version,
-    header,
-    StatusCode
-};
-use wreq_util::{
-    Emulation
-};
+use crate::utils::rt_request;
 
 pub struct DL {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
     uid: String,
-    use_proxy: bool
+    use_proxy: bool,
+    emulation: Option<String>
 }
 
 impl DL {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool, emulation: Option<String>) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, name, uid, use_proxy}
+        Self {is_running, app_sender, name, uid, use_proxy, emulation}
     }
 }
 impl Translator for DL {
@@ -56,22 +49,11 @@ impl Translator for DL {
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.use_proxy;
+                let emulation = self.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                    let mut proxy: Option<wreq::Proxy> = None;
-                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-                        let proxy_url = &proxy_settings.url;
-                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
-                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-                                wreq_proxy.basic_auth(username, password)
-                            } else {
-                                wreq_proxy
-                            };
-                            proxy = Some(wreq_proxy);
-                        }
-                        
-                    }
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
+
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation);
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
@@ -162,7 +144,7 @@ struct DLang {
     method: String
 }*/
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: Option<wreq::Proxy>) -> Result<(String, Lang)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: bool, emulation: Option<String>) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if is_lang_detected {
@@ -171,11 +153,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         "auto".to_string()
     };
 
-    let rt = TOKIO_RT.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
-    });
 
-    let result = rt.block_on(async {
 
         // Prepare translation request using new LMT_handle_texts method
         let id = get_random_number();
@@ -209,51 +187,52 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         //ita-free.www.deepl.com
 
         // Set headers to simulate browser request
-        let mut headers = header::HeaderMap::new();
-        headers.insert("Content-Type", header::HeaderValue::from_static("application/json"));
-        headers.insert("Accept", header::HeaderValue::from_static("*/*"));
-        headers.insert("Accept-Language", header::HeaderValue::from_static("en-US,en;q=0.9"));
-        headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip"));
+        let mut headers = HashMap::new();
+        headers.insert("Content-Type".into(), "application/json".into());
+        headers.insert("Accept".into(), "*/*".into());
+        headers.insert("Accept-Language".into(), "en-US,en;q=0.9".into());
+        headers.insert("Accept-Encoding".into(), "gzip".into());
         //headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip, deflate, br, zstd"));
-        headers.insert("Origin", header::HeaderValue::from_static("https://www.deepl.com"));
-        headers.insert("Referer", header::HeaderValue::from_static("https://www.deepl.com/"));
-        headers.insert("Sec-Fetch-Dest", header::HeaderValue::from_static("empty"));
-        headers.insert("Sec-Fetch-Mode", header::HeaderValue::from_static("cors"));
-        headers.insert("Sec-Fetch-Site", header::HeaderValue::from_static("same-site"));
-        headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
+        headers.insert("Origin".into(), "https://www.deepl.com".into());
+        headers.insert("Referer".into(), "https://www.deepl.com/".into());
+        headers.insert("Sec-Fetch-Dest".into(), "empty".into());
+        headers.insert("Sec-Fetch-Mode".into(), "cors".into());
+        headers.insert("Sec-Fetch-Site".into(), "same-site".into());
+        headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36".into());
 
         // Create a new req client
-        let mut client = wreq::Client::builder()
-            .emulation(Emulation::Chrome137)
+        let mut client = rt_request::Client::builder()
+            //.emulation("Chrome137")
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .gzip(true);
-        client = if let Some(proxy) = proxy {
-            client.proxy(proxy)
-        } else {
-            client
-        };
-        
+            .gzip(true)
+            .proxy(proxy);
+        if let Some(e) = emulation {
+            client = client.emulation(e);
+        }
         let client = client.build()?;
         //client := req.C().SetTLSFingerprintRandomized()
         let resp = client.post(url_full)
             //.version(Version::HTTP_11)
-            .body(post_str).send().await?;
+            .body(post_str).send()?;
         let status = resp.status();
-        if status.is_success() {
-            let resp = resp.text().await?;
-            return Ok(resp);
-        }
-        match status {
-            StatusCode::OK => {
-                let resp = resp.text().await?;
-                Ok(resp)
-            }
-            code => {
-                Err(anyhow!(code.to_string()))
-            }
-        } 
-    });
+        //println!("{:?}", resp.status_u16());
+        let result = if status.is_success() {
+            let resp = resp.text()?;
+            Ok(resp)
+        } else {
+            Err(anyhow!(status.to_string()))
+            /*match status {
+                rt_request::StatusCode::OK => {
+                    let resp = resp.text()?;
+                    Ok(resp)
+                }
+                code => {
+                    Err(anyhow!(code.to_string()))
+                }
+            } */
+        };
+
 
     match result {
         Ok(json_data) => {

@@ -34,6 +34,8 @@ use global_hotkey::{
 use std::str::FromStr;
 use unicode_segmentation::UnicodeSegmentation;
 
+use sys_locale::get_locale;
+
 use rusqlite::{params, params_from_iter, Connection};
 
 use tray_item::{IconSource, TrayItem};
@@ -138,7 +140,7 @@ pub struct Settings {
     pub re_str_find: Option<String>,
     pub re_str_replace: Option<String>,
     
-    pub transl_request_min_length: usize,
+    pub source_text_min_length: usize,
     pub dict_request_max_length: usize,
 
     #[serde(default = "default_as_minus_one")]
@@ -164,6 +166,7 @@ struct TranslatorOption {
     pub command: Option<String>,
     pub args: Option<Vec<String>>,
     pub reload_if_lang_changed: Option<bool>,
+    pub emulation: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct DictOption {
@@ -175,6 +178,7 @@ struct DictOption {
 
     pub path: Option<String>,
     pub dict_path: Option<String>,
+    pub emulation: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TTServiceOption {
@@ -190,6 +194,7 @@ struct PRNNSourceOption {
     pub name: String,
     #[serde(default = "default_as_false")]
     pub use_proxy: bool,
+    pub emulation: Option<String>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProxyOption {
@@ -199,8 +204,15 @@ pub struct ProxyOption {
 }
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
+    let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
+    dprintln!("{}", locale);
+    let default_settings_file = if locale == "ru-RU" {
+        "settings.json.rus.default"
+    } else {
+        "settings.json.default"
+    };
     if !std::path::Path::new("settings.json").exists() {
-        std::fs::copy("settings.json.default", "settings.json").unwrap_or_else(|e| {
+        std::fs::copy(default_settings_file, "settings.json").unwrap_or_else(|e| {
             app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
@@ -260,7 +272,7 @@ static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
     ui_config
 });
 
-static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+//static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 
 fn main() {
 
@@ -353,11 +365,11 @@ fn main() {
         && let Some(reload) = &value.reload_if_lang_changed {
             app_state.translators.insert(value.uid.clone(), Box::new(sidecar_translator::ST::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), *reload, use_proxy )));
         } else if value.uid == "tr_google" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
         } else if value.uid == "tr_google2" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
+            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
         } else if value.uid == "tr_deepl" {
-            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
+            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
@@ -371,9 +383,9 @@ fn main() {
         if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone())));
         } else if value.uid == "dict_wiktionary_en" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
         } else if value.uid == "dict_google" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy)));
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
         }
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
@@ -398,9 +410,9 @@ fn main() {
         } else*/ 
         let use_proxy = value.use_proxy;
         if value.uid == "prnn_wiki" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone(), use_proxy)));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone(), use_proxy, value.emulation.clone())));
         } else if value.uid == "prnn_google" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone(), use_proxy)));
+            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone(), use_proxy, value.emulation.clone())));
         }
     }
 

@@ -1,7 +1,7 @@
 {
     /*
      * ======================================
-     * SETTINGS (json5)
+     * НАСТРОЙКИ (json5)
      * ======================================
      */
 
@@ -9,28 +9,29 @@
 
     /*
      * ======================================
-     * TRANSLATION SERVICES 
+     * СЕРВИСЫ ПЕРЕВОДА
      * ======================================
-     * The following arrays determine the order and visibility of the 
-     * corresponding controls (e.g. translator buttons) in the app's UI.
+     * Следующие массивы определяют порядок и видимость соотв. элементов управления 
+     * в интерфейсе программы (в том числе кнопок с переводчиками). 
      *
-     * Commenting out an item will hide it from UI
+     * Закомментируйте элемент, чтобы отключить соответствующий сервис.
      *
-     * ⚠️ Caution: Any executable you link in the "command" field runs directly on your machine. 
-     * Be careful and only use CLI apps from sources you personally trust.
+     * ⚠️ Предупреждение: Любой исполняемый файл, указанный в поле "command", исполняется 
+     * вне какой-либо песочницы и имеет полный доступ к вашему устройству. 
      *
-     * Setting the "command" or "dict_path" fields for items with the following uids will override 
-     * their built-in services: 
+     * Заполнение полей "command" или "dict_path" для элементов со следующими uid, перезапишет
+     * их встроенные сервисы: 
      * - "tr_google"        - "dict_google"            - "prnn_wiki"
      * - "tr_google2"       - "dict_wiktionary_en"     - "prnn_google"
      * - "tr_deepl"
      *
-     * The working directory of the sideprocess is always set to ".\extensions\{service_uid}\"
+     * Рабочая директория сайдпроцесса, указанного в поле "command", всегда 
+     * устанавливается как ".\extensions\{uid сервиса}\"
      *
-     * The "uid" field can only contain alphabetical characters, digits and underscores
+     * Поле "uid" может содержать только буквы, цифры и нижние подчеркивания (_)
      *
-     * Setting the "emulation" field tells the service to use wreq_cli.exe 
-     * for browser TLS fingerprint emulation
+     * Заполнение поля "emulation" указывает сервису использовать wreq_cli.exe 
+     * для эмуляции браузерного TLS отпечатка
      * --------------------------------------
      */ 
     "translators": [
@@ -91,7 +92,7 @@
 
     /*
      * ======================================
-     * DICTIONARY SERVICES 
+     * СЛОВАРИ
      * ======================================
      */ 
     "dictionaries": [
@@ -108,7 +109,7 @@
             //"use_proxy": false
         },
 
-        // --- DSL(LINGVO) OFFLINE DICTIONARIES ---
+        // --- ОФФЛАЙН СЛОВАРИ В ФОРМАТЕ DSL(LINGVO) ---
         /*{
             "uid": "dict_example_dsl",
             "name": "Example dict",
@@ -120,7 +121,7 @@
 
     /*
      * ======================================
-     * TEXT TO SPEECH SERVICES 
+     * СЕРВИСЫ ОЗВУЧКИ ТЕКСТА 
      * ======================================
      */ 
     "tts_services": [
@@ -145,7 +146,7 @@
 
     /*
      * ======================================
-     * PRONUNCIATION SERVICES 
+     * СЕРВИСЫ ПРОИЗНОШЕНИЙ
      * ======================================
      */ 
     "prnn_services": [
@@ -167,9 +168,9 @@
 
     /*
      * ======================================
-     * API KEYS 
+     * КЛЮЧИ API 
      * ======================================
-     * Default X-Goog-API-Key from: 
+     * Ключ X-Goog-API-Key взят от сюда: 
      * https://github.com/ssut/py-googletrans/issues/268#issuecomment-3220244991
      * --------------------------------------
      */ 
@@ -179,9 +180,10 @@
 
     /*
      * ======================================
-     * PRONUNCIATIONS
+     * ПРОИЗНОШЕНИЯ
      * ======================================
-     * English accents to download
+     * Скачивать произношения в следйющих англ. акцентах 
+     * (код для британского английского в разных сервисах отличается)
      * --------------------------------------
      */
     "eng_accents": [
@@ -196,11 +198,11 @@
 
     /*
      * ======================================
-     * PROXY 
+     * ПРОКСИ 
      * ======================================
      * url: <protocol>://<host>:port
-     * Example: "socks5://example.com:8000"
-     * supported protocols: "http", "https", "soks4", "soks4a", "soks5"
+     * Пример: "socks5://example.com:8000"
+     * поддерживаемые протоколы: "http", "https", "soks4", "soks4a", "soks5"
      */
     /*"proxy": {
         "url": "http://127.0.0.1:9080",
@@ -212,23 +214,26 @@
 
     /*
      * ======================================
-     * LANGUAGES 
+     * ЯЗЫКИ 
      * ======================================
-     * Allowed values: ISO 639_3, ISO 639_1 or "auto"
+     * Допустимые значения: ISO 639_3, ISO 639_1 или "auto" (автоопределение)
      * https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
      *
-     * The first item is used as the default
+     * Первый элемент в массиве устанавливается как язык по умолчанию (по умолчанию это "auto" и "ru",
+     * т.е. автоматически определять язык и переводить на русский)
+     * src (source) - исходный язык
+     * target - язык, на который нужно переводить
      * --------------------------------------
      */
     "pinned_src_languages": ["auto", "en", "es", "zh", "ja", "ru"],
     "pinned_target_languages": ["ru", "en", "es"],
-    "switch_target_lang": true, //IF source_language (auto-detected) == target_language THEN target_langage = first pinned source_language that is not 'auto'
+    "switch_target_lang": true, //ЕСЛИ язык источника (автоопределение) === целевой язык ТО целевой язык = первый закреплённый исходный язык, который не является 'auto' (по умолчанию это "en", то есть при попытке перевода русского текста на русский, он переведётся на английский)
 
 
 
     /*
      * ======================================
-     * HOTKEYS 
+     * ГОРЯЧИЕ КЛАВИШИ 
      * ======================================
      * Key Codes: https://docs.rs/global-hotkey/0.8.0/global_hotkey/hotkey/enum.Code.html
      * --------------------------------------
@@ -236,13 +241,13 @@
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
     "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
     "ocr_hotkey": "ctrl+Backquote",
-    "single_word_to_dict": true, //if the selected text contains one single word, send it to the dictionary
+    "single_word_to_dict": true, //если выбранный текст содержит только одно слово - отправить его в словарь
 
 
 
     /*
      * ======================================
-     * UI
+     * ИНТЕРФЕЙС (шрифты, цвета)
      * ======================================
      */
     "ui_font_size": 12,
@@ -257,43 +262,44 @@
 
     /*
      * ======================================
-     * TIMEOUTS 
+     * ТАЙМАУТЫ 
      * ======================================
      */
-    "ext_service_unload_timeout": 120, //in seconds
-    "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
-    "http_request_timeout": 30, //in seconds
+    "ext_service_unload_timeout": 120, //в секундах
+    "http_throttling": 1.5, //ограничение на повторные запросы к онлайн сервисам перевода, в секундах (допустимы дробные значения)
+    "http_request_timeout": 30, //в секундах
 
 
 
     /*
      * ======================================
-     * LIMITS 
+     * ЛИМИТЫ 
      * ======================================
      */
-    "source_text_max_length": 4500, //Source text will be truncated to this size. The recommend value is 5000 or less (google translate api limit).
+    "source_text_max_length": 4500, //Исходный текст обрезается до этого размера (в символах).Рекомендуемое значение - 5000 или меньше (ограничение апи google translate).
     "source_text_min_length": 3,
     "dict_request_max_length": 100,
-    "history_max_entries": -1, //marked as favorites is not included; set -1 to disable auto-clearing
+    "history_max_entries": -1, //Максимальное кол-во записей в истории. Элементы, отмеченные как избранные, никогда не удаляются. Установите -1 чтобы полностью отключить очистку истории переводов
 
 
 
     /*
      * ======================================
-     * SOURCE TEXT PREPROCESSING
+     * ОБРАБОТКА ТЕКСТА ПЕРЕД ОТПРАВКОЙ НА ПЕРЕВОД
      * ======================================
-     * regex for text preprocessing
-     * comment out to disable
+     * регулярное выражение
+     * закомментируйте чтобы отключить
+     * пробелы в начале и конце текста удаляются в любом случае
      * --------------------------------------
      */
-    "re_str_find": "\\n(?=[a-z])", //default: "\\n(?=[a-z])" (removes line break if the next line starts with a lowercase letter)
+    "re_str_find": "\\n(?=[a-z])", //по умолчанию: "\\n(?=[a-z])" (удаляет разрывы строк, если следующая строка начинается со строчной буквы (если следующая строка пустая - не срабатывает))
     "re_str_replace": "",
 
 
 
     /*
      * ======================================
-     * OCR 
+     * РАСПОЗНАВАНИЕ ТЕКСТА 
      * ======================================
      */
     "ocr_fullscreen": true,

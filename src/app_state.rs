@@ -274,7 +274,7 @@ impl AppState {
             self.app_sender.send(AppEvent::SetWaiting(Some("translate".to_string()), false));
         }
         let selected_text = self.src_text.clone();
-        if selected_text.chars().count() < GLOBAL_SETTINGS.transl_request_min_length {
+        if selected_text.chars().count() < GLOBAL_SETTINGS.source_text_min_length {
             return Err(anyhow!("source text is too short"));
         }
         //let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props

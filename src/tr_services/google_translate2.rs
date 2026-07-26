@@ -1,37 +1,29 @@
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
-//use ureq::Agent;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
-use std::str::FromStr;
 
-use wreq::{
-    //Client,
-    Version,
-    header
-};
-use wreq_util::{
-    Emulation
-};
+use std::str::FromStr;
+use crate::utils::rt_request;
 
 pub struct GT2 {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
     uid: String,
-    use_proxy: bool
+    use_proxy: bool,
+    emulation: Option<String>
 }
 
 impl GT2 {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool, emulation: Option<String>) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
         //let uid = "tr_google2".to_string();
-        Self {is_running, app_sender, name, uid, use_proxy}
+        Self {is_running, app_sender, name, uid, use_proxy, emulation}
     }
 }
 impl Translator for GT2 {
@@ -54,22 +46,11 @@ impl Translator for GT2 {
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.use_proxy;
+                let emulation = self.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                    let mut proxy: Option<wreq::Proxy> = None;
-                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-                        let proxy_url = &proxy_settings.url;
-                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
-                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-                                wreq_proxy.basic_auth(username, password)
-                            } else {
-                                wreq_proxy
-                            };
-                            proxy = Some(wreq_proxy);
-                        }
-                        
-                    }
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, proxy);
+                                        
+                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation);
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
@@ -108,7 +89,7 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: Option<wreq::Proxy>) -> Result<(String, Lang)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: bool, emulation: Option<String>) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if is_lang_detected {
@@ -117,52 +98,47 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
         "auto"
     };
 
-    let rt = TOKIO_RT.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
-    });
 
-    let result = rt.block_on(async {
-        //TODO: /v1/translateHtml does not preserve line breaks (and if we put an array of strings, they will not share context)
 
-        //let selected_text: String = selected_text.lines().map(|s| serde_json::to_string(s).unwrap_or("\"\"".to_string())).filter(|item| *item != "\"\"".to_string()).collect::<Vec<String>>().join(","); //array of strings (serialized)
-        let selected_text = serde_json::to_string(&selected_text)?;
-        let src_lang_ref = serde_json::to_string(src_lang_ref)?;
-        let target_lang = serde_json::to_string(target_lang.as_ref())?;
+    //TODO: /v1/translateHtml does not preserve line breaks (and if we put an array of strings, they will not share context)
 
-        let req_body = format!("[[[{}],{},{}],\"wt_lib\"]", selected_text, src_lang_ref, target_lang);
-        dprintln!("{}", req_body);
-        let mut headers = header::HeaderMap::new();
-        headers.insert("Host", header::HeaderValue::from_static("translate-pa.googleapis.com"));
-        headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"));
-        let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
-        match api_key {
-            Some(api_key) => {
-                let api_key = header::HeaderValue::from_str(&api_key)?;
-                headers.insert("X-Goog-API-Key", api_key);
-                headers.insert("Content-Type", header::HeaderValue::from_static("application/json+protobuf"));
+    //let selected_text: String = selected_text.lines().map(|s| serde_json::to_string(s).unwrap_or("\"\"".to_string())).filter(|item| *item != "\"\"".to_string()).collect::<Vec<String>>().join(","); //array of strings (serialized)
+    let selected_text = serde_json::to_string(&selected_text)?;
+    let src_lang_ref = serde_json::to_string(src_lang_ref)?;
+    let target_lang = serde_json::to_string(target_lang.as_ref())?;
 
-                let mut client = wreq::Client::builder()
-                    .emulation(Emulation::Chrome137)
-                    .default_headers(headers)
-                    .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout));
-                client = if let Some(proxy) = proxy {
-                    client.proxy(proxy)
-                } else {
-                    client
-                };
-                let client = client.build()?;
+    let req_body = format!("[[[{}],{},{}],\"wt_lib\"]", selected_text, src_lang_ref, target_lang);
+    dprintln!("{}", req_body);
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("Host".into(), "translate-pa.googleapis.com".into());
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36".into());
+    let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
+    let result = match api_key {
+        Some(api_key) => {
+            headers.insert("X-Goog-API-Key".into(), api_key.clone());
+            headers.insert("Content-Type".into(), "application/json+protobuf".into());
 
-                let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version(Version::HTTP_11).body(req_body).send().await?.text().await?;
-
-                dprintln!("{}", resp);
-                Ok(resp)
+            let mut client = rt_request::Client::builder()
+                //.emulation("Chrome137")
+                .default_headers(headers)
+                .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
+                .proxy(proxy);
+            if let Some(e) = emulation {
+                client = client.emulation(e);
             }
-            None => {
-                Err(anyhow!("No api key found. Please check settings.json : \"google_translate_api_key\""))
-            }
+            let client = client.build()?;
+
+            let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version("HTTP_11").body(req_body).send()?.text()?;
+
+            dprintln!("{}", resp);
+            Ok(resp)
         }
+        None => {
+            Err(anyhow!("No api key found. Please check settings.json : \"google_translate_api_key\""))
+        }
+    };
         
-    });
+
 
     match result {
         Ok(json_data) => {

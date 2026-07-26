@@ -2,7 +2,7 @@ use debug_print::{debug_println as dprintln};
 //use serde_json::Value;
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 //use ureq::Agent;
-use wreq::{
+use crate::utils::rt_request::{
     Client,
     //Version
 };
@@ -11,23 +11,23 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
-use super::TOKIO_RT;
 
 pub struct WDEn {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
     name: String,
     uid: String,
-    use_proxy: bool
+    use_proxy: bool,
+    emulation: Option<String>
 }
 
 
 
 impl WDEn {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool, emulation: Option<String>) -> Self {
         let is_running = Arc::new(AtomicBool::new(false));
         //let uid = "dict_wiktionary_en".to_string();
-        Self {is_running, app_sender, name, uid, use_proxy}
+        Self {is_running, app_sender, name, uid, use_proxy, emulation}
     }
 }
 impl Dictionary for WDEn {
@@ -49,22 +49,11 @@ impl Dictionary for WDEn {
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.use_proxy;
+                let emulation = self.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                    let mut proxy: Option<wreq::Proxy> = None;
-                    if use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-                        let proxy_url = &proxy_settings.url;
-                        if let Ok(mut wreq_proxy) = wreq::Proxy::all(proxy_url) {
-                            wreq_proxy = if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-                                wreq_proxy.basic_auth(username, password)
-                            } else {
-                                wreq_proxy
-                            };
-                            proxy = Some(wreq_proxy);
-                        }
-                        
-                    }
-                    let transl_result = send_tr_request(text.clone(), proxy);
+
+                    let transl_result = send_tr_request(text.clone(), use_proxy, emulation);
                     match transl_result {
                         Ok(t_text) => {
                             //app_sender.send(AppEvent::SaveDictEntry((src_id, text.clone(), uid.clone(), t_text.clone(), None, None)));
@@ -107,32 +96,29 @@ impl Dictionary for WDEn {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String, proxy: Option<wreq::Proxy>) -> Result<String> {
+fn send_tr_request(selected_text: String, proxy: bool, emulation: Option<String>) -> Result<String> {
     //let mut response = "".to_string();
 
     let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();
     dprintln!("{}", req_string);
 
-    let rt = TOKIO_RT.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("Tokio Runtime Error")
-    });
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36".into());
 
-    let result = rt.block_on(async {
-        let mut client = Client::builder()
-            //.emulation(Emulation::Chrome137)
-            .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-            .user_agent("User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36");
-        client = if let Some(proxy) = proxy {
-            client.proxy(proxy)
-        } else {
-            client
-        };
-        let client = client.build()?;
-        
-        let resp = client.get(req_string).query(&[("title", selected_text.to_lowercase())]).send().await?.text().await?;
-        //dprintln!("{}", resp);
-        Ok(resp)
-    });
+    let mut client = Client::builder()
+        //.emulation(Emulation::Chrome137)
+        .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
+        .default_headers(headers)
+        .proxy(proxy);
+    if let Some(e) = emulation {
+        client = client.emulation(e);
+    }
+    let client = client.build()?;
+    
+    let resp = client.get(req_string).query([("title", selected_text.to_lowercase())]).send()?.text()?;
+    //dprintln!("{}", resp);
+    let result = Ok(resp);
+
 
     match result {
         Ok(r) => {
