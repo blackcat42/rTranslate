@@ -42,6 +42,7 @@ use tray_item::{IconSource, TrayItem};
 
 mod tr_services;
 use tr_services::sidecar_translator;
+use tr_services::qt_translator;
 use tr_services::google_translate;
 use tr_services::google_translate2;
 use tr_services::deepl_translate;
@@ -134,6 +135,9 @@ pub struct Settings {
     pub http_throttling: f64,
     pub http_request_timeout: u64,
     pub proxy: Option<ProxyOption>,
+    
+    #[serde(default = "default_as_false")]
+    pub use_proxy_global: bool,
 
     pub source_text_max_length: usize, //TODO: chunking
 
@@ -154,6 +158,9 @@ pub struct Settings {
 
     #[serde(default = "default_as_false")]
     pub sqlite_vacuum: bool,
+
+    #[serde(default = "default_as_true")]
+    pub qtranslate_autoload: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TranslatorOption {
@@ -222,10 +229,48 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
             app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
-    let settings: Settings = json5::from_str(&settings_json).unwrap_or_else(|e| {
+    let mut settings: Settings = json5::from_str(&settings_json).unwrap_or_else(|e| {
             app_message("Failed to parse settings.json");
             panic!("Error: {}", e);
         });
+
+    if !settings.qtranslate_autoload {
+        return settings;
+    }
+    let re_uid = Regex::new(r"^[\w ]+$").unwrap();
+    let mut seen_uids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let target_dir = "./extensions/qtranslate/Services"; 
+    let path = std::path::Path::new(target_dir);
+    if path.exists() && let Ok(paths) = std::fs::read_dir(path) {
+        for entry in paths {
+            let entry = entry.unwrap();
+            let entry_path = entry.path();
+
+            if entry_path.is_dir() {
+                if let Some(folder_name_os) = entry_path.file_name() {
+                    let folder_name = folder_name_os.to_string_lossy().into_owned();
+                    if re_uid.is_match(&folder_name) && seen_uids.insert(folder_name.clone()) {
+                        let new_tr = TranslatorOption {
+                            uid: folder_name.clone(),
+                            name: folder_name,
+                            use_proxy: false,
+                            command: Some("QTRANSLATE".to_string()),
+                            args: None,
+                            reload_if_lang_changed: None,
+                            emulation: None,
+                        };
+                        
+                        if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {
+                            settings.translators.push(new_tr);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    
+    
     settings
 });
 static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
@@ -352,14 +397,18 @@ fn main() {
     });
 
     //APP STATE
-    let re_uid = Regex::new(r"^\w+$").unwrap();
+    let re_uid = Regex::new(r"^[\w ]+$").unwrap();
     for value in GLOBAL_SETTINGS.translators.iter() {
         if !re_uid.is_match(&value.uid) {
             app_message("settings.json: Failed to parse uid");
             panic!("Error");
         }
         let use_proxy = value.use_proxy;
-        if let Some(command) = &value.command 
+
+        if let Some(command) = &value.command
+        && command == "QTRANSLATE" {
+            app_state.translators.insert(value.uid.clone(), Box::new(qt_translator::QT::new(app_sender, value.name.clone(), value.uid.clone(), false, None )));
+        } else if let Some(command) = &value.command 
         && command.chars().count() > 0
         && let Some(args) = &value.args 
         && let Some(reload) = &value.reload_if_lang_changed {

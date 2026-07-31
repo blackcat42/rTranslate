@@ -212,13 +212,23 @@ impl AppView {
         let flex_buttons = group::Flex::default().row();
 
         let mut translator_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
+        let btn_n = GLOBAL_SETTINGS.translators.len();
         for qwe in GLOBAL_SETTINGS.translators.iter() {
             let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
-            let icon_path = format!(r"icons/{}.ico", &qwe.uid);
+            let icon_path = if let Some(cmd) = &qwe.command && cmd == "QTRANSLATE" {
+                format!(r"extensions/qtranslate/Services/{}/Service.ico", &qwe.uid)
+            } else {
+                format!(r"icons/{}.ico", &qwe.uid)
+            };
             dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
                 button.set_image(Some(image));
-                button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
+                if btn_n > 5 {
+                    button.set_align(fltk::enums::Align::Left | fltk::enums::Align::Inside | fltk::enums::Align::ImageNextToText | fltk::enums::Align::Clip);
+                } else {
+                    button.set_align(fltk::enums::Align::Inside | fltk::enums::Align::ImageNextToText | fltk::enums::Align::Clip);
+                }
+                
             }
             if qwe.uid == UICONFIG.selected_translator {
                 button.set(true);

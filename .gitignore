@@ -36,6 +36,11 @@ target
 /dist/settings.json
 /dist/ui_config.json
 
+/dist/extensions/qtranslate/Services/*
+!/dist/extensions/qtranslate/Services/-QTExample/
+!/dist/extensions/qtranslate/Services/-QTExample/Service.ico
+!/dist/extensions/qtranslate/Services/-QTExample/Service.js
+
 /build_win_dbg.bat
 /build_win_release.bat
 /build_win_release_x64.bat

@@ -19,6 +19,16 @@
      * ⚠️ Caution: Any executable you link in the "command" field runs directly on your machine. 
      * Be careful and only use CLI apps from sources you personally trust.
      *
+     * ----------QTranslate Services----------
+     * The "QTRANSLATE" value of the "command" field is reserved for QTranslate services.
+     * To load QTranslate services, move the "Services" folder to .\extensions\qtranslate
+     * Service folder names are used as uids - only letters, numbers, spaces, and underscores 
+     * are allowed.
+     * To disable a service when the "qtranslate_autoload" option is active, add any other character
+     * to its folder name or delete the folder entirely.
+     * To configure a service (and enable it when "qtranslate_autoload" is disabled),
+     * add an object to the array following the "QTExample" template.
+     * 
      * Setting the "command" or "dict_path" fields for items with the following uids will override 
      * their built-in services: 
      * - "tr_google"        - "dict_google"            - "prnn_wiki"
@@ -27,12 +37,15 @@
      *
      * The working directory of the sideprocess is always set to ".\extensions\{service_uid}\"
      *
-     * The "uid" field can only contain alphabetical characters, digits and underscores
+     * The "uid" field can only contain alphabetical characters, spaces, digits and underscores
      *
      * Setting the "emulation" field tells the service to use wreq_cli.exe 
      * for browser TLS fingerprint emulation
      * --------------------------------------
      */ 
+
+    "qtranslate_autoload": true,
+
     "translators": [
         {
             "uid": "tr_google",
@@ -65,6 +78,13 @@
         },
 
         // --- EXAMPLES ---
+        /*{
+            "uid": "QTExample",
+            "name": "QT example",
+            "command": "QTRANSLATE",
+            //"emulation": "Chrome137",
+            //"use_proxy": false
+        },*/
         /*{
             "uid": "tr_js_example",
             "name": "JS example",
@@ -207,6 +227,7 @@
         //"username": "",
         //"password": ""
     },*/
+    "use_proxy_global": false, //if true, individual use_proxy flags are ignored and all traffic goes through the proxy
 
 
 

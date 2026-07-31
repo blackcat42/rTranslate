@@ -138,7 +138,10 @@ impl Client {
 		self.expect_binary = f;
         self
 	}
-	pub fn send(self) -> Result<Response> {
+	pub fn send(mut self) -> Result<Response> {
+		if GLOBAL_SETTINGS.use_proxy_global {
+			self.use_proxy = true;
+		}
 		if self.emulation.is_some() {
 			run_wreq_cli(self)
 		} else {
