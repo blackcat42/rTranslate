@@ -27,6 +27,7 @@ target
 /dist/tts_cache/
 /dist/*.exe
 !/dist/oggenc2.exe
+!/dist/qjs.exe
 /dist/*.db
 /assets_other/
 *.sublime-project
