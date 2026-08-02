@@ -851,8 +851,6 @@ fn main() {
 
                     AppEvent::OCRInit => {
                         screen_ocr.process_image();
-                        screen_ocr.win.hide();
-                        screen_ocr.win.show();
                     }
                     AppEvent::OCRDrop => {
                         screen_ocr.clear();

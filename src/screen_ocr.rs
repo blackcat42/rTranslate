@@ -299,6 +299,7 @@ impl ScreenOCR {
         app::awake();
         self.win.hide();
         self.win.show();
+        self.win.take_focus();
         Ok(())
     }
 
@@ -619,8 +620,10 @@ impl MaskableImage {
                     if !overlay_win.shown() {
                         overlay_win.show();
                         overlay_win.set_pos(overlay_x, overlay_y);
+                        overlay_win.take_focus();
                     } else {
                         overlay_win.show();
+                        overlay_win.take_focus();
                     }
                 }
 
