@@ -153,6 +153,24 @@ pub enum Lang {
     #[strum(serialize = "cat", to_string = "ca")] Ca,
     #[strum(serialize = "tgl", to_string = "tl")] Tl,
     #[strum(serialize = "hye", to_string = "hy")] Hy,
+
+    #[strum(serialize = "sqi", to_string = "sq")] Sq,
+    #[strum(serialize = "eus", to_string = "eu")] Eu,
+    #[strum(serialize = "glg", to_string = "gl")] Gl,
+    #[strum(serialize = "hat", to_string = "ht")] Ht,
+    #[strum(serialize = "isl", to_string = "is")] Is,
+    #[strum(serialize = "gle", to_string = "ga")] Ga,
+    #[strum(serialize = "msa", to_string = "ms")] Ms,
+    #[strum(serialize = "mlt", to_string = "mt")] Mt,
+    #[strum(serialize = "nor", to_string = "no")] No,
+    #[strum(serialize = "swa", to_string = "sw")] Sw,
+    #[strum(serialize = "cym", to_string = "cy")] Cy,
+    #[strum(serialize = "hmn", to_string = "hmn")] Hmn,
+    #[strum(serialize = "lao", to_string = "lo")] Lo,
+    #[strum(serialize = "kaz", to_string = "kk")] Kk,
+    #[strum(serialize = "tgk", to_string = "tg")] Tg,
+    #[strum(serialize = "mon", to_string = "mn")] Mn,
+    #[strum(serialize = "tat", to_string = "mo")] Tt,
 }
 
 impl Lang {
@@ -228,6 +246,24 @@ impl Lang {
             Lang::Ca => "cat",
             Lang::Tl => "tgl",
             Lang::Hy => "hye",
+
+            Lang::Sq => "sqi",
+            Lang::Eu => "eus",
+            Lang::Gl => "glg",
+            Lang::Ht => "hat",
+            Lang::Is => "isl",
+            Lang::Ga => "gle",
+            Lang::Ms => "msa",
+            Lang::Mt => "mlt",
+            Lang::No => "nor",
+            Lang::Sw => "swa",
+            Lang::Cy => "cym",
+            Lang::Hmn => "hmn",
+            Lang::Lo => "lao",
+            Lang::Kk => "kaz",
+            Lang::Tg => "tgk",
+            Lang::Mn => "mon",
+            Lang::Tt => "tat",
         }
     }
 
@@ -303,6 +339,24 @@ impl Lang {
             Lang::Ca => "Catalan",
             Lang::Tl => "Tagalog",
             Lang::Hy => "Armenian",
+
+            Lang::Sq => "Albanian",
+            Lang::Eu => "Basque",
+            Lang::Gl => "Galician",
+            Lang::Ht => "Haitian",
+            Lang::Is => "Icelandic",
+            Lang::Ga => "Irish",
+            Lang::Ms => "Malay",
+            Lang::Mt => "Maltese",
+            Lang::No => "Norwegian",
+            Lang::Sw => "Swahili",
+            Lang::Cy => "Welsh",
+            Lang::Hmn => "Hmong",
+            Lang::Lo => "Lao",
+            Lang::Kk => "Kazakh",
+            Lang::Tg => "Tajik",
+            Lang::Mn => "Mongolian",
+            Lang::Tt => "Tatar",
         }
     }
 }

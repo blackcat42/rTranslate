@@ -350,15 +350,17 @@ fn convert_lang_to_qt_isize(lng: Lang) -> isize {
         Lang::Auto => 1,
         Lang::Af => 2,
         Lang::Az => 3,
-        //Lang::Sq => 4, sq/sqi Albanian
+        Lang::Sq => 4,
         Lang::Ar => 5,
         Lang::Hy => 6,
-        //Lang::Eu => 7, eu/eus/Basque 
+        Lang::Eu => 7,
         Lang::Be => 8,
         Lang::Bg => 9,
         Lang::Ca => 10,
+
         Lang::Zh => 11, //"zh-CN",
         //"zh-TW" => 12,
+
         Lang::Hr => 13,
         Lang::Cs => 14,
         Lang::Da => 15,
@@ -368,26 +370,26 @@ fn convert_lang_to_qt_isize(lng: Lang) -> isize {
         Lang::Fi => 19,
         Lang::Tl => 20,
         Lang::Fr => 21,
-        //Lang::Gl => 22, gl/glg/Galician
+        Lang::Gl => 22,
         Lang::De => 23,
         Lang::El => 24,
-        //Lang::Ht => 25, ht hat Haitian
+        Lang::Ht => 25,
         Lang::He => 26, //iw
         Lang::Hi => 27,
         Lang::Hu => 28,
-        //Lang::Is => 29, is isl Icelandic
+        Lang::Is => 29,
         Lang::Id => 30,
         Lang::It => 31,
-        //Lang::Ga => 32, gle Irish
+        Lang::Ga => 32,
         Lang::Ja => 33,
         Lang::Ka => 34,
         Lang::Ko => 35,
         Lang::Lv => 36,
         Lang::Lt => 37,
         Lang::Mk => 38,
-        //Lang::Ms => 39, msa Malay
-        //Lang::Mt => 40, mlt Maltese
-        //Lang::No => 41, nor Norwegian
+        Lang::Ms => 39,
+        Lang::Mt => 40,
+        Lang::No => 41,
         Lang::Fa => 42,
         Lang::Pl => 43,
         Lang::Pt => 44,
@@ -397,31 +399,31 @@ fn convert_lang_to_qt_isize(lng: Lang) -> isize {
         Lang::Sk => 48,
         Lang::Sl => 49,
         Lang::Es => 50,
-        //Lang::Sw => 51, swa Swahili
+        Lang::Sw => 51,
         Lang::Sv => 52,
         Lang::Th => 53,
         Lang::Tr => 54,
         Lang::Uk => 55,
         Lang::Ur => 56,
         Lang::Vi => 57,
-        //Lang::Cy => 58, cym Welsh
+        Lang::Cy => 58,
         Lang::Yi => 59,
         Lang::Epo => 60,
-        //hmn Hmong
+        Lang::Hmn => 61,
         Lang::La => 62,
-        //Lang::Lo => 63, lao Lao
-        //Lang::Kk => 64, kaz Kazakh
+        Lang::Lo => 63,
+        Lang::Kk => 64,
         Lang::Uz => 65,
         Lang::Si => 66,
-        //Lang::Tg => 67, tgk Tajik
+        Lang::Tg => 67,
         Lang::Te => 68,
         Lang::Km => 69,
-        //Lang::Mn => 70, mon Mongolian
+        Lang::Mn => 70,
         Lang::Kn => 71,
         Lang::Ta => 72,
         Lang::Mr => 73,
         Lang::Bn => 74,
-        //Lang::Tt => 75, tat Tatar
+        Lang::Tt => 75,
         //Lang::Auto => ,
         _ => -1,
     }
@@ -432,15 +434,17 @@ fn convert_qt_isize_to_lang(value: isize) -> Result<Lang> {
         1 => Ok(Lang::Auto),
         2 => Ok(Lang::Af),
         3 => Ok(Lang::Az),
-
+        4 => Ok(Lang::Sq),
         5 => Ok(Lang::Ar),
         6 => Ok(Lang::Hy),
-
+        7 => Ok(Lang::Eu),
         8 => Ok(Lang::Be),
         9 => Ok(Lang::Bg),
         10 => Ok(Lang::Ca),
+
         11 => Ok(Lang::Zh),
-        //12 => Ok(Lang::Zh),
+        12 => Ok(Lang::Zh),
+
         13 => Ok(Lang::Hr),
         14 => Ok(Lang::Cs),
         15 => Ok(Lang::Da),
@@ -450,26 +454,26 @@ fn convert_qt_isize_to_lang(value: isize) -> Result<Lang> {
         19 => Ok(Lang::Fi),
         20 => Ok(Lang::Tl),
         21 => Ok(Lang::Fr),
-
+        22 => Ok(Lang::Gl),
         23 => Ok(Lang::De),
         24 => Ok(Lang::El),
-
+        25 => Ok(Lang::Ht),
         26 => Ok(Lang::He),
         27 => Ok(Lang::Hi),
         28 => Ok(Lang::Hu),
-
+        29 => Ok(Lang::Is),
         30 => Ok(Lang::Id),
         31 => Ok(Lang::It),
-
+        32 => Ok(Lang::Ga),
         33 => Ok(Lang::Ja),
         34 => Ok(Lang::Ka),
         35 => Ok(Lang::Ko),
         36 => Ok(Lang::Lv),
         37 => Ok(Lang::Lt),
         38 => Ok(Lang::Mk),
-
-
-
+        39 => Ok(Lang::Ms),
+        40 => Ok(Lang::Mt),
+        41 => Ok(Lang::No),
         42 => Ok(Lang::Fa),
         43 => Ok(Lang::Pl),
         44 => Ok(Lang::Pt),
@@ -479,31 +483,31 @@ fn convert_qt_isize_to_lang(value: isize) -> Result<Lang> {
         48 => Ok(Lang::Sk),
         49 => Ok(Lang::Sl),
         50 => Ok(Lang::Es),
-
+        51 => Ok(Lang::Sw),
         52 => Ok(Lang::Sv),
         53 => Ok(Lang::Th),
         54 => Ok(Lang::Tr),
         55 => Ok(Lang::Uk),
         56 => Ok(Lang::Ur),
         57 => Ok(Lang::Vi),
-
+        58 => Ok(Lang::Cy),
         59 => Ok(Lang::Yi),
         60 => Ok(Lang::Epo),
-
+        61 => Ok(Lang::Hmn),
         62 => Ok(Lang::La),
-
-
+        63 => Ok(Lang::Lo),
+        64 => Ok(Lang::Kk),
         65 => Ok(Lang::Uz),
         66 => Ok(Lang::Si),
-
+        67 => Ok(Lang::Tg),
         68 => Ok(Lang::Te),
         69 => Ok(Lang::Km),
-
+        70 => Ok(Lang::Mn),
         71 => Ok(Lang::Kn),
         72 => Ok(Lang::Ta),
         73 => Ok(Lang::Mr),
         74 => Ok(Lang::Bn),
-
+        75 => Ok(Lang::Tt),
         _ => Err(anyhow!("Unsupported language ID")),
     }
 }
