@@ -215,19 +215,19 @@ pub struct ProxyOption {
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
     dprintln!("{}", locale);
-    let default_settings_file = if locale == "ru-RU" {
-        "settings.json.rus.default"
+    let default_settings_file = if locale.starts_with("ru") {
+        "./i18n/settings.json.ru.default"
     } else {
-        "settings.json.default"
+        "./i18n/settings.json.en.default"
     };
-    if !std::path::Path::new("settings.json").exists() {
-        std::fs::copy(default_settings_file, "settings.json").unwrap_or_else(|e| {
+    if !std::path::Path::new("./settings.json").exists() {
+        std::fs::copy(default_settings_file, "./settings.json").unwrap_or_else(|e| {
             app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
     }
 
-    let settings_json = std::fs::read_to_string("settings.json").unwrap_or_else(|e| {
+    let settings_json = std::fs::read_to_string("./settings.json").unwrap_or_else(|e| {
             app_message("Failed to open settings.json");
             panic!("Error: {}", e);
         });
@@ -322,6 +322,12 @@ static UICONFIG: LazyLock<UIConfig> = LazyLock::new(|| {
 //static TOKIO_RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 
 fn main() {
+
+    if let Ok(mut exe_path) = std::env::current_exe() {
+        exe_path.pop();
+        dprintln!("{exe_path:?}");
+        let _ = std::env::set_current_dir(exe_path);
+    }
 
     let app = app::App::default().with_scheme(app::Scheme::Base);
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
