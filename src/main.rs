@@ -65,7 +65,7 @@ mod app_state;
 mod app_view;
 mod screen_ocr;
 mod utils;
-use types::{AppEvent, TrayEvent};
+use types::{AppEvent, TrayEvent, OCRModelOption};
 use app_state::{AppState};
 use app_view::{AppView};
 use screen_ocr::{ScreenOCR};
@@ -109,6 +109,8 @@ pub struct Settings {
     dictionaries: Vec<DictOption>,
     tts_services: Vec<TTServiceOption>,
     prnn_services: Vec<PRNNSourceOption>,
+
+    pub ocr_models: Vec<OCRModelOption>,
 
     pub download_all_pronunciations: bool,
     pub eng_accents: Vec<String>,

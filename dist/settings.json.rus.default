@@ -321,7 +321,37 @@
      * ======================================
      * РАСПОЗНАВАНИЕ ТЕКСТА 
      * ======================================
+     * PP-OCRv6 small и medium поддерживают 50 языков распознавания: упрощенный китайский, 
+     * традиционный китайский, английский, японский и 46 языков с латинским алфавитом. 
+     * PP-OCRv6 tiny поддерживает тот же набор языков, за исключением японского. 
+     *
+     * Для корейского, кириллицы, арабского, деванагари, тайского, 
+     * греческого, тамильского и телугу следует использовать 
+     * script-specific PP-OCRv5 recognition models.
+     *
+     * Скачать модели: https://github.com/zibo-chen/rust-paddle-ocr/models
+     * --------------------------------------
      */
     "ocr_fullscreen": true,
-    
+    "ocr_models": [
+        {
+            "name": "small",
+            "det_model": "ocr_models/PP-OCRv6_small_det.mnn",
+            "rec_model": "ocr_models/PP-OCRv6_small_rec.mnn",
+            "charset":   "ocr_models/ppocr_keys_v6_small.txt"
+        },
+        /*{
+            "name": "tiny (fast)",
+            "det_model": "ocr_models/PP-OCRv6_tiny_det.mnn",
+            "rec_model": "ocr_models/PP-OCRv6_tiny_rec.mnn",
+            "charset":   "ocr_models/ppocr_keys_v6_tiny.txt"
+        },*/
+        /*{
+            "name": "cyrillic", 
+            "det_model": "ocr_models/PP-OCRv5_mobile_det.mnn",
+            "rec_model": "ocr_models/cyrillic_PP-OCRv5_mobile_rec_infer.mnn",
+            "charset":   "ocr_models/ppocr_keys_cyrillic.txt"
+        },*/
+    ],
+
 }

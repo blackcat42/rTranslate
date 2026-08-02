@@ -316,7 +316,36 @@
      * ======================================
      * OCR 
      * ======================================
+     * PP-OCRv6 small and medium support the official 50 v6 recognition languages: 
+     * Simplified Chinese, Traditional Chinese, English, Japanese, and 46 Latin-script languages. 
+     * PP-OCRv6 tiny follows the same set except Japanese.
+     * 
+     * Korean, Cyrillic, Arabic, Devanagari, Thai, Greek, Tamil, and Telugu should continue 
+     * using the PP-OCRv5 script-specific recognition models.
+     *
+     * Download models: https://github.com/zibo-chen/rust-paddle-ocr/models
+     * --------------------------------------
      */
     "ocr_fullscreen": true,
-    
+    "ocr_models": [
+        {
+            "name": "small",
+            "det_model": "ocr_models/PP-OCRv6_small_det.mnn",
+            "rec_model": "ocr_models/PP-OCRv6_small_rec.mnn",
+            "charset":   "ocr_models/ppocr_keys_v6_small.txt"
+        },
+        /*{
+            "name": "tiny (fast)",
+            "det_model": "ocr_models/PP-OCRv6_tiny_det.mnn",
+            "rec_model": "ocr_models/PP-OCRv6_tiny_rec.mnn",
+            "charset":   "ocr_models/ppocr_keys_v6_tiny.txt"
+        },*/
+        /*{
+            "name": "cyrillic", 
+            "det_model": "ocr_models/PP-OCRv5_mobile_det.mnn",
+            "rec_model": "ocr_models/cyrillic_PP-OCRv5_mobile_rec_infer.mnn",
+            "charset":   "ocr_models/ppocr_keys_cyrillic.txt"
+        },*/
+    ],
+
 }

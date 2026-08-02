@@ -25,7 +25,8 @@ use std::cell::RefCell;
 
 use crate::types::{
     AppEvent,
-    BLWCoords
+    BLWCoords,
+    OCRModelOption
 };
 use crate::utils::helpers::{
     borderless_win_handler, 
@@ -45,6 +46,7 @@ pub struct ScreenOCR {
     overlay_win: DoubleWindow,
     app_sender: fltk::app::Sender<AppEvent>,
     checkbox_ocr_append: fltk::button::CheckButton,
+    choice_ocr_model: fltk::menu::Choice,
     btn_ocr: fltk::button::Button,
 
     kill_sender: Option<std::sync::mpsc::Sender<()>>,
@@ -115,9 +117,28 @@ impl ScreenOCR {
         let mut flex_buttons = group::Flex::default().row();
         let mut checkbox_ocr_append = button::CheckButton::default().with_label("Keep previous text")
             .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
-        flex_buttons.fixed(&checkbox_ocr_append, 200);
+        flex_buttons.fixed(&checkbox_ocr_append, 150);
+
+        fltk::frame::Frame::default();
+        let mut choice_ocr_model = fltk::menu::Choice::default().with_label("Model:").with_align(fltk::enums::Align::Left);
+
+        for ocr_m in GLOBAL_SETTINGS.ocr_models.iter() {
+            let name = (*ocr_m.name).to_string();
+            choice_ocr_model.add_choice(
+                &name
+            );
+        }
+        /*if let Some(item) = choice_ocr_model.find_item("PP-OCRv6_small") {
+            choice_ocr_model.set_item(&item);
+        }*/
+        choice_ocr_model.set_value(0);
+        flex_buttons.fixed(&choice_ocr_model, 150);
+
+        /*let mut checkbox_ocr_fast = button::CheckButton::default().with_label("fast (less accuracy)")
+            .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
+        flex_buttons.fixed(&checkbox_ocr_fast, 400);*/
         flex_buttons.end();
-        flex2.fixed(&flex_buttons_wrapper, 15);
+        flex2.fixed(&flex_buttons_wrapper, 25);
         flex_buttons_wrapper.end();
         let mut flex_buttons_wrapper2 = group::Flex::default().column();
         flex_buttons_wrapper2.set_margins(15, 0, 15, 0);
@@ -133,7 +154,7 @@ impl ScreenOCR {
         flex_buttons2.end();
         flex2.fixed(&flex_buttons_wrapper2, 25);
         flex_buttons_wrapper2.end();
-        flex.fixed(&flex2, 50);
+        flex.fixed(&flex2, 60);
         flex2.end();
 
         flex.end();
@@ -240,6 +261,7 @@ impl ScreenOCR {
             ocr_text_buf,
             //ocr_waiting_buf,
             checkbox_ocr_append,
+            choice_ocr_model,
             btn_ocr
         }
     }
@@ -319,6 +341,27 @@ impl ScreenOCR {
         let (kill_tx, kill_rx) = std::sync::mpsc::channel();
         self.kill_sender = Some(kill_tx);
 
+        let mut det_model = "ocr_models/PP-OCRv6_small_det.mnn".to_string();
+        let mut rec_model = "ocr_models/PP-OCRv6_small_rec.mnn".to_string();
+        let mut charset = "ocr_models/ppocr_keys_v6_small.txt".to_string();
+        /*if self.checkbox_ocr_fast.is_checked() {
+            det_model = "ocr_models/PP-OCRv6_tiny_det.mnn".to_string();
+            rec_model = "ocr_models/PP-OCRv6_tiny_rec.mnn".to_string();
+            charset = "ocr_models/ppocr_keys_v6_tiny.txt".to_string();
+        }*/
+
+        if let Some(text) = self.choice_ocr_model.choice() {
+            let last_match: Option<&OCRModelOption> = GLOBAL_SETTINGS.ocr_models
+                .iter()
+                .rev()
+                .find(|model| model.name == text);
+            if let Some(model) = last_match {
+                det_model = model.det_model.clone();
+                rec_model = model.rec_model.clone();
+                charset = model.charset.clone();
+            }
+        } 
+
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         let command = ".\\rt_ocr".to_string();
@@ -327,6 +370,9 @@ impl ScreenOCR {
         if which::which(&command).is_ok() {
             child = std::process::Command::new(working_dir.join(&command))
                 .arg("--pipe")
+                .arg("--det_model").arg(&det_model)
+                .arg("--rec_model").arg(&rec_model)
+                .arg("--charset").arg(&charset)
                 .creation_flags(CREATE_NO_WINDOW)
                 .current_dir(working_dir)
                 .stdin(std::process::Stdio::piped())

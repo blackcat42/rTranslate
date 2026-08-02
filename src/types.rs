@@ -12,6 +12,7 @@ use anyhow::Result;
 use strum_macros::EnumIter;
 //use strum::IntoEnumIterator;
 use crate::screen_ocr::CropSegment;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub enum TrayEvent {
@@ -442,4 +443,14 @@ pub struct BLWCoords {
     pub init_on_border_right: bool,
     pub init_on_border_top: bool,
     pub init_on_border_bottom: bool,
+}
+
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OCRModelOption {
+    pub name: String,
+    pub det_model: String,
+    pub rec_model: String,
+    pub charset: String
 }

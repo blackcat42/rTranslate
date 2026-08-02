@@ -42,6 +42,11 @@ target
 !/dist/extensions/qtranslate/Services/-QTExample/Service.ico
 !/dist/extensions/qtranslate/Services/-QTExample/Service.js
 
+/dist/ocr_models/*
+!/dist/ocr_models/PP-OCRv6_small_det.mnn
+!/dist/ocr_models/PP-OCRv6_small_rec.mnn
+!/dist/ocr_models/ppocr_keys_v6_small.txt
+
 /build_win_dbg.bat
 /build_win_release.bat
 /build_win_release_x64.bat
