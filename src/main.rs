@@ -332,6 +332,12 @@ fn main() {
     let app = app::App::default().with_scheme(app::Scheme::Base);
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
 
+    let instance = single_instance::SingleInstance::new("rtranslate").unwrap();
+    if !instance.is_single() {
+        app_message("rTranslate is already running");
+        std::process::exit(1);
+    }
+
     let conn = if GLOBAL_SETTINGS.use_db {
         Connection::open("history.db").ok()
     } else {
