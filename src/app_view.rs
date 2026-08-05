@@ -1520,6 +1520,7 @@ impl AppView {
         win.platform_show();
         let mut win_clone = win.clone();
         fltk::app::add_timeout3(0.1, move |_| {
+            win_clone.show();
             win_clone.set_on_top();
             win_clone.take_focus();
         });
