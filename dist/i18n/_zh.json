@@ -1,0 +1,44 @@
+//WARN! Machine translated. Help improve it via GitHub Issues or PRs. 
+{
+    //TRAY MENU
+    "screen_ocr": "屏幕 OCR",
+    "show_popup": "显示弹窗",
+    "show_popup_dict": "显示 词典弹窗",
+    "settings": "设置",
+    "exit": "退出",    
+
+    //MAIN WINDOW
+    "from": "源语言",
+    "to": "目标语言",
+
+    "translate_refresh": "翻译 / 刷新",
+    "send_to_dict": "发送到词典",
+    "play": "播放",
+    "download": "下载",
+    "add_to_fav": "添加至收藏",
+    "remove_from_fav": "从收藏中移除",
+
+    "recent_history": "最近历史",
+    "favorites": "收藏夹",
+
+    "source_text": "原文 (可编辑)",
+    "translation": "译文",
+    "dictionary_entry": "词典释义",
+    "prnn_cached": "发音缓存 (点击播放)",
+    "tts_cached": "TTS缓存 (点击播放)",
+
+    "translate_with": "翻译自",
+    "dictionary": "词典",
+    "tts_engine_voice": "TTS (引擎-语音)",
+    "pronunciation": "发音",
+
+    //POPUP WINDOW
+    "close": "关闭",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "刷新",
+    "lang": "语言",
+    "tts": "朗读",
+    //"send_to_dict",
+    "open_main_win": "打开主窗口",
+}

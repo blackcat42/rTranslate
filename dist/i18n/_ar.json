@@ -1,0 +1,45 @@
+{
+    //WARN! Machine translated. Help improve it via GitHub Issues or PRs.
+
+    //TRAY MENU
+    "screen_ocr": "تعرف على النص",
+    "show_popup": "إظهار النافذة المنبثقة",
+    "show_popup_dict": "إظهار منبثقة القاموس",
+    "settings": "الإعدادات",
+    "exit": "خروج",    
+
+    //MAIN WINDOW
+    "from": "من",
+    "to": "إلى",
+
+    "translate_refresh": "ترجمة / تحديث",
+    "send_to_dict": "إرسال إلى القاموس",
+    "play": "تشغيل",
+    "download": "تحميل",
+    "add_to_fav": "إضافة للمفضلة",
+    "remove_from_fav": "إزالة من المفضلة",
+
+    "recent_history": "السجل الأخير",
+    "favorites": "المفضلة",
+
+    "source_text": "المصدر (قابل للتعديل)",
+    "translation": "الترجمة",
+    "dictionary_entry": "إدخال القاموس",
+    "prnn_cached": "النطق (مخزن مؤقتاً)",
+    "tts_cached": "TTS (مخزن مؤقتاً)",
+
+    "translate_with": "ترجمة بواسطة",
+    "dictionary": "القاموس",
+    "tts_engine_voice": "TTS",
+    "pronunciation": "النطق",
+
+    //POPUP WINDOW
+    "close": "إغلاق",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "تحديث",
+    "lang": "اللغات",
+    "tts": "نطق النص",
+    //"send_to_dict",
+    "open_main_win": "فتح النافذة الرئيسية",
+}

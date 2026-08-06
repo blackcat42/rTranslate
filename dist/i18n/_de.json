@@ -1,0 +1,44 @@
+//WARN! Machine translated. Help improve it via GitHub Issues or PRs. 
+{
+    //TRAY MENU
+    "screen_ocr": "Bildschirm-OCR",
+    "show_popup": "Popup-Fenster anzeigen",
+    "show_popup_dict": "Wörterbuch-Popup anzeigen",
+    "settings": "Einstellungen",
+    "exit": "Beenden",    
+
+    //MAIN WINDOW
+    "from": "Von",
+    "to": "Nach",
+
+    "translate_refresh": "Übersetzen / Aktualisieren",
+    "send_to_dict": "Ins Wörterbuch senden",
+    "play": "Abspielen",
+    "download": "Herunterladen",
+    "add_to_fav": "Zu Favoriten hinzufügen",
+    "remove_from_fav": "Aus Favoriten entfernen",
+
+    "recent_history": "Verlauf",
+    "favorites": "Favoriten",
+
+    "source_text": "Quelle (bearbeitbar)",
+    "translation": "Übersetzung",
+    "dictionary_entry": "Wörterbucheintrag",
+    "prnn_cached": "Aussprachen (gecached)",
+    "tts_cached": "TTS (gecached)",
+
+    "translate_with": "Übersetzen mit",
+    "dictionary": "Wörterbuch",
+    "tts_engine_voice": "TTS (Engine-Stimme)",
+    "pronunciation": "Aussprache",
+
+    //POPUP WINDOW
+    "close": "Schließen",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "Aktualisieren",
+    "lang": "Sprachen",
+    "tts": "TTS",
+    //"send_to_dict",
+    "open_main_win": "Hauptfenster öffnen",
+}

@@ -1,0 +1,46 @@
+{
+    //WARN! Machine translated. Help improve it via GitHub Issues or PRs.
+
+    //TRAY MENU
+    "screen_ocr": "OCR d'écran",
+    "show_popup": "Afficher la fenêtre contextuelle",
+    "show_popup_dict": "Afficher le dictionnaire pop-up",
+    "settings": "Paramètres",
+    "exit": "Quitter",    
+
+    //MAIN WINDOW
+    "from": "De",
+    "to": "À",
+
+    "translate_refresh": "Traduire / Actualiser",
+    "send_to_dict": "Envoyer au dictionnaire",
+    "play": "Lire",
+    "download": "Télécharger",
+    "add_to_fav": "Ajouter aux favoris",
+    "remove_from_fav": "Supprimer des fav.",
+
+    "recent_history": "Historique récent",
+    "favorites": "Favoris",
+
+    "source_text": "Source (modifiable)",
+    "translation": "Traduction",
+    "dictionary_entry": "Entrée de dictionnaire",
+    "prnn_cached": "Prononciations (en cache)",
+    "tts_cached": "Synthèse vocale (en cache)",
+
+    "translate_with": "Traduire avec",
+    "dictionary": "Dictionnaire",
+    "tts_engine_voice": "TTS",
+    "pronunciation": "Prononciation",
+
+    //POPUP WINDOW
+    "close": "Fermer",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "Actualiser",
+    "lang": "Langues",
+    "tts": "TTS",
+    //"send_to_dict",
+    "open_main_win": "Ouvrir la fenêtre princ.",
+}
+
