@@ -270,6 +270,7 @@
      * ИНТЕРФЕЙС (шрифты, цвета)
      * ======================================
      */
+    "ui_lang": "ru",
     "ui_font_size": 12,
     "text_font_size": 14,
     "win_bg_color": "#C0C0C0", //"#D6CFC6",
@@ -277,6 +278,7 @@
     "text_bg_color_popup": "#F0F0F0",
     "text_bg_color_main": "#FFFFFF",
     "popup_opacity": 1.0, //0.0-1.0
+    "no_tooltips": false,
 
 
 

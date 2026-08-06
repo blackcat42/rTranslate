@@ -1,0 +1,43 @@
+{
+    //TRAY MENU
+    "screen_ocr": "Распознавание текста",
+    "show_popup": "Показать окно перевода",
+    "show_popup_dict": "Показать окно словаря",
+    "settings": "Настройки",
+    "exit": "Выход",
+
+    //MAIN WINDOW
+    "from": "Язык источника",
+    "to": "Язык перевода",
+
+    "translate_refresh": "Перевести / Обновить",
+    "send_to_dict": "Поиск в словаре",
+    "play": "Воспр.",
+    "download": "Скачать",
+    "add_to_fav": "Добавить в избранное",
+    "remove_from_fav": "Удалить из избранного",
+
+    "recent_history": "Недавнее",
+    "favorites": "Избранное",
+
+    "source_text": "Исходный текст",
+    "translation": "Перевод",
+    "dictionary_entry": "Словарь",
+    "prnn_cached": "Произношения (кешированные), нажмите чтобы воспроизвести",
+    "tts_cached": "TTS (кешированные), нажмите чтобы воспроизвести",
+
+    "translate_with": "Перевести с помощью",
+    "dictionary": "Словарь",
+    "tts_engine_voice": "Озвучка текста (движок-голос)",
+    "pronunciation": "Произношения",
+
+    //POPUP WINDOW
+    "close": "Закрыть",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "Обновить",
+    "lang": "Язык",
+    "tts": "Озвучить",
+    //"send_to_dict",
+    "open_main_win": "Открыть главное окно",
+}

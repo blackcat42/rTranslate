@@ -36,10 +36,11 @@ use crate::utils::helpers::{
     borderless_win_handler, 
     borderless_win_frame_handler
 };
+use crate::utils::widgets::TooltipExt;
 
 use super::GLOBAL_SETTINGS;
 use super::UICONFIG;
-
+use super::t;
 
 pub struct AppView {
     //app_sender: fltk::app::Sender<AppEvent>,
@@ -106,6 +107,17 @@ impl AppView {
         let text_bg_color_popup = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_popup).unwrap_or(enums::Color::from_hex(0xF0F0F0));
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
+
+        let mut tooltip_win = fltk::window::OverlayWindow::default().with_size(160, 20);
+        let mut tooltip_text = fltk::frame::Frame::default().size_of_parent().center_of_parent();
+        tooltip_text.set_frame(fltk::enums::FrameType::BorderBox);
+        tooltip_text.set_color(fltk::enums::Color::from_rgb(255, 255, 191));
+        tooltip_text.set_label("");
+        tooltip_win.end();
+        tooltip_win.set_border(false);
+        tooltip_win.set_override();
+        tooltip_win.hide();
+
         ////////////////////---------------BEGIN POPUP WIN---------------/////////////////////
         let mut win_popup = window::Window::default().with_size(550, 200);
         let mut frame_wrapper = group::Flex::default().column().size_of_parent();
@@ -125,6 +137,8 @@ impl AppView {
             close_button.set_image(Some(image));
             close_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //close_button.set_tooltip(t!(close));
+        close_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
 
         
         let mut title_frame = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
@@ -136,18 +150,24 @@ impl AppView {
             fav_button.set_image(Some(image));
             fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //fav_button.set_tooltip(t!(add_to_fav));
+        fav_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(add_to_fav));
 
         let mut refresh_button = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
             refresh_button.set_image(Some(image));
             refresh_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //refresh_button.set_tooltip(t!(refresh));
+        refresh_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(refresh));
 
         let mut lng_menu_button_wrapper = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
             lng_menu_button_wrapper.set_image(Some(image));
             lng_menu_button_wrapper.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //lng_menu_button_wrapper.set_tooltip(t!(lang));
+        lng_menu_button_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
         let mut tts_button = button::Button::new(28, 5, 18, 18, "");
@@ -155,6 +175,8 @@ impl AppView {
             tts_button.set_image(Some(image));
             tts_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //tts_button.set_tooltip(t!(tts));
+        tts_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(tts));
         /*let mut qsettings_button = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
             qsettings_button.set_image(Some(image));
@@ -165,11 +187,16 @@ impl AppView {
             dict_button.set_image(Some(image));
             dict_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //dict_button.set_tooltip(t!(send_to_dict));
+        dict_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(send_to_dict));
+
         let mut open_button = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\open.png").to_str().unwrap_or("")) {
             open_button.set_image(Some(image));
             open_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //open_button.set_tooltip(t!(open_main_win));
+        open_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
 
         flex_titlebar.fixed(&close_button, 18);
         flex_titlebar.fixed(&title_frame, 1);
@@ -285,6 +312,8 @@ impl AppView {
             close_button_dict.set_image(Some(image));
             close_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //close_button_dict.set_tooltip(t!(close));
+        close_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
         
         let mut title_frame_dict = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
         title_frame_dict.set_label_size(GLOBAL_SETTINGS.ui_font_size);
@@ -295,18 +324,24 @@ impl AppView {
             fav_button_dict.set_image(Some(image));
             fav_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //fav_button_dict.set_tooltip(t!(add_to_fav));
+        fav_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(add_to_fav));
 
         let mut refresh_button_dict = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
             refresh_button_dict.set_image(Some(image));
             refresh_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //refresh_button_dict.set_tooltip(t!(refresh));
+        refresh_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(refresh));
 
         let mut lng_menu_button_wrapper_dict = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
             lng_menu_button_wrapper_dict.set_image(Some(image));
             lng_menu_button_wrapper_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //lng_menu_button_wrapper_dict.set_tooltip(t!(lang));
+        lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
         let mut prnn_button_dict = button::Button::new(51, 5, 18, 18, "");
@@ -314,6 +349,8 @@ impl AppView {
             prnn_button_dict.set_image(Some(image));
             prnn_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //prnn_button_dict.set_tooltip(t!(pronunciation));
+        prnn_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(pronunciation));
 
         
         let mut open_button_dict = button::Button::new(51, 5, 18, 18, "");
@@ -321,6 +358,8 @@ impl AppView {
             open_button_dict.set_image(Some(image));
             open_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
+        //open_button_dict.set_tooltip(t!(open_main_win));
+        open_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
 
         flex_titlebar_dict.fixed(&close_button_dict, 18);
         flex_titlebar_dict.fixed(&title_frame_dict, 1);
@@ -414,7 +453,7 @@ impl AppView {
         main_flex_left.set_type(group::FlexType::Column);
 
         let mut main_src_txt_wrapper = group::Flex::default().column();
-        let mut main_src_txt = text::TextEditor::default().with_label("Source text (editable):").with_align(fltk::enums::Align::TopLeft);
+        let mut main_src_txt = text::TextEditor::default().with_label(t!(source_text)).with_align(fltk::enums::Align::TopLeft);
         main_src_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_src_txt.set_buffer(src_buf.clone());
         main_src_txt.wrap_mode(text::WrapMode::AtBounds, 0);
@@ -427,7 +466,7 @@ impl AppView {
 
         let mut main_controls_left = group::Flex::default().column();
         let mut col_left_row_lng = group::Flex::default().row();
-        let mut lang_choice_from = fltk::menu::Choice::default().with_size(30, 10).with_label("From:").with_align(fltk::enums::Align::TopLeft);
+        let mut lang_choice_from = fltk::menu::Choice::default().with_size(30, 10).with_label(t!(from)).with_align(fltk::enums::Align::TopLeft);
 
         for lng in Lang::iter() {
             lang_choice_from.add(
@@ -444,7 +483,7 @@ impl AppView {
             ); 
         }
         //let col_left_row1_tr_but1 = button::Button::default().with_label("@<->").with_size(20, 20);
-        let mut lang_choice_to = fltk::menu::Choice::default().with_size(30, 10).with_label("To:").with_align(fltk::enums::Align::TopLeft);
+        let mut lang_choice_to = fltk::menu::Choice::default().with_size(30, 10).with_label(t!(to)).with_align(fltk::enums::Align::TopLeft);
         for lng in Lang::iter() {
             lang_choice_to.add(
                 lng.clone().name(),
@@ -466,7 +505,7 @@ impl AppView {
 
         let mut col_left_row_tr = group::Flex::default().row();
 
-        let mut transl_choice = fltk::menu::Choice::default().with_size(30, 10).with_label("Translate with:").with_align(fltk::enums::Align::TopLeft);
+        let mut transl_choice = fltk::menu::Choice::default().with_size(30, 10).with_label(t!(translate_with)).with_align(fltk::enums::Align::TopLeft);
 
         for transl_ch in GLOBAL_SETTINGS.translators.iter() {
             transl_choice.add(
@@ -483,7 +522,7 @@ impl AppView {
             );
         }
 
-        let mut run_transl_btn_main = button::Button::default().with_label("Translate / Refresh").with_size(20, 20);
+        let mut run_transl_btn_main = button::Button::default().with_label(t!(translate_refresh)).with_size(20, 20);
         run_transl_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
@@ -497,7 +536,7 @@ impl AppView {
         col_left_row_tr.end();
 
         let mut col_left_row_dict = group::Flex::default().row();
-        let mut dict_choice = fltk::menu::Choice::default().with_size(30, 10).with_label("Dictionary:").with_align(fltk::enums::Align::TopLeft);
+        let mut dict_choice = fltk::menu::Choice::default().with_size(30, 10).with_label(t!(dictionary)).with_align(fltk::enums::Align::TopLeft);
 
         for dict_ch in GLOBAL_SETTINGS.dictionaries.iter() {
             dict_choice.add(
@@ -513,7 +552,7 @@ impl AppView {
                 },
             );
         }
-        let mut run_dict_btn_main = button::Button::default().with_label("Send to Dictionary").with_size(20, 20);
+        let mut run_dict_btn_main = button::Button::default().with_label(t!(send_to_dict)).with_size(20, 20);
         run_dict_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
@@ -527,7 +566,7 @@ impl AppView {
         col_left_row_dict.end();
 
         let mut col_left_row_tts = group::Flex::default().row();
-        let mut tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("TTS engine/voice:").with_align(fltk::enums::Align::TopLeft);
+        let mut tts_choice = fltk::menu::Choice::default().with_size(50, 10).with_label(t!(tts_engine_voice)).with_align(fltk::enums::Align::TopLeft);
 
         for srvc in GLOBAL_SETTINGS.tts_services.iter() {
             for tts_voice in srvc.voices.iter() {
@@ -546,7 +585,7 @@ impl AppView {
             }
         }
 
-        let mut _col1_row1_tts_but = button::Button::default().with_size(10, 10).with_label("Play");
+        let mut _col1_row1_tts_but = button::Button::default().with_size(10, 10).with_label(t!(play));
         /*if let Ok(image) = PngImage::load(working_dir.join(r"icons\play.png").to_str().unwrap_or("")) {
             _col1_row1_tts_but.set_image(Some(image));
             _col1_row1_tts_but.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
@@ -559,7 +598,7 @@ impl AppView {
         });
     
 
-        let mut prnn_choice = fltk::menu::Choice::default().with_size(50, 10).with_label("Pronunciation:").with_align(fltk::enums::Align::TopLeft);
+        let mut prnn_choice = fltk::menu::Choice::default().with_size(50, 10).with_label(t!(pronunciation)).with_align(fltk::enums::Align::TopLeft);
 
         for qwe in GLOBAL_SETTINGS.prnn_services.iter() {
             let name = (*qwe.name).to_string();
@@ -599,7 +638,7 @@ impl AppView {
 
 
         let mut col_left_row_fav = group::Flex::default().row();
-        let mut fav_button_main = button::Button::new(51, 5, 18, 18, "").with_label("Add to favorites");
+        let mut fav_button_main = button::Button::new(51, 5, 18, 18, "").with_label(t!(add_to_fav));
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
             fav_button_main.set_image(Some(image));
             fav_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
@@ -624,7 +663,7 @@ impl AppView {
         let mut col_main_tabs = group::Flex::default().row().with_pos(5, 0);
         let mut tab = group::Tabs::default().with_size(100, 50); //::default_fill not working in debug mode
 
-        let history_tab = group::Flex::default_fill().with_label("Recent history\t").column();
+        let history_tab = group::Flex::default_fill().with_label(&format!("{}\t", t!(recent_history))).column();
         let mut history_browser_wrapper = group::Flex::default().row();
         let mut browser = browser::HoldBrowser::new(0, 20, 200, 200, None);
         browser.set_column_widths(&[100, 100]);
@@ -634,7 +673,7 @@ impl AppView {
         history_browser_wrapper.end();
         history_tab.end();
 
-        let fav_tab = group::Flex::default_fill().with_label("Favorites\t").column();
+        let fav_tab = group::Flex::default_fill().with_label(&format!("{}\t", t!(favorites))).column();
         let mut fav_browser_wrapper = group::Flex::default().row();
         let mut fav_browser = browser::HoldBrowser::new(0, 20, 200, 200, None);
         fav_browser.set_column_widths(&[100, 100]);
@@ -659,24 +698,24 @@ impl AppView {
         let mut main_flex_right = group::Flex::new(400,0,400,585,None);
         main_flex_right.set_type(group::FlexType::Column);
         
-        let mut main_transl_txt = text::TextDisplay::default().with_label("Translation:").with_align(fltk::enums::Align::TopLeft);
+        let mut main_transl_txt = text::TextDisplay::default().with_label(t!(translation)).with_align(fltk::enums::Align::TopLeft);
         main_transl_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_transl_txt.set_buffer(translation_buf.clone());
         main_transl_txt.wrap_mode(text::WrapMode::AtBounds, 0);
 
-        let mut main_dict_txt = text::TextDisplay::default().with_label("Dictionary entry:").with_align(fltk::enums::Align::TopLeft);
+        let mut main_dict_txt = text::TextDisplay::default().with_label(t!(dictionary_entry)).with_align(fltk::enums::Align::TopLeft);
         main_dict_txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
         main_dict_txt.set_buffer(dict_buf.clone());
         main_dict_txt.wrap_mode(text::WrapMode::AtBounds, 0);
         //main_dict_txt.above_of(&dict_assets_browser, 20);
         main_flex_right.fixed(&main_dict_txt, 125);
 
-        let mut dict_assets_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label("Pronunciations (cached), click to play:").with_align(fltk::enums::Align::TopLeft);
+        let mut dict_assets_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label(t!(prnn_cached)).with_align(fltk::enums::Align::TopLeft);
         dict_assets_browser.set_column_widths(&[100, 100]);
         dict_assets_browser.set_column_char('\t');
         main_flex_right.fixed(&dict_assets_browser, 125);
 
-        let mut tts_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label("TTS (cached), click to play:").with_align(fltk::enums::Align::TopLeft);
+        let mut tts_browser = browser::HoldBrowser::new(0, 0, 200, 200, None).with_label(t!(tts_cached)).with_align(fltk::enums::Align::TopLeft);
         tts_browser.set_column_widths(&[100, 100]);
         tts_browser.set_column_char('\t');
         main_flex_right.fixed(&tts_browser, 125);
@@ -1239,13 +1278,13 @@ impl AppView {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
                     self.fav_button.set_image(Some(image.clone()));
                     self.fav_button_main.set_image(Some(image));
-                    self.fav_button_main.set_label("Remove from fav.");
+                    self.fav_button_main.set_label(t!(remove_from_fav));
                 }
             } else {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
                     self.fav_button.set_image(Some(image.clone()));
                     self.fav_button_main.set_image(Some(image));
-                    self.fav_button_main.set_label("Add to favorites");
+                    self.fav_button_main.set_label(t!(add_to_fav));
                 }
             }
         }

@@ -1,0 +1,43 @@
+{
+    //TRAY MENU
+    "screen_ocr": "Screen OCR",
+    "show_popup": "Show popup window",
+    "show_popup_dict": "Show dict. popup window",
+    "settings": "Settings",
+    "exit": "Exit",    
+
+    //MAIN WINDOW
+    "from": "From",
+    "to": "To",
+
+    "translate_refresh": "Translate / Refresh",
+    "send_to_dict": "Send to dictionary",
+    "play": "Play",
+    "download": "Download",
+    "add_to_fav": "Add to favorites",
+    "remove_from_fav": "Remove from fav.",
+
+    "recent_history": "Recent history",
+    "favorites": "Favorites",
+
+    "source_text": "Source (editable)",
+    "translation": "Translation",
+    "dictionary_entry": "Dictionary entry",
+    "prnn_cached": "Pronunciations (cached)",
+    "tts_cached": "TTS (cached)",
+
+    "translate_with": "Translate with",
+    "dictionary": "Dictionary",
+    "tts_engine_voice": "TTS (engine-voice)",
+    "pronunciation": "Pronunciation",
+
+    //POPUP WINDOW
+    "close": "Close",
+    //"add_to_fav", 
+    //"remove_from_fav",
+    "refresh": "Refresh",
+    "lang": "Languages",
+    "tts": "TTS",
+    //"send_to_dict",
+    "open_main_win": "Open main window",
+}

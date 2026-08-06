@@ -65,6 +65,7 @@ mod app_state;
 mod app_view;
 mod screen_ocr;
 mod utils;
+mod i18n;
 use types::{AppEvent, TrayEvent, OCRModelOption};
 use app_state::{AppState};
 use app_view::{AppView};
@@ -121,12 +122,15 @@ pub struct Settings {
     pub pinned_target_languages: Vec<String>,
     pub switch_target_lang: bool,
 
+    pub ui_lang: String,
     pub ui_font_size: i32,
     pub text_font_size: i32,
     pub win_bg_color: String,
     pub text_bg_color_popup: String,
     pub text_bg_color_main: String,
     pub popup_opacity: f64,
+    #[serde(default = "default_as_false")]
+    pub no_tooltips: bool,
 
     pub translate_hotkey: Option<String>,
     pub dict_hotkey: Option<String>,
@@ -213,14 +217,17 @@ pub struct ProxyOption {
 }
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
-    let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
-    dprintln!("{}", locale);
-    let default_settings_file = if locale.starts_with("ru") {
-        "./i18n/settings.json.ru.default"
-    } else {
-        "./i18n/settings.json.en.default"
-    };
+    
     if !std::path::Path::new("./settings.json").exists() {
+        let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
+        let locale: String = locale.chars().take(2).collect();
+        dprintln!("{}", locale);
+        let mut default_settings_file = format!("./i18n/settings.json.{}.default", locale);
+        if !std::path::Path::new(&default_settings_file).exists() {
+            default_settings_file = "./i18n/settings.json.en.default".to_string();
+            //TODO: impl default for struct
+        }
+
         std::fs::copy(default_settings_file, "./settings.json").unwrap_or_else(|e| {
             app_message("Failed to open settings.json");
             panic!("Error: {}", e);
@@ -329,6 +336,9 @@ fn main() {
         let _ = std::env::set_current_dir(exe_path);
     }
 
+    LazyLock::force(&GLOBAL_SETTINGS);
+    LazyLock::force(&i18n::LOCALIZATION);
+
     let app = app::App::default().with_scheme(app::Scheme::Base);
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
 
@@ -377,28 +387,28 @@ fn main() {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowMainWin));
         }
     }).unwrap();
-    tray.add_menu_item("Screen OCR", {
+    tray.add_menu_item(t!(screen_ocr), {
         move || {
             app_sender.send(AppEvent::OCRInit);
         }
     }).unwrap();
     tray.inner_mut().add_separator().unwrap();
-    tray.add_menu_item("Show popup window", {
+    tray.add_menu_item(t!(show_popup), {
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowPopupWin));
         }
     }).unwrap();
-    tray.add_menu_item("Show dict. popup window", {
+    tray.add_menu_item(t!(show_popup_dict), {
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowPopupDictWin));
         }
     }).unwrap();
-    tray.add_menu_item("Settings", {
+    tray.add_menu_item(t!(settings), {
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::Settings));
         }
     }).unwrap();
-    tray.add_menu_item("Exit", {
+    tray.add_menu_item(t!(exit), {
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::Exit));
         }
