@@ -35,23 +35,44 @@ jobs:
           choco install cmake -y
         shell: cmd
 
-      - name: Build on Windows with Static Linking
+      - name: Build on Windows
         #env:
         #  RUSTFLAGS: "-C target-feature=+crt-static"
         run: cargo build --release --locked --target i686-pc-windows-msvc
 
+      - name: Build on Windows x64
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Copy Release directory
+      shell: pwsh
+      run: |
+        Copy-Item -Path "dist" -Destination "dist_x64" -Recurse -Force
+
       - name: Prepare Release Folder
         shell: pwsh
         run: |
+          Copy-Item "utils\combase\combase.dll" -Destination "dist\" -Force
           Copy-Item "target\i686-pc-windows-msvc\release\rTranslate.exe" -Destination "dist\" -Force
           gh release download --repo "blackcat42/rtranslate-utils" --pattern "rt_ocr.exe" --dir "dist\"
           gh release download --repo "blackcat42/rtranslate-utils" --pattern "wreq_cli.exe" --dir "dist\"
-          Compress-Archive -Path "dist\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows-x86.zip"
+          Compress-Archive -Path "dist\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows_xp-x86.zip"
+
+      - name: Prepare Release Folder x64
+        shell: pwsh
+        run: |
+          Copy-Item "target\x86_64-pc-windows-msvc\release\rTranslate.exe" -Destination "dist_x64\" -Force
+          gh release download --repo "blackcat42/rtranslate-utils" --pattern "rt_ocr_x64.exe" --dir "dist_x64\"
+          gh release download --repo "blackcat42/rtranslate-utils" --pattern "wreq_cli_x64.exe" --dir "dist_x64\"
+          Move-Item -Path "dist_x64\rt_ocr_x64.exe" -Destination "dist_x64\rt_ocr.exe" -Force
+          Move-Item -Path "dist_x64\wreq_cli_x64.exe" -Destination "dist_x64\wreq_cli.exe" -Force
+          Compress-Archive -Path "dist_x64\*" -DestinationPath "rtranslate-${{github.ref_name}}-windows-x64.zip"
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: rtranslate-${{github.ref_name}}-windows-x86.zip
+          files: |
+            rtranslate-${{github.ref_name}}-windows-x64.zip
+            rtranslate-${{github.ref_name}}-windows_xp-x86.zip
           tag_name: ${{ github.ref }}
           draft: false
           prerelease: false
