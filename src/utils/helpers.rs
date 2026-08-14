@@ -7,10 +7,31 @@ use fltk::{
 };
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::sync::{OnceLock};
 
 use crate::types::{
     BLWCoords
 };
+
+static WIN7_OR_GREATER: OnceLock<bool> = OnceLock::new();
+
+pub fn is_win7_or_greater() -> bool {
+    *WIN7_OR_GREATER.get_or_init(|| {
+        unsafe { 
+            let version = windows_sys::Win32::System::SystemInformation::GetVersion();
+            let major = (version & 0xFF) as u8;
+            let minor = ((version >> 8) & 0xFF) as u8;
+
+            if major > 6 || (major == 6 && minor > 0) {
+                //Windows 8: 6.2; Windows 7: 6.1
+                true
+            } else {
+                //Windows Vista: 6.0; Windows XP Pro x64: 5.2; Windows XP: 5.1; Windows 2000: 5.0
+                false
+            }
+        }
+    })
+}
 
 pub fn app_message(e: &str) {
     let pos = screen_center();

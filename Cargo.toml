@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 which = "8.0.0"
-fltk = { version = "^1.5", features = ["fltk-bundled"] } #"static-msvcrt", 
+fltk = { version = "^1.5", features = ["fltk-bundled"] } #"static-msvcrt", "no-gdiplus"
 anyhow = "1.0.100"
 ureq = { version = "=3.3.0", features = ["socks-proxy"] }
 image = "0.25.9"
@@ -15,7 +15,10 @@ image = "0.25.9"
 tray-item = { git = "https://github.com/blackcat42/tray-item-rs.git", rev = "ea1eb80" }
 get-selected-text = "=0.1.6" #todo: high ram usage
 unicode-truncate = "2.0.1"
-global-hotkey = "0.7.0"
+#global-hotkey = "0.8.0"
+#global-hotkey = { path = "./global-hotkey-global-hotkey" }
+global-hotkey = { git = "https://github.com/blackcat42/global-hotkey.git", rev = "7952f87" }
+#handy-keys = "=0.3.4"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 twox-hash = "2.1.2"
 strum = "0.27.2"
@@ -37,6 +40,8 @@ unicode-segmentation = "1.13.3"
 sys-locale = "0.3.2"
 single-instance = "0.3.3"
 
+windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation"] }
+
 #tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread"] }
 #wreq = { version = "5.3.0", features = ["gzip", "stream", "cookies"] }
 #wreq-util = "2.2.6"
@@ -53,6 +58,7 @@ base64 = "=0.22.1"
 
 [build-dependencies]
 embed-resource = "2.3"
+thunk-rs = { version = "0.3.5", features = ["xp", "subsystem_windows"] } #"subsystem_windows", , "vc_ltl_only"
 winres = "0.1.12"
 
 [profile.release]

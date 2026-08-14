@@ -357,6 +357,12 @@ fn main() {
     if GLOBAL_SETTINGS.history_max_entries >= 0 && conn.is_some() {
         let _ = clear_history(&conn);
     }
+    
+    let mut dummy_win = fltk::window::Window::new(0, 0, 0, 0, "");
+    dummy_win.set_border(false);
+    dummy_win.end();
+    dummy_win.show();
+    dummy_win.set_pos(-100, -100);
 
     let mut app_view = AppView::new(app_sender);
     let mut app_state = AppState::new(app_sender, conn);

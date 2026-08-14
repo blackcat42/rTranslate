@@ -44,7 +44,7 @@ See GitHub Actions workflow.
 - **bergamot-translate:** github.com/browsermt/bergamot-translator
 - **kokoro-js:** github.com/hexgrad/kokoro
 - **oggenc2:** rarewares.org/ogg-oggenc.php
-- **QuickJS-NG:** github.com/quickjs-ng/quickjs/releases/download/v0.15.1/qjs-windows-x86.exe
+- **QuickJS:** bellard.org/quickjs/binary_releases/quickjs-win-i686-2026-06-04.zip
 - **Rust PaddleOCR:** models from github.com/zibo-chen/rust-paddle-ocr/tree/de823d33a76eb2123038be27319da74168bdc069/models
 
 **Icons:**

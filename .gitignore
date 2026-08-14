@@ -25,6 +25,7 @@ target
 /dist/extensions/tts_kokoro/node_modules/
 /dist/dictionaries/
 /dist/tts_cache/
+/dist/combase.dll
 /dist/*.exe
 !/dist/oggenc2.exe
 !/dist/qjs.exe

@@ -924,8 +924,8 @@ impl AppView {
         });*/
         app::flush();
         //app::wait_for(0.0);
-        win_popup.platform_hide();
-        win_popup_dict.platform_hide();
+        win_popup.hide();
+        win_popup_dict.hide();
         /*app::add_timeout3(0.1, {
             let win_popup = win_popup.clone();
             let win_popup_dict = win_popup_dict.clone();
@@ -1038,15 +1038,15 @@ impl AppView {
 
         //WIDGET CALLBACKS
         close_button.set_callback({
-            let win_popup = win_popup.clone();
+            let mut win_popup = win_popup.clone();
             move |_| {
-                win_popup.platform_hide();
+                win_popup.hide();
             }
         });
         close_button_dict.set_callback({
-            let win_popup_dict = win_popup_dict.clone();
+            let mut win_popup_dict = win_popup_dict.clone();
             move |_| {
-                win_popup_dict.platform_hide();
+                win_popup_dict.hide();
             }
         });
         fav_button.set_callback({
@@ -1087,7 +1087,7 @@ impl AppView {
             move |_button| {
                 win_popup_dict.set_pos(win_popup.x_root() + 50, win_popup.y_root() + 50);
                 win_popup_dict.set_on_top();
-                win_popup_dict.platform_show();
+                win_popup_dict.show();
                 s.send(AppEvent::SendToDict());
             }
         });
@@ -1114,29 +1114,29 @@ impl AppView {
         open_button.set_callback({
             //let s = app_sender;
             let mut main_win = main_win.clone();
-            let win_popup = win_popup.clone();
+            let mut win_popup = win_popup.clone();
             move |_| {
                 main_win.show();
-                win_popup.platform_hide();
+                win_popup.hide();
             }
         });
         open_button_dict.set_callback({
             //let s = app_sender;
             let mut main_win = main_win.clone();
-            let win_popup_dict = win_popup_dict.clone();
+            let mut win_popup_dict = win_popup_dict.clone();
             move |_| {
                 main_win.show();
-                win_popup_dict.platform_hide();
+                win_popup_dict.hide();
             }
         });
         
         win_popup.clone().set_callback(|w| {
             // We intercept the closing of the window here
-            w.platform_hide();
+            w.hide();
         });
         win_popup_dict.clone().set_callback(|w| {
             // We intercept the closing of the window here
-            w.platform_hide();
+            w.hide();
         });
 
         main_win.resize(100, 100, UICONFIG.main_window_w, UICONFIG.main_window_h);
@@ -1556,10 +1556,10 @@ impl AppView {
             win.set_pos(x, y);
         }
 
-        win.platform_show();
+        win.hide();
+        win.show();
         let mut win_clone = win.clone();
         fltk::app::add_timeout3(0.1, move |_| {
-            win_clone.show();
             win_clone.set_on_top();
             win_clone.take_focus();
         });

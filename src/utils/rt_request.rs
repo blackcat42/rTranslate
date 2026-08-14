@@ -6,7 +6,10 @@ use debug_print::{debug_println as dprintln};
 //use std::str::FromStr;
 use std::{time::Duration};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 
+use crate::utils::helpers::is_win7_or_greater;
 use super::GLOBAL_SETTINGS;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
@@ -406,47 +409,79 @@ fn run_wreq_cli(request: Client) -> Result<Response> {
         
     if which::which(&command).is_ok() {
     	dprintln!("cmd found");
-        let mut child_output = std::process::Command::new(working_dir.join(&command));
+        let mut child = std::process::Command::new(working_dir.join(&command));
 
-        child_output.arg(&arg_url);
-        child_output.arg(&arg_X);
+        child.arg(&arg_url);
+        child.arg(&arg_X);
         if let Some(arr) = args_H {
-        	child_output.args(&arr);
+        	child.args(&arr);
         }
         if let Some(arr) = args_data {
-        	child_output.args(&arr);
+        	child.args(&arr);
         }
         if let Some(d) = arg_d {
-        	child_output.arg(&d);
+        	child.arg(&d);
         }
         if let Some(p) = arg_proxy {
-        	child_output.arg(&p);
+        	child.arg(&p);
         	if let Some(u) = arg_U {
-        		child_output.arg(&u);
+        		child.arg(&u);
         	}
         }
         if let Some(e) = arg_emulation {
-        	child_output.arg(&e);
+        	child.arg(&e);
         }
         if let Some(h) = arg_http {
-        	child_output.arg(&h);
+        	child.arg(&h);
         }
         if let Some(t) = arg_timeout {
-        	child_output.arg(&t);
+        	child.arg(&t);
         }
         if arg_gzip {
-        	child_output.arg("--gzip");
+        	child.arg("--gzip");
         }
         if arg_base64 {
-        	child_output.arg("--base64-response");
+        	child.arg("--base64-response");
         }
         
-        child_output
+        child
             .creation_flags(CREATE_NO_WINDOW)
             .current_dir(working_dir);
-        let child_output = child_output.output()?;
-        let child_err = String::from_utf8_lossy(&child_output.stderr).into_owned();
-        let child_output = String::from_utf8_lossy(&child_output.stdout).into_owned();
+
+        let mut child_err: String;
+        let mut child_output: String;
+        if !is_win7_or_greater() {
+            let output_file = File::create("wreq_output.tmp")?;
+            let output_err_file = File::create("wreq_output_err.tmp")?;
+
+            {
+                let mut child = child
+                	.stdin(std::process::Stdio::null()) 
+                	.stdout(std::process::Stdio::from(output_file)) 
+                	.stderr(std::process::Stdio::from(output_err_file));
+                let mut child = child.spawn()?;
+                let status = child.wait()?;
+            }
+
+            if let Ok(mut file) = File::open("wreq_output.tmp") {
+                file.read_to_string(&mut child_output)?;
+            }
+            if let Ok(mut file) = File::open("wreq_output_err.tmp") {
+                file.read_to_string(&mut child_err)?;
+            }
+            if let Err(e) = std::fs::remove_file("wreq_output.tmp") {
+                println!("error remove file: {}", e);
+            }
+            if let Err(e) = std::fs::remove_file("wreq_output_err.tmp") {
+                println!("error remove file: {}", e);
+            }
+        } else {
+            let child = child.output()?;
+        	child_err = String::from_utf8_lossy(&child.stderr).into_owned();
+        	child_output = String::from_utf8_lossy(&child.stdout).into_owned();
+        }
+
+        
         dprintln!("{}", child_err);
         dprintln!("{}", child_output);
 

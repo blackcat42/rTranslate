@@ -1,0 +1,1 @@
+#pragma comment(linker, "/export:CoTaskMemFree=ole32.CoTaskMemFree")

@@ -6,10 +6,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
+use crate::utils::helpers::is_win7_or_greater;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use crate::utils::rt_request;
+use std::fs::File;
+use std::io::Read;
 
 thread_local! {
     static JS_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
@@ -236,10 +239,42 @@ fn run_qt_service(srvc_id: &str, eval_str: &str) -> Result<QTData> {
         .creation_flags(CREATE_NO_WINDOW)
         .current_dir(working_dir);
 
+        let mut child_output = String::new();
+        let mut child_err = String::new();
+
+        if !is_win7_or_greater() {
+            let output_file = File::create("qjs_output.tmp")?;
+            let output_err_file = File::create("qjs_output_err.tmp")?;
+
+            {
+                let mut child = child
+                .stdin(std::process::Stdio::null()) 
+                .stdout(std::process::Stdio::from(output_file)) 
+                .stderr(std::process::Stdio::from(output_err_file));
+                let mut child = child.spawn()?;
+                let status = child.wait()?;
+            }
+
+            if let Ok(mut file) = File::open("qjs_output.tmp") {
+                file.read_to_string(&mut child_output)?;
+            }
+            if let Ok(mut file) = File::open("qjs_output_err.tmp") {
+                file.read_to_string(&mut child_err)?;
+            }
+            if let Err(e) = std::fs::remove_file("qjs_output.tmp") {
+                println!("error remove file: {}", e);
+            }
+            if let Err(e) = std::fs::remove_file("qjs_output_err.tmp") {
+                println!("error remove file: {}", e);
+            }
+        } else {
+            let output = child.output()?;
+            child_err = String::from_utf8_lossy(&output.stderr).into_owned();
+            child_output = String::from_utf8_lossy(&output.stdout).into_owned();
+        }
+
         //dprintln!("cmd: {:?}", child);
-        let child_output = child.output()?;
-        let child_err = String::from_utf8_lossy(&child_output.stderr).into_owned();
-        let child_output = String::from_utf8_lossy(&child_output.stdout).into_owned();
+        
         dprintln!("{}", child_err);
         dprintln!("{}", child_output);
 

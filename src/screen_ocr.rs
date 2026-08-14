@@ -22,6 +22,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::{Write, Read};
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::fs::File;
 
 use crate::types::{
     AppEvent,
@@ -30,7 +31,8 @@ use crate::types::{
 };
 use crate::utils::helpers::{
     borderless_win_handler, 
-    borderless_win_frame_handler
+    borderless_win_frame_handler,
+    is_win7_or_greater
 };
 use super::GLOBAL_SETTINGS;
 //use super::UICONFIG;
@@ -315,6 +317,10 @@ impl ScreenOCR {
 
     pub fn run_ocr(&mut self) -> Result<()> {
 
+        if !is_win7_or_greater() {
+            return self.run_ocr_winxp();
+        }
+
         if self.is_processing.load(Ordering::SeqCst) {
             self.terminate();
             return Ok(());
@@ -427,6 +433,140 @@ impl ScreenOCR {
 
         Ok(())
     }
+
+    pub fn run_ocr_winxp(&mut self) -> Result<()> {
+        //TODO
+        if self.is_processing.load(Ordering::SeqCst) {
+            self.terminate();
+            return Ok(());
+        } else {
+            self.terminate();
+        }
+        
+        if self.ocr_thread.is_some() {
+            return Ok(());
+        }
+        let working_dir = std::env::current_dir().unwrap();
+
+        let image_data;
+        let width_bytes;
+        let height_bytes;
+        if let Some(i) = &self.crop {
+            image_data = i.img.clone();
+            width_bytes = i.width as u32;
+            height_bytes = i.height as u32;
+        } else {
+            return Err(anyhow!("no image data"));
+        }
+        let size = image_data.len() as u32;
+
+        image::save_buffer(
+            "ocr_image.png",
+            &image_data,
+            width_bytes,
+            height_bytes,
+            image::ColorType::Rgba8,
+        )?;
+        
+        let (kill_tx, kill_rx) = std::sync::mpsc::channel();
+        self.kill_sender = Some(kill_tx);
+
+        let mut det_model = "ocr_models/PP-OCRv6_small_det.mnn".to_string();
+        let mut rec_model = "ocr_models/PP-OCRv6_small_rec.mnn".to_string();
+        let mut charset = "ocr_models/ppocr_keys_v6_small.txt".to_string();
+
+        if let Some(text) = self.choice_ocr_model.choice() {
+            let last_match: Option<&OCRModelOption> = GLOBAL_SETTINGS.ocr_models
+                .iter()
+                .rev()
+                .find(|model| model.name == text);
+            if let Some(model) = last_match {
+                det_model = model.det_model.clone();
+                rec_model = model.rec_model.clone();
+                charset = model.charset.clone();
+            }
+        } 
+
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let command = ".\\rt_ocr".to_string();
+
+        let mut child_output = String::new();
+        let mut child_err = String::new();
+
+        let mut child;
+        if which::which(&command).is_ok() {
+            let output_file = File::create("ocr_output.tmp")?;
+            let output_err_file = File::create("ocr_output_err.tmp")?;
+
+            child = std::process::Command::new(working_dir.join(&command))
+                .arg("-f").arg("ocr_image.png")
+                .arg("--det_model").arg(&det_model)
+                .arg("--rec_model").arg(&rec_model)
+                .arg("--charset").arg(&charset)
+                .creation_flags(CREATE_NO_WINDOW)
+                .current_dir(working_dir)
+                .stdin(std::process::Stdio::null()) 
+                .stdout(std::process::Stdio::from(output_file)) 
+                .stderr(std::process::Stdio::from(output_err_file))
+                .spawn()?;
+        } else {
+            self.app_sender.send(AppEvent::SetReady(Some("error".to_string()), false));
+            return Ok(());
+        }
+
+        let app_sender = self.app_sender;
+        self.set_waiting();
+        let handle = std::thread::spawn(move || {
+            loop {
+                if let Ok(_) = kill_rx.try_recv() {
+                    dprintln!("Kill signal received");
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break;
+                }
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        dprintln!("Process finished with: {:?}", status);
+                        break;
+                    }
+                    Ok(None) => {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                    Err(e) => {
+                        eprintln!("Error checking process: {}", e);
+                        break;
+                    }
+                }
+            }
+
+            if let Ok(mut file) = File::open("ocr_output.tmp") {
+                file.read_to_string(&mut child_output).unwrap();
+            }
+            if let Ok(mut file) = File::open("ocr_output_err.tmp") {
+                file.read_to_string(&mut child_err).unwrap();
+            }
+
+            //let mut output = String::new();
+            //stdout.read_to_string(&mut output)?;
+            let _ = app_sender.send(AppEvent::OCRSuccess(child_output));
+            dprintln!("ocr_thread_reader stopping");
+            if let Err(e) = std::fs::remove_file("ocr_output.tmp") {
+                println!("error remove file: {}", e);
+            }
+            if let Err(e) = std::fs::remove_file("ocr_output_err.tmp") {
+                println!("error remove file: {}", e);
+            }
+            if let Err(e) = std::fs::remove_file("ocr_image.png") {
+                println!("error remove file: {}", e);
+            }
+
+        });
+        self.ocr_thread = Some(handle);
+
+        Ok(())
+    }
+
 
     pub fn update_crop(&mut self, crop: CropSegment) {
         self.crop = Some(crop);
