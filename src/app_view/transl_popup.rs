@@ -99,7 +99,7 @@ impl TranslPopupView {
             lng_menu_button_wrapper.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
         //lng_menu_button_wrapper.set_tooltip(t!(lang));
-        lng_menu_button_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
+        //lng_menu_button_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
         let mut tts_button = button::Button::new(28, 5, 18, 18, "");
@@ -409,6 +409,7 @@ impl TranslPopupView {
             let mut win_popup = win_popup.clone();
             move |_| {
                 main_win.show();
+                let _ = main_win.take_focus();
                 win_popup.hide();
             }
         });

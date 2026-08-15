@@ -101,7 +101,7 @@ impl DictPopupView {
             lng_menu_button_wrapper_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }
         //lng_menu_button_wrapper_dict.set_tooltip(t!(lang));
-        lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
+        //lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
         let mut prnn_button_dict = button::Button::new(51, 5, 18, 18, "");
@@ -348,6 +348,7 @@ impl DictPopupView {
             let mut win_popup_dict = win_popup_dict.clone();
             move |_| {
                 main_win.show();
+                let _ = main_win.take_focus();
                 win_popup_dict.hide();
             }
         });

@@ -11,7 +11,7 @@ use anyhow::Result;
 
 use strum_macros::EnumIter;
 //use strum::IntoEnumIterator;
-use crate::screen_ocr::CropSegment;
+use crate::utils::screen_ocr::CropSegment;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]

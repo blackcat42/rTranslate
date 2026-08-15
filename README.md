@@ -1,7 +1,9 @@
 # rTranslate
 
 Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB RAM footprint). Local offline translation, OCR and TTS supported (bergamot with firefox models and kokoro.js through Deno's runtime).
-![popup_window](assets/scrnshts/s1.png) ![popup_dict](assets/scrnshts/s2.png)
+
+## Screenshots
+[<img src="assets/scrnshts/s1.png" width="200">](assets/scrnshts/s1.png) [<img src="assets/scrnshts/s2.png" width="200">](assets/scrnshts/s2.png) [<img src="assets/scrnshts/s3.png" width="200">](assets/scrnshts/s3.png) [<img src="assets/scrnshts/s4.png" width="200">](assets/scrnshts/s4.png)
 
 ## Default global hotkeys
 - **Translate the selected text:** Ctrl + Q
@@ -19,16 +21,19 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 - **Extensions:** Supports extensions running as sidecar processes that communicate with the host application via stdio.
 - **History & Favorites**
 
-![main_window](assets/scrnshts/s3.png)
-
 ## Roadmap
 
 - [x] Offline OCR (PaddleOCR)
+- [ ] QTranslate services support
+	- [x] translation
+	- [ ] dictionaries
+	- [ ] tts
 - [ ] Wiktionary parser
-- [ ] i18n
+- [x] i18n
 - [ ] Double-key shortcuts, mouse mode
 - [ ] High-DPI and multi-monitor setups support
-- [ ] Windows 7, XP(?), Linux support
+- [x] Windows 7, XP support
+- [ ] Builds for Linux
 - [ ] Codebase refactoring
 
 ## Installation

@@ -116,6 +116,6 @@ pub static LOCALIZATION: LazyLock<Locale> = LazyLock::new(|| {
 #[macro_export]
 macro_rules! t {
     ($key:ident) => {
-        &crate::i18n::LOCALIZATION.$key
+        &crate::utils::i18n::LOCALIZATION.$key
     };
 }

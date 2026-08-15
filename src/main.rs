@@ -60,16 +60,13 @@ mod tts_services;
 use tts_services::nodejs_tts;
 
 mod types;
-mod bbcode;
 mod app_state;
 mod app_view;
-mod screen_ocr;
 mod utils;
-mod i18n;
 use types::{AppEvent, TrayEvent, OCRModelOption};
 use app_state::{AppState};
 use app_view::{AppView};
-use screen_ocr::{ScreenOCR};
+use utils::screen_ocr::{ScreenOCR};
 use std::sync::{LazyLock};
 use std::sync::{OnceLock};
 use utils::helpers::{
@@ -337,7 +334,7 @@ fn main() {
     }
 
     LazyLock::force(&GLOBAL_SETTINGS);
-    LazyLock::force(&i18n::LOCALIZATION);
+    LazyLock::force(&utils::i18n::LOCALIZATION);
 
     let app = app::App::default().with_scheme(app::Scheme::Base);
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
@@ -765,6 +762,7 @@ fn main() {
                         match tray_event {
                             TrayEvent::ShowMainWin => {
                                 app_view.main_win.window.show();
+                                let _ = app_view.main_win.window.take_focus();
                             }
                             TrayEvent::ShowPopupWin => {
                                 app_view.show_popup(false, false);

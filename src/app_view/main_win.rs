@@ -257,7 +257,7 @@ impl MainWinView {
             refresh_button_main.set_image(Some(image));
             refresh_button_main.set_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         }*/
-        col_left_row_fav.fixed(&fav_button_main, 135);
+        col_left_row_fav.fixed(&fav_button_main, 175);
         //col_left_row_fav.fixed(&refresh_button_main, 100);
         col_left_row_fav.set_margins(0,15,0,0);
         main_controls_left.fixed(&col_left_row_fav, 40);

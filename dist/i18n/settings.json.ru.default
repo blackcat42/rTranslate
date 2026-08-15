@@ -354,6 +354,12 @@
             "rec_model": "ocr_models/cyrillic_PP-OCRv5_mobile_rec_infer.mnn",
             "charset":   "ocr_models/ppocr_keys_cyrillic.txt"
         },*/
+        /*{
+            "name": "medium",
+            "det_model": "ocr_models/PP-OCRv6_medium_det.mnn",
+            "rec_model": "ocr_models/PP-OCRv6_medium_rec.mnn",
+            "charset":   "ocr_models/ppocr_keys_v6_medium.txt"
+        },*/
     ],
 
 }
