@@ -729,7 +729,7 @@ fn main() {
 
                     AppEvent::ToggleFav(is_dict) => {
                         if is_dict {
-                            let _ = app_state.toggle_fav(&app_view.src_dict, is_dict);
+                            let _ = app_state.toggle_fav(&app_view.dict_popup.src_dict, is_dict);
                         } else {
                             let _ = app_state.toggle_fav(&app_view.src, is_dict);
                         }
@@ -844,7 +844,7 @@ fn main() {
                     }
                     AppEvent::RequestDictEntry(fail_if_not_exist, force, check_buf) => 'request_dict_arm: {
                         //app_view.clear_ui(true);
-                        if check_buf && (app_view.src_buf.text() != app_view.src_dict) { //only src_buf in main_window is editable
+                        if check_buf && (app_view.src_buf.text() != app_view.dict_popup.src_dict) { //only src_buf in main_window is editable
                             if let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), true) {
                                 app_view.set_status(set_src_error.to_string().as_str(), true, true);
                                 break 'request_dict_arm;
@@ -888,8 +888,8 @@ fn main() {
                     }
 
                     AppEvent::PRNNString(force) => {
-                        app_view.prnn_index += 1;
-                        if let Err(error) = app_state.run_prnn(app_view.prnn_index, force) {
+                        app_view.dict_popup.prnn_index += 1;
+                        if let Err(error) = app_state.run_prnn(app_view.dict_popup.prnn_index, force) {
                             app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
                         }
                     }
@@ -967,8 +967,8 @@ fn main() {
 
         config.popup_w = app_view.win_popup.width();
         config.popup_h = app_view.win_popup.height();
-        config.popup_dict_w = app_view.win_popup_dict.width();
-        config.popup_dict_h = app_view.win_popup_dict.height();
+        config.popup_dict_w = app_view.dict_popup.win_popup_dict.width();
+        config.popup_dict_h = app_view.dict_popup.win_popup_dict.height();
 
         let ui_config = serde_json::to_string(&config).unwrap_or_else(|e| {
             app_message("Failed to serialize UICONFIG");

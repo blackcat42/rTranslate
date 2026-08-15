@@ -42,9 +42,12 @@ use super::GLOBAL_SETTINGS;
 use super::UICONFIG;
 use super::t;
 
+mod dict_popup;
+use dict_popup::{DictPopupView};
+
 pub struct AppView {
     //app_sender: fltk::app::Sender<AppEvent>,
-
+    pub dict_popup: DictPopupView,
     pub src_buf: text::TextBuffer,
     pub src_dict_buf: text::TextBuffer,
     translation_buf: text::TextBuffer,
@@ -54,17 +57,17 @@ pub struct AppView {
     is_processing: Arc<AtomicBool>,
 
     txt_popup: text::TextDisplay,
-    txt_popup_dict: text::TextDisplay,
+    //txt_popup_dict: text::TextDisplay,
     txt_main: text::TextDisplay,
     txt_dict_main: text::TextDisplay,
     title_frame: Frame,
-    title_frame_dict: Frame,
+    //title_frame_dict: Frame,
     //status_frame: Frame,
     status_frame_main: Frame,
     //status_frame_dict: Frame,
     pub src: String, //todo: use src_buf?
-    pub src_dict: String,
-    pub prnn_index: i32,
+    //pub src_dict: String,
+    //pub prnn_index: i32,
 
     transl_browser: fltk::browser::HoldBrowser,
     fav_browser: fltk::browser::HoldBrowser,
@@ -72,13 +75,13 @@ pub struct AppView {
     dict_assets_browser: fltk::browser::HoldBrowser,
 
     pub win_popup: DoubleWindow,
-    pub win_popup_dict: DoubleWindow,
+    //pub win_popup_dict: DoubleWindow,
     pub main_win: DoubleWindow,
 
     translator_buttons: HashMap<String, fltk::button::RadioButton>,
-    dict_buttons: HashMap<String, fltk::button::RadioButton>,
+    //dict_buttons: HashMap<String, fltk::button::RadioButton>,
     fav_button: button::Button,
-    fav_button_dict: button::Button,
+    //fav_button_dict: button::Button,
     fav_button_main: button::Button,
 
 
@@ -105,6 +108,14 @@ impl AppView {
         app::set_background2_color(text_bg_color_main_rgb.0, text_bg_color_main_rgb.1, text_bg_color_main_rgb.2);
 
         let text_bg_color_popup = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_popup).unwrap_or(enums::Color::from_hex(0xF0F0F0));
+
+
+        let dict_buf = text::TextBuffer::default();
+        let src_buf = text::TextBuffer::default();
+        let src_dict_buf = text::TextBuffer::default();
+        let translation_buf = text::TextBuffer::default();
+        let waiting_buf = text::TextBuffer::default();
+        let error_buf = text::TextBuffer::default();
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
 
@@ -218,10 +229,7 @@ impl AppView {
         flex.set_spacing(7);
 
         /////TEXTAREA
-        let src_buf = text::TextBuffer::default();
-        let translation_buf = text::TextBuffer::default();
-        let waiting_buf = text::TextBuffer::default();
-        let error_buf = text::TextBuffer::default();
+        
 
         let mut txt = text::TextDisplay::default();
         txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
@@ -293,153 +301,7 @@ impl AppView {
         ////////////////////---------------END POPUP WIN---------------/////////////////////
 
 
-        ////////////////////---------------BEGIN DICT POPUP WIN---------------/////////////////////
-        let mut win_popup_dict = window::Window::default().with_size(450, 200);
-        let mut frame_wrapper_dict = group::Flex::default().column().size_of_parent();
-
-        frame_wrapper_dict.set_margins(3,3,3,3);
-        let mut frame_dict = group::Flex::default().column();
-        frame_dict.set_spacing(3);
-        frame_dict.set_frame(fltk::enums::FrameType::EngravedBox);
-
-        ////////////////////---------------TITLEBAR---------------/////////////////////
-        let mut flex_titlebar_dict = group::Flex::default().row();//.below_of(&txt, 10);
-
-        flex_titlebar_dict.set_margins(2,2,3,0);
-        flex_titlebar_dict.set_pad(5);
-        let mut close_button_dict = button::Button::new(5, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\close.png").to_str().unwrap_or("")) {
-            close_button_dict.set_image(Some(image));
-            close_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //close_button_dict.set_tooltip(t!(close));
-        close_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
         
-        let mut title_frame_dict = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
-        title_frame_dict.set_label_size(GLOBAL_SETTINGS.ui_font_size);
-        let _status_s_frame = Frame::default();
-
-        let mut fav_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-            fav_button_dict.set_image(Some(image));
-            fav_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //fav_button_dict.set_tooltip(t!(add_to_fav));
-        fav_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(add_to_fav));
-
-        let mut refresh_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
-            refresh_button_dict.set_image(Some(image));
-            refresh_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //refresh_button_dict.set_tooltip(t!(refresh));
-        refresh_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(refresh));
-
-        let mut lng_menu_button_wrapper_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
-            lng_menu_button_wrapper_dict.set_image(Some(image));
-            lng_menu_button_wrapper_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //lng_menu_button_wrapper_dict.set_tooltip(t!(lang));
-        lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
-        let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
-
-        let mut prnn_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\audio.png").to_str().unwrap_or("")) {
-            prnn_button_dict.set_image(Some(image));
-            prnn_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //prnn_button_dict.set_tooltip(t!(pronunciation));
-        prnn_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(pronunciation));
-
-        
-        let mut open_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\open.png").to_str().unwrap_or("")) {
-            open_button_dict.set_image(Some(image));
-            open_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        //open_button_dict.set_tooltip(t!(open_main_win));
-        open_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
-
-        flex_titlebar_dict.fixed(&close_button_dict, 18);
-        flex_titlebar_dict.fixed(&title_frame_dict, 1);
-        flex_titlebar_dict.fixed(&fav_button_dict, 18);
-        flex_titlebar_dict.fixed(&lng_menu_button_wrapper_dict, 18);
-        flex_titlebar_dict.fixed(&prnn_button_dict, 18);
-        flex_titlebar_dict.fixed(&refresh_button_dict, 18);
-        flex_titlebar_dict.fixed(&open_button_dict, 18);
-
-        frame_dict.fixed(&flex_titlebar_dict, 20);
-        flex_titlebar_dict.end();
-        ////////////////////---------------END TITLEBAR---------------/////////////////////
-
-        ////////////////////---------------FLEXBOX1---------------/////////////////////
-        let mut flex_dict = group::Flex::default().column();
-        flex_dict.set_margins(0, 0, 0, 0);
-        flex_dict.set_spacing(7);
-
-        /////TEXTAREA
-        let src_dict_buf = text::TextBuffer::default();
-        let dict_buf = text::TextBuffer::default();
-
-        let mut txt_dict = text::TextDisplay::default();
-        txt_dict.set_text_size(GLOBAL_SETTINGS.text_font_size);
-        txt_dict.set_color(text_bg_color_popup);
-        txt_dict.set_frame(fltk::enums::FrameType::FlatBox);
-        txt_dict.set_buffer(dict_buf.clone());
-        txt_dict.wrap_mode(text::WrapMode::AtBounds, 0);
-
-        /////-----BEGIN FLEX INNER (DICT BUTTONS)-----/////
-        let mut flex2_dict = group::Flex::default().column();
-        flex2_dict.set_spacing(5);
-
-        let mut flex_buttons_wrapper_dict = group::Flex::default().column();
-        flex_buttons_wrapper_dict.set_margins(15, 0, 15, 0);
-        let flex_buttons_dict = group::Flex::default().row();
-
-        let mut dict_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
-        for qwe in GLOBAL_SETTINGS.dictionaries.iter() {
-            let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
-            let icon_path = format!(r"icons/{}.ico", &qwe.uid);
-            dprintln!("{}", icon_path);
-            if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
-                button.set_image(Some(image));
-                button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
-            }
-            if qwe.uid == UICONFIG.selected_dict {
-                button.set(true);
-            }
-            button.set_callback({
-                let s = app_sender;
-                move |_b| {
-                    s.send(AppEvent::SetDict(qwe.uid.clone()));
-                    s.send(AppEvent::RequestDictEntry(false, false, false));
-                }
-            });
-            dict_buttons.insert(qwe.uid.clone(), button);
-        }
-
-        flex_buttons_dict.end();
-        flex2_dict.fixed(&flex_buttons_wrapper_dict, 25);
-        flex_buttons_wrapper_dict.end();
-        
-        flex_dict.fixed(&flex2_dict, 31);
-        flex2_dict.end();
-        /////-----END FLEX INNER (DICT BUTTONS)-----/////
-        
-        flex_dict.end();
-        ////////////////////---------------END FLEXBOX1---------------/////////////////////
-        
-        frame_dict.end();
-        frame_wrapper_dict.end();
-        win_popup_dict.make_resizable(true);
-        win_popup_dict.set_border(false);
-        win_popup_dict.set_frame(fltk::enums::FrameType::UpBox);
-        win_popup_dict.resizable(&win_popup_dict);
-        win_popup_dict.size_range(400, 150, 0 ,0);
-
-        win_popup_dict.end();
-        ////////////////////---------------END POPUP WIN---------------/////////////////////
 
 
 
@@ -753,12 +615,7 @@ impl AppView {
                 fltk::menu::MenuFlag::Inactive,
                 |_| {}
         );
-        lng_menu_button_dict.add(
-                "From:",
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Inactive,
-                |_| {}
-        );
+        
         for item in &GLOBAL_SETTINGS.pinned_src_languages {
             let lng = Lang::from_str(item).unwrap_or(Lang::En);
             let name_from = format!("&{}", lng.name());
@@ -772,18 +629,6 @@ impl AppView {
                     move |_b| {
                         s.send(AppEvent::SetSrcLang(lng.clone()));
                         s.send(AppEvent::Translate(false, false, false));
-                    }
-                },
-            );
-            lng_menu_button_dict.add(
-                name_from.as_ref(),
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Normal,
-                {
-                    let s = app_sender;
-                    move |_b| {
-                        s.send(AppEvent::SetSrcLang(lng.clone()));
-                        s.send(AppEvent::RequestDictEntry(false, false, false));
                     }
                 },
             );
@@ -804,18 +649,6 @@ impl AppView {
                     }
                 },
             );
-            lng_menu_button_dict.add(
-                name_from.as_ref(),
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Normal,
-                {
-                    let s = app_sender;
-                    move |_b| {
-                        s.send(AppEvent::SetSrcLang(lng.clone()));
-                        s.send(AppEvent::RequestDictEntry(false, false, false));
-                    }
-                },
-            );
         };
         //lng_menu_button.add("", fltk::enums::Shortcut::None, fltk::menu::MenuFlag::MenuDivider, |_| {});
         lng_menu_button.add(
@@ -824,12 +657,7 @@ impl AppView {
                 fltk::menu::MenuFlag::Inactive,
                 |_| {}
         );
-        lng_menu_button_dict.add(
-                "To:",
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Inactive,
-                |_| {}
-        );
+        
 
         for item in &GLOBAL_SETTINGS.pinned_target_languages {
             let lng = Lang::from_str(item).unwrap_or(Lang::Ru);
@@ -844,18 +672,6 @@ impl AppView {
                     move |_b| {
                         s.send(AppEvent::SetTargetLang(lng.clone()));
                         s.send(AppEvent::Translate(false, false, false));
-                    }
-                },
-            );
-            lng_menu_button_dict.add(
-                name_to.as_ref(),
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Normal,
-                {
-                    let s = app_sender;
-                    move |_b| {
-                        s.send(AppEvent::SetTargetLang(lng.clone()));
-                        s.send(AppEvent::RequestDictEntry(false, false, false));
                     }
                 },
             );
@@ -875,42 +691,25 @@ impl AppView {
                     }
                 },
             );
-            lng_menu_button_dict.add(
-                name_to.as_ref(),
-                fltk::enums::Shortcut::None,
-                fltk::menu::MenuFlag::Normal,
-                {
-                    let s = app_sender;
-                    move |_b| {
-                        s.send(AppEvent::SetTargetLang(lng.clone()));
-                        s.send(AppEvent::RequestDictEntry(false, false, false));
-                    }
-                },
-            );
         };
 
         lng_menu_button.hide();
-        lng_menu_button_dict.hide();
+        
         lng_menu_button_wrapper.set_callback(move |b| {
             if let Some(item) = lng_menu_button.menu()
                 && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
                     selected.do_callback(&lng_menu_button); 
             }
         });
-        lng_menu_button_wrapper_dict.set_callback(move |b| {
-            if let Some(item) = lng_menu_button_dict.menu()
-                && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
-                    selected.do_callback(&lng_menu_button_dict); 
-            }
-        });
+        
 
         win_popup.hotspot(&close_button);
-        win_popup_dict.hotspot(&close_button_dict);
+        
         //trying to hide popup window at startup...
         win_popup.show();
-        win_popup_dict.show();
+        
         win_popup.set_opacity(GLOBAL_SETTINGS.popup_opacity); //This should be called on a shown window
-        win_popup_dict.set_opacity(GLOBAL_SETTINGS.popup_opacity); //0.8
+        
         //fltk bug? panic or high cpu usage when we trying to hide the windows. spawning a new thread and hiding them inside it works
         //TODO: should be called after app's event loop run?
         /*std::thread::spawn({
@@ -922,10 +721,10 @@ impl AppView {
                 app::awake();
             }
         });*/
-        app::flush();
+        // !!!!!!!!!!!!!!!!!!!!!!!!! app::flush();
         //app::wait_for(0.0);
         win_popup.hide();
-        win_popup_dict.hide();
+        
         /*app::add_timeout3(0.1, {
             let win_popup = win_popup.clone();
             let win_popup_dict = win_popup_dict.clone();
@@ -1001,7 +800,7 @@ impl AppView {
         
         //IMPL RESIZING/DRAGGING BHVR FOR BORDELESS WINDOW
         let is_inner = Rc::new(RefCell::new(false));
-        let is_inner_dict = Rc::new(RefCell::new(false));
+        
         frame.handle({
             let mut win_popup = win_popup.clone();
             let is_inner = Rc::clone(&is_inner);
@@ -1009,13 +808,7 @@ impl AppView {
                 borderless_win_frame_handler(event, &mut win_popup, &is_inner)
             }
         });
-        frame_dict.handle({
-            let mut win_popup_dict = win_popup_dict.clone();
-            let is_inner_dict = Rc::clone(&is_inner_dict);
-            move |_t, event| {
-                borderless_win_frame_handler(event, &mut win_popup_dict, &is_inner_dict)
-            }
-        });
+        
     
         win_popup.handle({
             //popup borderless window resizing and dragging
@@ -1026,15 +819,7 @@ impl AppView {
                 borderless_win_handler(window, event, &mut coords, &is_inner)
             }
         });
-        win_popup_dict.handle({
-            //popup borderless window resizing and dragging
-            let mut coords = BLWCoords::default();
-            let is_inner_dict = Rc::clone(&is_inner_dict);
-
-            move |window, event| {
-                borderless_win_handler(window, event, &mut coords, &is_inner_dict)
-            }
-        });
+        
 
         //WIDGET CALLBACKS
         close_button.set_callback({
@@ -1043,24 +828,14 @@ impl AppView {
                 win_popup.hide();
             }
         });
-        close_button_dict.set_callback({
-            let mut win_popup_dict = win_popup_dict.clone();
-            move |_| {
-                win_popup_dict.hide();
-            }
-        });
+        
         fav_button.set_callback({
             let s = app_sender;
             move |_| {
                 s.send(AppEvent::ToggleFav(false));
             }
         });
-        fav_button_dict.set_callback({
-            let s = app_sender;
-            move |_| {
-                s.send(AppEvent::ToggleFav(true));
-            }
-        });
+        
         fav_button_main.set_callback({
             let s = app_sender;
             move |_| {
@@ -1073,16 +848,12 @@ impl AppView {
                 s.send(AppEvent::TTString());
             }
         });
-        prnn_button_dict.set_callback({
-            let s = app_sender;
-            move |_| {
-                s.send(AppEvent::PRNNString(false));
-            }
-        });
+        
+        let dict_popup = DictPopupView::new(app_sender, main_win.clone(), tooltip_win.clone(), tooltip_text.clone());
         
         dict_button.set_callback({
             let win_popup = win_popup.clone();
-            let mut win_popup_dict = win_popup_dict.clone();
+            let mut win_popup_dict = dict_popup.win_popup_dict.clone();
             let s = app_sender;
             move |_button| {
                 win_popup_dict.set_pos(win_popup.x_root() + 50, win_popup.y_root() + 50);
@@ -1098,12 +869,7 @@ impl AppView {
                 s.send(AppEvent::Translate(false, true, false));
             }
         });
-        refresh_button_dict.set_callback({
-            let s = app_sender;
-            move |_button| {
-                s.send(AppEvent::RequestDictEntry(false, true, false));
-            }
-        });
+        
         /*refresh_button_main.set_callback({
             let s = app_sender;
             move |_button| {
@@ -1120,67 +886,58 @@ impl AppView {
                 win_popup.hide();
             }
         });
-        open_button_dict.set_callback({
-            //let s = app_sender;
-            let mut main_win = main_win.clone();
-            let mut win_popup_dict = win_popup_dict.clone();
-            move |_| {
-                main_win.show();
-                win_popup_dict.hide();
-            }
-        });
+        
         
         win_popup.clone().set_callback(|w| {
             // We intercept the closing of the window here
             w.hide();
         });
-        win_popup_dict.clone().set_callback(|w| {
-            // We intercept the closing of the window here
-            w.hide();
-        });
+        
 
         main_win.resize(100, 100, UICONFIG.main_window_w, UICONFIG.main_window_h);
         win_popup.resize(100, 100, UICONFIG.popup_w, UICONFIG.popup_h);
-        win_popup_dict.resize(100, 100, UICONFIG.popup_dict_w, UICONFIG.popup_dict_h);
+        
+        
 
         AppView {
             //app_sender,
-
+            dict_popup,
             src_buf,
+            dict_buf,
             src_dict_buf,
             translation_buf,
-            dict_buf,
+            
             waiting_buf,
             error_buf,
 
             is_processing: Arc::new(AtomicBool::new(false)),
             
             txt_popup: txt,
-            txt_popup_dict: txt_dict,
+            
             txt_main: main_transl_txt,
             txt_dict_main: main_dict_txt,
             title_frame,
-            title_frame_dict,
+            
             //status_frame,
             status_frame_main,
             //status_frame_dict,
 
             src: "".to_string(),
-            src_dict: "".to_string(),
+            
             transl_browser: browser,
             fav_browser,
             tts_browser,
             dict_assets_browser,
-            prnn_index: 0,
+            
 
             win_popup,
-            win_popup_dict,
+            
             main_win,
 
             translator_buttons,
-            dict_buttons,
+            
             fav_button,
-            fav_button_dict,
+            
             fav_button_main,
 
             lang_choice_from,
@@ -1198,7 +955,7 @@ impl AppView {
             self.txt_popup.set_buffer(self.waiting_buf.clone());
             self.txt_main.set_buffer(self.waiting_buf.clone());      
         } else {
-            self.txt_popup_dict.set_buffer(self.waiting_buf.clone());
+            self.dict_popup.txt_popup_dict.set_buffer(self.waiting_buf.clone());
             self.txt_dict_main.set_buffer(self.waiting_buf.clone());
         }
         self.run_anim(text);
@@ -1214,7 +971,7 @@ impl AppView {
             self.txt_popup.set_buffer(self.translation_buf.clone());
             self.txt_main.set_buffer(self.translation_buf.clone());           
         } else {
-            self.txt_popup_dict.set_buffer(self.dict_buf.clone());
+            self.dict_popup.txt_popup_dict.set_buffer(self.dict_buf.clone());
             self.txt_dict_main.set_buffer(self.dict_buf.clone());
         }
     }
@@ -1224,7 +981,7 @@ impl AppView {
             self.txt_popup.set_buffer(self.error_buf.clone());
             self.txt_main.set_buffer(self.error_buf.clone());
         } else {
-            self.txt_popup_dict.set_buffer(self.error_buf.clone());
+            self.dict_popup.txt_popup_dict.set_buffer(self.error_buf.clone());
             self.txt_dict_main.set_buffer(self.error_buf.clone());
         }
         //TODO: red highlight
@@ -1237,7 +994,7 @@ impl AppView {
             self.title_frame.set_label("");
             self.translation_buf.set_text("");
         } else {
-            self.title_frame_dict.set_label("");
+            self.dict_popup.title_frame_dict.set_label("");
             self.dict_buf.set_text("");
         }
     }
@@ -1299,9 +1056,9 @@ impl AppView {
 
         if is_new_source {  
             self.src_dict_buf.set_text(format!("{}\n", &src_text_dict).as_str()); //new line is req bc fltk widget bug
-            self.src_dict = src_text_dict;
-            self.prnn_index = -1;
-        } else if src_text_dict != self.src_dict {
+            self.dict_popup.src_dict = src_text_dict;
+            self.dict_popup.prnn_index = -1;
+        } else if src_text_dict != self.dict_popup.src_dict {
             return;
         }
 
@@ -1380,8 +1137,8 @@ impl AppView {
             self.dict_buf.set_text(&str_main);
             sbuf.set_text(&str_f);
             
-            self.txt_popup_dict.unset_highlight_data(sbuf.clone());
-            self.txt_popup_dict.set_highlight_data(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g]);
+            self.dict_popup.txt_popup_dict.unset_highlight_data(sbuf.clone());
+            self.dict_popup.txt_popup_dict.set_highlight_data(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g]);
 
             self.txt_dict_main.unset_highlight_data(sbuf.clone());
             self.txt_dict_main.set_highlight_data(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g]);
@@ -1392,7 +1149,7 @@ impl AppView {
         //let title_text = format!("{}->{} ({})", from.as_ref(), to.as_ref(), dict_name);
 
         if let Some(dict_name) = dict_name {
-            let mut title_text = format!("\"{}\" - {}", &self.src_dict, dict_name);
+            let mut title_text = format!("\"{}\" - {}", &self.dict_popup.src_dict, dict_name);
             if src.is_some() || target.is_some() {
                 title_text.push_str(" (");
                 if let Some(src) = src {
@@ -1405,18 +1162,18 @@ impl AppView {
                 }
                 title_text.push(')');
             }
-            self.title_frame_dict.set_label(&title_text);
+            self.dict_popup.title_frame_dict.set_label(&title_text);
         }
 
         if let Some(is_fav) = is_fav {
             let working_dir = std::env::current_dir().unwrap();
             if is_fav {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav_filled.png").to_str().unwrap_or("")) {
-                    self.fav_button_dict.set_image(Some(image));
+                    self.dict_popup.fav_button_dict.set_image(Some(image));
                 }
             } else {
                 if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-                    self.fav_button_dict.set_image(Some(image));
+                    self.dict_popup.fav_button_dict.set_image(Some(image));
                 }
             }
         }
@@ -1524,7 +1281,7 @@ impl AppView {
         if let Some(item) = self.dict_choice.find_item(name) {
             self.dict_choice.set_item(&item);
         }
-        for (key, value) in &mut self.dict_buttons{
+        for (key, value) in &mut self.dict_popup.dict_buttons{
             if key == uid {
                 value.set(true);
             } else {
@@ -1545,7 +1302,7 @@ impl AppView {
     }
 
     pub fn show_popup(&mut self, show_dict: bool, hotspot: bool) {
-        let win = if show_dict { &mut self.win_popup_dict } else { &mut self.win_popup };
+        let win = if show_dict { &mut self.dict_popup.win_popup_dict } else { &mut self.win_popup };
         if hotspot {
             //TODO: multi-monitor setup
             let position = app::get_mouse();
@@ -1561,7 +1318,7 @@ impl AppView {
         let mut win_clone = win.clone();
         fltk::app::add_timeout3(0.1, move |_| {
             win_clone.set_on_top();
-            win_clone.take_focus();
+            let _ = win_clone.take_focus();
         });
         //app::redraw();
         //app::awake();
