@@ -448,8 +448,8 @@ fn run_wreq_cli(request: Client) -> Result<Response> {
             .creation_flags(CREATE_NO_WINDOW)
             .current_dir(working_dir);
 
-        let mut child_err: String;
-        let mut child_output: String;
+        let mut child_err = "".to_string();
+        let mut child_output = "".to_string();
         if !is_win7_or_greater() {
             let output_file = File::create("wreq_output.tmp")?;
             let output_err_file = File::create("wreq_output_err.tmp")?;
