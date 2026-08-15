@@ -2,14 +2,6 @@
 
 Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB RAM footprint). Local offline translation, OCR and TTS supported (bergamot with firefox models and kokoro.js through Deno's runtime).
 
-## Screenshots
-[<img src="assets/scrnshts/s1.png" width="200">](assets/scrnshts/s1.png) [<img src="assets/scrnshts/s2.png" width="200">](assets/scrnshts/s2.png) [<img src="assets/scrnshts/s3.png" width="200">](assets/scrnshts/s3.png) [<img src="assets/scrnshts/s4.png" width="200">](assets/scrnshts/s4.png)
-
-## Default global hotkeys
-- **Translate the selected text:** Ctrl + Q
-- **Dictionary:** Ctrl + Shift + Q
-- **OCR:** Ctrl + ~
-
 ## Features
 
 - **Instant Translation:** Select text in any application and instantly translate it using a customizable shortcut.
@@ -20,6 +12,16 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 - **Pronunciations:** Google, Wiktionary
 - **Extensions:** Supports extensions running as sidecar processes that communicate with the host application via stdio.
 - **History & Favorites**
+
+## Screenshots
+[<img src="assets/scrnshts/s1.png" height="250">](assets/scrnshts/s1.png) [<img src="assets/scrnshts/s2.png" height="250">](assets/scrnshts/s2.png) 
+
+[<img src="assets/scrnshts/s3.png" height="250">](assets/scrnshts/s3.png) [<img src="assets/scrnshts/s4.png" height="250">](assets/scrnshts/s4.png)
+
+## Default global hotkeys
+- **Translate the selected text:** Ctrl + Q
+- **Dictionary:** Ctrl + Shift + Q
+- **OCR:** Ctrl + ~
 
 ## Roadmap
 
