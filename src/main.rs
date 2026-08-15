@@ -751,10 +751,10 @@ fn main() {
                     }
                     AppEvent::Message(text) => {
                         //TODO: use winapi and raw window handle? native dialog?
-                        if !app_view.main_win.shown() {
-                            app_view.main_win.show();
+                        if !app_view.main_win.window.shown() {
+                            app_view.main_win.window.show();
                             app_message(&text);
-                            app_view.main_win.hide();
+                            app_view.main_win.window.hide();
                         } else {
                             app_message(&text);
                         }                             
@@ -764,7 +764,7 @@ fn main() {
                         dprintln!("{:?}", tray_event);
                         match tray_event {
                             TrayEvent::ShowMainWin => {
-                                app_view.main_win.show();
+                                app_view.main_win.window.show();
                             }
                             TrayEvent::ShowPopupWin => {
                                 app_view.show_popup(false, false);
@@ -961,8 +961,8 @@ fn main() {
         config.selected_src = app_state.selected_src.as_ref().to_string();
         config.selected_target = app_state.selected_target.as_ref().to_string();
 
-        config.main_window_w = app_view.main_win.width();
-        config.main_window_h = app_view.main_win.height();
+        config.main_window_w = app_view.main_win.window.width();
+        config.main_window_h = app_view.main_win.window.height();
         //TODO?: app_view.main_win.maximize_active();
 
         config.popup_w = app_view.transl_popup.win_popup.width();

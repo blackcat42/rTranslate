@@ -36,24 +36,12 @@ use super::t;
 
 
 pub struct TranslPopupView {
-
-
     pub translator_buttons: HashMap<String, fltk::button::RadioButton>,
     pub fav_button: button::Button,
     pub txt_popup: text::TextDisplay,
     pub title_frame: Frame,
     pub src: String, //todo: use src_buf?
     pub win_popup: DoubleWindow,
-
-    /*pub txt_popup_dict: text::TextDisplay,
-    pub title_frame_dict: Frame,
-    pub src_dict: String,
-    pub prnn_index: i32,
-
-    pub win_popup_dict: DoubleWindow,
-
-    pub dict_buttons: HashMap<String, fltk::button::RadioButton>,
-    pub fav_button_dict: button::Button,*/
 }
 
 impl TranslPopupView {
@@ -393,9 +381,10 @@ impl TranslPopupView {
             let mut win_popup_dict = win_popup_dict.clone();
             let s = app_sender;
             move |_button| {
+                win_popup_dict.show();
                 win_popup_dict.set_pos(win_popup.x_root() + 50, win_popup.y_root() + 50);
                 win_popup_dict.set_on_top();
-                win_popup_dict.show();
+                
                 s.send(AppEvent::SendToDict());
             }
         });
