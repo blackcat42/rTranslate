@@ -731,7 +731,7 @@ fn main() {
                         if is_dict {
                             let _ = app_state.toggle_fav(&app_view.dict_popup.src_dict, is_dict);
                         } else {
-                            let _ = app_state.toggle_fav(&app_view.src, is_dict);
+                            let _ = app_state.toggle_fav(&app_view.transl_popup.src, is_dict);
                         }
                         let _ = app_state.update_fav_browser();
                     }
@@ -831,7 +831,7 @@ fn main() {
                     }
                     AppEvent::Translate(fail_if_not_exist, force, check_buf) => 'translate_arm: {
                         //app_view.clear_ui(false);
-                        if check_buf && (app_view.src_buf.text() != app_view.src)
+                        if check_buf && (app_view.src_buf.text() != app_view.transl_popup.src)
                             && let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
                                 app_view.set_status(set_src_error.to_string().as_str(), true, false);
                                 break 'translate_arm;
@@ -858,7 +858,7 @@ fn main() {
                     }
                     AppEvent::SendToDict() => {
                         //app_view.clear_ui(true);
-                        if let Err(set_src_error) = app_state.set_src_text(&app_view.src, true) {
+                        if let Err(set_src_error) = app_state.set_src_text(&app_view.transl_popup.src, true) {
                             app_sender.send(AppEvent::SetReady(Some(set_src_error.to_string()), false));
                             //app_view.set_status(set_src_error.to_string().as_str(), true, true);
                         } else if let Err(dict_error) = app_state.request_dict_entry(false, false) {
@@ -965,8 +965,8 @@ fn main() {
         config.main_window_h = app_view.main_win.height();
         //TODO?: app_view.main_win.maximize_active();
 
-        config.popup_w = app_view.win_popup.width();
-        config.popup_h = app_view.win_popup.height();
+        config.popup_w = app_view.transl_popup.win_popup.width();
+        config.popup_h = app_view.transl_popup.win_popup.height();
         config.popup_dict_w = app_view.dict_popup.win_popup_dict.width();
         config.popup_dict_h = app_view.dict_popup.win_popup_dict.height();
 
