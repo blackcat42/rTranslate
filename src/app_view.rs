@@ -32,6 +32,7 @@ use crate::types::{
 };
 
 use crate::utils::bbcode::{dsl_parse};
+use crate::utils::helpers::ui_scale;
 /*use crate::utils::helpers::{
     borderless_win_handler, 
     borderless_win_frame_handler
@@ -88,7 +89,7 @@ impl AppView {
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
 
-        let mut tooltip_win = fltk::window::OverlayWindow::default().with_size(160, 20);
+        let mut tooltip_win = fltk::window::OverlayWindow::default().with_size(ui_scale(160), ui_scale(20));
         let mut tooltip_text = fltk::frame::Frame::default().size_of_parent().center_of_parent();
         tooltip_text.set_frame(fltk::enums::FrameType::BorderBox);
         tooltip_text.set_color(fltk::enums::Color::from_rgb(255, 255, 191));
@@ -515,9 +516,15 @@ impl AppView {
             let position = app::get_mouse();
             let screen_w = app::screen_size().0 as i32;
             let screen_h = app::screen_size().1 as i32;
-            let x = position.0.clamp(0, screen_w - win.w());
-            let y = position.1.clamp(0, screen_h - win.h());
-            win.set_pos(x, y);
+            let max_x = screen_w - win.w();
+            let max_y = screen_h - win.h();
+            if max_x < 0 || max_y < 0 {
+                win.set_pos(0, 0);
+            } else {
+                let x = position.0.clamp(0, max_x);
+                let y = position.1.clamp(0, max_y);
+                win.set_pos(x, y);
+            }
         }
 
         
@@ -525,9 +532,11 @@ impl AppView {
         fltk::app::add_timeout3(0.1, move |_| {
             win_clone.set_on_top();
             let _ = win_clone.take_focus();
+            if win_clone.pixels_per_unit() != 1.0 {
+                win_clone.redraw();
+                //app::flush();
+            }
         });
-        //app::redraw();
-        //app::awake();
     }
     
 }

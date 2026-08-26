@@ -34,6 +34,8 @@ use crate::utils::helpers::{
     borderless_win_frame_handler,
     is_win7_or_greater
 };
+use crate::utils::widgets::IconExt;
+use crate::utils::helpers::ui_scale;
 use super::GLOBAL_SETTINGS;
 //use super::UICONFIG;
 
@@ -81,30 +83,27 @@ impl ScreenOCR {
         win.hide();
 
 
-        let mut overlay_win = fltk::window::Window::default().with_size(550, 200);
+        let mut overlay_win = fltk::window::Window::default().with_size(ui_scale(550), ui_scale(200));
 
         let mut frame_wrapper = fltk::group::Flex::default().column().size_of_parent();
-        frame_wrapper.set_margins(3,3,3,3);
+        frame_wrapper.set_margins(ui_scale(3),ui_scale(3),ui_scale(3),ui_scale(3));
 
         let mut frame = fltk::group::Flex::default().column();
-        frame.set_spacing(3);
+        frame.set_spacing(ui_scale(3));
         frame.set_frame(fltk::enums::FrameType::EngravedBox);
 
         let mut flex_titlebar = fltk::group::Flex::default().row();
-        flex_titlebar.set_margins(2,2,3,0);
-        flex_titlebar.set_pad(5);
-        let mut close_button = fltk::button::Button::new(5, 5, 18, 18, "");
-        if let Ok(image) = fltk::image::PngImage::load(working_dir.join(r"icons\close.png").to_str().unwrap_or("")) {
-            close_button.set_image(Some(image));
-            close_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
-        flex_titlebar.fixed(&close_button, 18);
-        frame.fixed(&flex_titlebar, 20);
+        flex_titlebar.set_margins(ui_scale(2),ui_scale(2),ui_scale(3),0);
+        flex_titlebar.set_pad(ui_scale(5));
+        let mut close_button = fltk::button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        close_button.set_png_icon("close");
+        flex_titlebar.fixed(&close_button, ui_scale(18));
+        frame.fixed(&flex_titlebar, ui_scale(20));
         flex_titlebar.end();
 
         let mut flex = fltk::group::Flex::default().column();
         flex.set_margins(0, 0, 0, 0);
-        flex.set_spacing(7);
+        flex.set_spacing(ui_scale(7));
         let ocr_text_buf = fltk::text::TextBuffer::default();
         //let ocr_waiting_buf = text::TextBuffer::default();
         let mut txt = fltk::text::TextEditor::default();
@@ -115,11 +114,11 @@ impl ScreenOCR {
         let mut flex2 = fltk::group::Flex::default().column();
         flex2.set_spacing(5);
         let mut flex_buttons_wrapper = group::Flex::default().column();
-        flex_buttons_wrapper.set_margins(15, 0, 15, 0);
+        flex_buttons_wrapper.set_margins(ui_scale(15), 0, ui_scale(15), 0);
         let mut flex_buttons = group::Flex::default().row();
         let mut checkbox_ocr_append = button::CheckButton::default().with_label("Keep previous text")
             .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
-        flex_buttons.fixed(&checkbox_ocr_append, 150);
+        flex_buttons.fixed(&checkbox_ocr_append, ui_scale(150));
 
         fltk::frame::Frame::default();
         let mut choice_ocr_model = fltk::menu::Choice::default().with_label("Model:").with_align(fltk::enums::Align::Left);
@@ -134,29 +133,29 @@ impl ScreenOCR {
             choice_ocr_model.set_item(&item);
         }*/
         choice_ocr_model.set_value(0);
-        flex_buttons.fixed(&choice_ocr_model, 150);
+        flex_buttons.fixed(&choice_ocr_model, ui_scale(150));
 
         /*let mut checkbox_ocr_fast = button::CheckButton::default().with_label("fast (less accuracy)")
             .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         flex_buttons.fixed(&checkbox_ocr_fast, 400);*/
         flex_buttons.end();
-        flex2.fixed(&flex_buttons_wrapper, 25);
+        flex2.fixed(&flex_buttons_wrapper, ui_scale(25));
         flex_buttons_wrapper.end();
         let mut flex_buttons_wrapper2 = group::Flex::default().column();
-        flex_buttons_wrapper2.set_margins(15, 0, 15, 0);
+        flex_buttons_wrapper2.set_margins(ui_scale(15), 0, ui_scale(15), 0);
         let flex_buttons2 = group::Flex::default().row();
-        let mut btn_ocr = button::Button::new(0, 15, 100, 40, "Run OCR")
+        let mut btn_ocr = button::Button::new(0, ui_scale(15), ui_scale(100), ui_scale(40), "Run OCR")
             .with_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
-        let mut btn_copy = button::Button::new(0, 15, 100, 40, "Copy")
+        let mut btn_copy = button::Button::new(0, ui_scale(15), ui_scale(100), ui_scale(40), "Copy")
             .with_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
-        let mut btn_translate = button::Button::new(0, 15, 100, 40, "Translate")
+        let mut btn_translate = button::Button::new(0, ui_scale(15), ui_scale(100), ui_scale(40), "Translate")
             .with_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
-        let mut btn_exit = button::Button::new(0, 15, 100, 40, "Exit (Esc)")
+        let mut btn_exit = button::Button::new(0, ui_scale(15), ui_scale(100), ui_scale(40), "Exit (Esc)")
             .with_align(fltk::enums::Align::Center | fltk::enums::Align::ImageNextToText);
         flex_buttons2.end();
-        flex2.fixed(&flex_buttons_wrapper2, 25);
+        flex2.fixed(&flex_buttons_wrapper2, ui_scale(25));
         flex_buttons_wrapper2.end();
-        flex.fixed(&flex2, 60);
+        flex.fixed(&flex2, ui_scale(60));
         flex2.end();
 
         flex.end();
@@ -166,7 +165,7 @@ impl ScreenOCR {
         overlay_win.set_border(false);
         overlay_win.set_frame(fltk::enums::FrameType::UpBox);
         overlay_win.resizable(&overlay_win);
-        overlay_win.size_range(400, 150, 0 ,0);
+        overlay_win.size_range(ui_scale(400), ui_scale(150), 0 ,0); //1510
         overlay_win.end();
         
         win.set_callback(move |w| {
@@ -677,7 +676,7 @@ impl MaskableImage {
 
 
         let mut img = img_path.unwrap();
-        // println!("image depth is {}", img.depth() );
+        
         println!("w is: {}, h is: {}", img.width(), img.height());
         let (x, y) = img.dimensions();
 
@@ -701,6 +700,7 @@ impl MaskableImage {
         let mut first_iter = true; 
 
         sb.frame.handle(move |t, ev| {
+            let screen_scale = fltk::app::screen_scale(0);
             let mut grey_img_c = grey_img.clone();
             let s_clone = s; 
             let mut rgc = rgb_image.clone();
@@ -800,10 +800,18 @@ impl MaskableImage {
             };
 
             t.draw(move |b|{
-                rgc.draw(b.x(), b.y(), x as i32, y as i32);
-                fltk::draw::set_draw_color(fltk::enums::Color::Yellow);
-                let coverupw = (f_x-s_x).abs() as u32;
-                let coveruph = (f_y-s_y).abs() as u32;
+                if screen_scale == 1.0 {
+                    rgc.draw(b.x(), b.y(), x as i32, y as i32);
+                } else {
+                    fltk::draw::override_scale();
+                    rgc.draw(b.x(), b.y(), x as i32, y as i32);
+                    fltk::draw::restore_scale(screen_scale);
+                }
+
+                fltk::draw::set_draw_color(fltk::enums::Color::Yellow); 
+
+                let coverupw = ((f_x-s_x).abs() as f32 * screen_scale) as u32;
+                let coveruph = ((f_y-s_y).abs() as f32 * screen_scale) as u32;
 
                 if coverupw > 0 && coveruph > 0 {
                     let mut sel_x: u32 = 0;
@@ -820,11 +828,16 @@ impl MaskableImage {
                         sel_y = (s_y-b.y()) as u32;
                     }
 
-                    let my_crop_data = image::imageops::crop(&mut grey_img_c, sel_x, sel_y, coverupw, coveruph).to_image().to_vec();
+                    let sel_x = sel_x as f32 * screen_scale;
+                    let sel_y = sel_y as f32 * screen_scale;
+                    
+                    let my_crop_data = image::imageops::crop(&mut grey_img_c, sel_x as u32, sel_y as u32, coverupw as u32, coveruph as u32).to_image().to_vec();
                     let mut my_crop = fltk::image::RgbImage::new(&my_crop_data, coverupw as i32, coveruph as i32, fltk::enums::ColorDepth::Rgba8).unwrap();
+                    fltk::draw::override_scale();
                     my_crop.draw(sel_x as i32, sel_y as i32, coverupw as i32, coveruph as i32);
+                    fltk::draw::set_draw_color(fltk::enums::Color::Yellow);
                     fltk::draw::draw_rect(sel_x as i32, sel_y as i32, coverupw as i32, coveruph as i32);
-
+                    fltk::draw::restore_scale(screen_scale);
                     let crop_s = CropSegment::new(sel_x as i32, sel_y as i32, coverupw as i32, coveruph as i32, my_crop_data);
 
                     if released {

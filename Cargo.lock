@@ -3945,7 +3945,7 @@ dependencies = [
 [[package]]
 name = "tray-item"
 version = "0.10.0"
-source = "git+https://github.com/blackcat42/tray-item-rs.git?rev=ea1eb80#ea1eb8073db380c900b51b0cd9537ad59febf014"
+source = "git+https://github.com/blackcat42/tray-item-rs.git?rev=e704ecc#e704eccc3289e8f5d4bdb7e28119c1f040a790ac"
 dependencies = [
  "cocoa 0.25.0",
  "core-graphics 0.23.2",

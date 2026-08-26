@@ -26,8 +26,10 @@ use crate::types::{
 
 use crate::utils::helpers::{
     borderless_win_handler, 
-    borderless_win_frame_handler
+    borderless_win_frame_handler,
+    ui_scale
 };
+use crate::utils::widgets::IconExt;
 use crate::utils::widgets::TooltipExt;
 
 use super::GLOBAL_SETTINGS;
@@ -54,24 +56,21 @@ impl DictPopupView {
         let text_bg_color_popup = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_popup).unwrap_or(enums::Color::from_hex(0xF0F0F0));
 
     	////////////////////---------------BEGIN DICT POPUP WIN---------------/////////////////////
-        let mut win_popup_dict = window::Window::default().with_size(450, 200);
+        let mut win_popup_dict = window::Window::default().with_size(ui_scale(450), ui_scale(200));
         let mut frame_wrapper_dict = group::Flex::default().column().size_of_parent();
 
-        frame_wrapper_dict.set_margins(3,3,3,3);
+        frame_wrapper_dict.set_margins(ui_scale(3),ui_scale(3),ui_scale(3),ui_scale(3));
         let mut frame_dict = group::Flex::default().column();
-        frame_dict.set_spacing(3);
+        frame_dict.set_spacing(ui_scale(3));
         frame_dict.set_frame(fltk::enums::FrameType::EngravedBox);
 
         ////////////////////---------------TITLEBAR---------------/////////////////////
         let mut flex_titlebar_dict = group::Flex::default().row();//.below_of(&txt, 10);
 
-        flex_titlebar_dict.set_margins(2,2,3,0);
-        flex_titlebar_dict.set_pad(5);
-        let mut close_button_dict = button::Button::new(5, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\close.png").to_str().unwrap_or("")) {
-            close_button_dict.set_image(Some(image));
-            close_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        flex_titlebar_dict.set_margins(ui_scale(2),ui_scale(2),ui_scale(3),0);
+        flex_titlebar_dict.set_pad(ui_scale(5));
+        let mut close_button_dict = button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        close_button_dict.set_png_icon("close");
         //close_button_dict.set_tooltip(t!(close));
         close_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
         
@@ -79,64 +78,49 @@ impl DictPopupView {
         title_frame_dict.set_label_size(GLOBAL_SETTINGS.ui_font_size);
         let _status_s_frame = Frame::default();
 
-        let mut fav_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-            fav_button_dict.set_image(Some(image));
-            fav_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut fav_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        fav_button_dict.set_png_icon("fav");
         //fav_button_dict.set_tooltip(t!(add_to_fav));
         fav_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(add_to_fav));
 
-        let mut refresh_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
-            refresh_button_dict.set_image(Some(image));
-            refresh_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut refresh_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        refresh_button_dict.set_png_icon("refresh");
         //refresh_button_dict.set_tooltip(t!(refresh));
         refresh_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(refresh));
 
-        let mut lng_menu_button_wrapper_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
-            lng_menu_button_wrapper_dict.set_image(Some(image));
-            lng_menu_button_wrapper_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut lng_menu_button_wrapper_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        lng_menu_button_wrapper_dict.set_png_icon("settings");
         //lng_menu_button_wrapper_dict.set_tooltip(t!(lang));
         //lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
-        let mut prnn_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\audio.png").to_str().unwrap_or("")) {
-            prnn_button_dict.set_image(Some(image));
-            prnn_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut prnn_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        prnn_button_dict.set_png_icon("audio");
         //prnn_button_dict.set_tooltip(t!(pronunciation));
         prnn_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(pronunciation));
 
         
-        let mut open_button_dict = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\open.png").to_str().unwrap_or("")) {
-            open_button_dict.set_image(Some(image));
-            open_button_dict.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut open_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        open_button_dict.set_png_icon("open");
         //open_button_dict.set_tooltip(t!(open_main_win));
         open_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
 
-        flex_titlebar_dict.fixed(&close_button_dict, 18);
-        flex_titlebar_dict.fixed(&title_frame_dict, 1);
-        flex_titlebar_dict.fixed(&fav_button_dict, 18);
-        flex_titlebar_dict.fixed(&lng_menu_button_wrapper_dict, 18);
-        flex_titlebar_dict.fixed(&prnn_button_dict, 18);
-        flex_titlebar_dict.fixed(&refresh_button_dict, 18);
-        flex_titlebar_dict.fixed(&open_button_dict, 18);
+        flex_titlebar_dict.fixed(&close_button_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&title_frame_dict, ui_scale(1));
+        flex_titlebar_dict.fixed(&fav_button_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&lng_menu_button_wrapper_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&prnn_button_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&refresh_button_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&open_button_dict, ui_scale(18));
 
-        frame_dict.fixed(&flex_titlebar_dict, 20);
+        frame_dict.fixed(&flex_titlebar_dict, ui_scale(20));
         flex_titlebar_dict.end();
         ////////////////////---------------END TITLEBAR---------------/////////////////////
 
         ////////////////////---------------FLEXBOX1---------------/////////////////////
         let mut flex_dict = group::Flex::default().column();
         flex_dict.set_margins(0, 0, 0, 0);
-        flex_dict.set_spacing(7);
+        flex_dict.set_spacing(ui_scale(7));
 
         /////TEXTAREA
         //let src_dict_buf = text::TextBuffer::default();
@@ -154,12 +138,12 @@ impl DictPopupView {
         flex2_dict.set_spacing(5);
 
         let mut flex_buttons_wrapper_dict = group::Flex::default().column();
-        flex_buttons_wrapper_dict.set_margins(15, 0, 15, 0);
+        flex_buttons_wrapper_dict.set_margins(ui_scale(15), 0, ui_scale(15), 0);
         let flex_buttons_dict = group::Flex::default().row();
 
         let mut dict_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
         for qwe in GLOBAL_SETTINGS.dictionaries.iter() {
-            let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
+            let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
             let icon_path = format!(r"icons/{}.ico", &qwe.uid);
             dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
@@ -180,10 +164,10 @@ impl DictPopupView {
         }
 
         flex_buttons_dict.end();
-        flex2_dict.fixed(&flex_buttons_wrapper_dict, 25);
+        flex2_dict.fixed(&flex_buttons_wrapper_dict, ui_scale(25));
         flex_buttons_wrapper_dict.end();
         
-        flex_dict.fixed(&flex2_dict, 31);
+        flex_dict.fixed(&flex2_dict, ui_scale(31));
         flex2_dict.end();
         /////-----END FLEX INNER (DICT BUTTONS)-----/////
         
@@ -196,7 +180,7 @@ impl DictPopupView {
         win_popup_dict.set_border(false);
         win_popup_dict.set_frame(fltk::enums::FrameType::UpBox);
         win_popup_dict.resizable(&win_popup_dict);
-        win_popup_dict.size_range(400, 150, 0 ,0);
+        win_popup_dict.size_range(ui_scale(400), ui_scale(150), 0 ,0);
 
         win_popup_dict.end();
         ////////////////////---------------END POPUP WIN---------------/////////////////////

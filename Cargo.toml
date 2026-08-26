@@ -12,7 +12,7 @@ anyhow = "1.0.100"
 ureq = { version = "=3.3.0", features = ["socks-proxy"] }
 image = "0.25.9"
 #tray-icon = "0.24.1"
-tray-item = { git = "https://github.com/blackcat42/tray-item-rs.git", rev = "ea1eb80" }
+tray-item = { git = "https://github.com/blackcat42/tray-item-rs.git", rev = "e704ecc" }
 get-selected-text = "=0.1.6" #todo: high ram usage
 unicode-truncate = "2.0.1"
 #global-hotkey = "0.8.0"

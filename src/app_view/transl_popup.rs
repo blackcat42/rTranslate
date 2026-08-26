@@ -7,6 +7,7 @@ use fltk::{
     enums,
     button,
     group,
+    //image::SvgImage,
     image::PngImage,
     image::IcoImage,
     frame::Frame,
@@ -26,9 +27,11 @@ use crate::types::{
 
 use crate::utils::helpers::{
     borderless_win_handler, 
-    borderless_win_frame_handler
+    borderless_win_frame_handler,
+    ui_scale
 };
 use crate::utils::widgets::TooltipExt;
+use crate::utils::widgets::IconExt;
 
 use super::GLOBAL_SETTINGS;
 use super::UICONFIG;
@@ -51,24 +54,20 @@ impl TranslPopupView {
         let text_bg_color_popup = enums::Color::from_hex_str(&GLOBAL_SETTINGS.text_bg_color_popup).unwrap_or(enums::Color::from_hex(0xF0F0F0));
 
     	////////////////////---------------BEGIN POPUP WIN---------------/////////////////////
-        let mut win_popup = window::Window::default().with_size(550, 200);
+        let mut win_popup = window::Window::default().with_size(ui_scale(550), ui_scale(200));
         let mut frame_wrapper = group::Flex::default().column().size_of_parent();
-        frame_wrapper.set_margins(3,3,3,3);
+        frame_wrapper.set_margins(ui_scale(3),ui_scale(3),ui_scale(3),ui_scale(3));
         let mut frame = group::Flex::default().column();
-        frame.set_spacing(3);
+        frame.set_spacing(ui_scale(3));
         frame.set_frame(fltk::enums::FrameType::EngravedBox);
 
         ////////////////////---------------TITLEBAR---------------/////////////////////
         let mut flex_titlebar = group::Flex::default().row();
-        flex_titlebar.set_margins(2,2,3,0);
-        flex_titlebar.set_pad(5);
+        flex_titlebar.set_margins(ui_scale(2),ui_scale(2),ui_scale(3),0);
+        flex_titlebar.set_pad(ui_scale(5));
 
-        let mut close_button = button::Button::new(5, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\close.png").to_str().unwrap_or("")) {
-            //image.scale(20, 20, true, true);
-            close_button.set_image(Some(image));
-            close_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut close_button = button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        close_button.set_png_icon("close");
         //close_button.set_tooltip(t!(close));
         close_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
 
@@ -77,36 +76,24 @@ impl TranslPopupView {
         title_frame.set_label_size(GLOBAL_SETTINGS.ui_font_size);
         let _status_s_frame = Frame::default();
 
-        let mut fav_button = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\fav.png").to_str().unwrap_or("")) {
-            fav_button.set_image(Some(image));
-            fav_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut fav_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        fav_button.set_png_icon("fav");
         //fav_button.set_tooltip(t!(add_to_fav));
         fav_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(add_to_fav));
 
-        let mut refresh_button = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\refresh.png").to_str().unwrap_or("")) {
-            refresh_button.set_image(Some(image));
-            refresh_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut refresh_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        refresh_button.set_png_icon("refresh");
         //refresh_button.set_tooltip(t!(refresh));
         refresh_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(refresh));
 
-        let mut lng_menu_button_wrapper = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
-            lng_menu_button_wrapper.set_image(Some(image));
-            lng_menu_button_wrapper.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut lng_menu_button_wrapper = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        lng_menu_button_wrapper.set_png_icon("settings");
         //lng_menu_button_wrapper.set_tooltip(t!(lang));
         //lng_menu_button_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
-        let mut tts_button = button::Button::new(28, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\audio.png").to_str().unwrap_or("")) {
-            tts_button.set_image(Some(image));
-            tts_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut tts_button = button::Button::new(ui_scale(28), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        tts_button.set_png_icon("audio");
         //tts_button.set_tooltip(t!(tts));
         tts_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(tts));
         /*let mut qsettings_button = button::Button::new(51, 5, 18, 18, "");
@@ -114,40 +101,34 @@ impl TranslPopupView {
             qsettings_button.set_image(Some(image));
             qsettings_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }*/
-        let mut dict_button = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\dict.png").to_str().unwrap_or("")) {
-            dict_button.set_image(Some(image));
-            dict_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut dict_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        dict_button.set_png_icon("dict");
         //dict_button.set_tooltip(t!(send_to_dict));
         dict_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(send_to_dict));
 
-        let mut open_button = button::Button::new(51, 5, 18, 18, "");
-        if let Ok(image) = PngImage::load(working_dir.join(r"icons\open.png").to_str().unwrap_or("")) {
-            open_button.set_image(Some(image));
-            open_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
-        }
+        let mut open_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        open_button.set_png_icon("open");
         //open_button.set_tooltip(t!(open_main_win));
         open_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
 
-        flex_titlebar.fixed(&close_button, 18);
-        flex_titlebar.fixed(&title_frame, 1);
-        flex_titlebar.fixed(&fav_button, 18);
-        flex_titlebar.fixed(&refresh_button, 18);
-        flex_titlebar.fixed(&lng_menu_button_wrapper, 18);
-        flex_titlebar.fixed(&tts_button, 18);
-        flex_titlebar.fixed(&dict_button, 18);
+        flex_titlebar.fixed(&close_button, ui_scale(18));
+        flex_titlebar.fixed(&title_frame, ui_scale(1));
+        flex_titlebar.fixed(&fav_button, ui_scale(18));
+        flex_titlebar.fixed(&refresh_button, ui_scale(18));
+        flex_titlebar.fixed(&lng_menu_button_wrapper, ui_scale(18));
+        flex_titlebar.fixed(&tts_button, ui_scale(18));
+        flex_titlebar.fixed(&dict_button, ui_scale(18));
         //flex_titlebar.fixed(&qsettings_button, 18);
-        flex_titlebar.fixed(&open_button, 18);
+        flex_titlebar.fixed(&open_button, ui_scale(18));
 
-        frame.fixed(&flex_titlebar, 20);
+        frame.fixed(&flex_titlebar, ui_scale(20));
         flex_titlebar.end();
         ////////////////////---------------END TITLEBAR---------------/////////////////////
 
         ////////////////////---------------FLEXBOX1---------------/////////////////////
         let mut flex = group::Flex::default().column();
         flex.set_margins(0, 0, 0, 0);
-        flex.set_spacing(7);
+        flex.set_spacing(ui_scale(7));
 
         /////TEXTAREA
         
@@ -164,13 +145,13 @@ impl TranslPopupView {
         flex2.set_spacing(5);
 
         let mut flex_buttons_wrapper = group::Flex::default().column();
-        flex_buttons_wrapper.set_margins(15, 0, 15, 0);
+        flex_buttons_wrapper.set_margins(ui_scale(15), 0, ui_scale(15), 0);
         let flex_buttons = group::Flex::default().row();
 
         let mut translator_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
         let btn_n = GLOBAL_SETTINGS.translators.len();
         for qwe in GLOBAL_SETTINGS.translators.iter() {
-            let mut button = button::RadioButton::new(0, 0, 180, 25, &*qwe.name);
+            let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
             let icon_path = if let Some(cmd) = &qwe.command && cmd == "QTRANSLATE" {
                 format!(r"extensions/qtranslate/Services/{}/Service.ico", &qwe.uid)
             } else {
@@ -200,10 +181,10 @@ impl TranslPopupView {
         }
 
         flex_buttons.end();
-        flex2.fixed(&flex_buttons_wrapper, 25);
+        flex2.fixed(&flex_buttons_wrapper, ui_scale(25));
         flex_buttons_wrapper.end();
         
-        flex.fixed(&flex2, 31);
+        flex.fixed(&flex2, ui_scale(31));
         flex2.end();
         /////-----END FLEX INNER (TRANSLATION BUTTONS)-----/////
         //flex2.auto_layout();
@@ -217,7 +198,7 @@ impl TranslPopupView {
         win_popup.set_border(false);
         win_popup.set_frame(fltk::enums::FrameType::UpBox);
         win_popup.resizable(&win_popup);
-        win_popup.size_range(400, 150, 0 ,0);
+        win_popup.size_range(ui_scale(400), ui_scale(150), 0 ,0);
         win_popup.end();        
         ////////////////////---------------END POPUP WIN---------------/////////////////////
 
@@ -382,7 +363,7 @@ impl TranslPopupView {
             let s = app_sender;
             move |_button| {
                 win_popup_dict.show();
-                win_popup_dict.set_pos(win_popup.x_root() + 50, win_popup.y_root() + 50);
+                win_popup_dict.set_pos(win_popup.x_root() + ui_scale(50), win_popup.y_root() + ui_scale(50));
                 win_popup_dict.set_on_top();
                 
                 s.send(AppEvent::SendToDict());

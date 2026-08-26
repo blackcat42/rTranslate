@@ -164,6 +164,11 @@ pub struct Settings {
 
     #[serde(default = "default_as_true")]
     pub qtranslate_autoload: bool,
+
+    #[serde(default = "default_as_false")]
+    pub enable_fltk_dpi_scaling: bool,
+
+    pub ui_scaling: f32,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct TranslatorOption {
@@ -333,8 +338,19 @@ fn main() {
         let _ = std::env::set_current_dir(exe_path);
     }
 
+    //fltk::image::Image::set_scaling_algorithm(fltk::image::RgbScaling::Nearest);
+    //app::set_visual(fltk::enums::Mode::Rgb8).unwrap();
+    
     LazyLock::force(&GLOBAL_SETTINGS);
     LazyLock::force(&utils::i18n::LOCALIZATION);
+
+    if !GLOBAL_SETTINGS.enable_fltk_dpi_scaling {
+        let screens = app::screen_count();
+        for i in 0..screens {
+            app::set_screen_scale(i, 1.0);
+        }
+    }
+    app::keyboard_screen_scaling(false);
 
     let app = app::App::default().with_scheme(app::Scheme::Base);
     let (app_sender, app_receiver) = app::channel::<AppEvent>();
@@ -417,7 +433,7 @@ fn main() {
         }
     }).unwrap();
 
-    tray.set_doubleclick_callback({
+    tray.inner_mut().set_doubleclick_callback({
         move || {
             app_sender.send(AppEvent::TrayMenuEvent(TrayEvent::ShowMainWin));
         }

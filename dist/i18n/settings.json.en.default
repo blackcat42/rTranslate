@@ -257,7 +257,7 @@
     "translate_hotkey": "ctrl+KeyQ", //"ctrl+KeyT",
     "dict_hotkey": "ctrl+shift+KeyQ", //"ctrl+KeyD",
     "ocr_hotkey": "ctrl+Backquote",
-    "single_word_to_dict": true, //if the selected text contains one single word, send it to the dictionary
+    "single_word_to_dict": false, //if the selected text contains one single word, send it to the dictionary
 
 
 
@@ -265,7 +265,12 @@
      * ======================================
      * UI
      * ======================================
+     * fltk_dpi_scaling and ui_scaling scale the UI independently of each other
+     * --------------------------------------
      */
+    "enable_fltk_dpi_scaling": false, //FLTK lacks full DPI scaling support. Causes visual glitches; use is not recommended.
+    "ui_scaling": 1.0, //Changes only the dimensions of UI elements. Does not affect the rendering of visual elements (borders, etc.), and the font size remains unchanged. Not a full replacement for DPI scaling, but better than nothing.
+
     "ui_lang": "en",
     "ui_font_size": 12,
     "text_font_size": 14,

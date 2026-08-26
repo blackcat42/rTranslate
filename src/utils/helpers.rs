@@ -12,6 +12,7 @@ use std::sync::{OnceLock};
 use crate::types::{
     BLWCoords
 };
+use super::GLOBAL_SETTINGS;
 
 static WIN7_OR_GREATER: OnceLock<bool> = OnceLock::new();
 
@@ -46,6 +47,10 @@ pub fn screen_center() -> (i32, i32) {
     )
 }
 
+pub fn ui_scale(size: i32) -> i32 {
+    (size as f32 * GLOBAL_SETTINGS.ui_scaling) as i32
+}
+
 
 
 pub fn borderless_win_frame_handler(event: enums::Event, win_popup: &mut DoubleWindow, is_inner: &Rc<RefCell<bool>>) -> bool {
@@ -71,23 +76,25 @@ pub fn borderless_win_handler(
 ) -> bool {
 
     let is_inner = *is_inner.borrow();
+    let win_ppu = window.pixels_per_unit();
     let (ex, ey) = app::event_coords();
-    let margin = 5; // border detection
+    let margin = (5 as f32 * win_ppu) as i32; // border detection
     //.x() - inner coords
     //.x_root() - coords relative to screen
     let win_left = 0;
-    let win_right = window.pixel_w();
+    let win_right = window.width();
     let win_top = 0;
-    let win_bottom = window.pixel_h();
-    
+    let win_bottom = window.height();
+
     match event {
         enums::Event::Push => {
             coords.x = ex;
             coords.y = ey;
             coords.x_start = app::event_x_root();
             coords.y_start = app::event_y_root();
-            coords.initial_window_height = window.pixel_h();
-            coords.initial_window_width = window.pixel_w();
+            //println!("win_right_inner: {}", window.pixel_w());
+            coords.initial_window_height = win_bottom;
+            coords.initial_window_width = win_right;
             coords.init_on_border_left = ex < win_left + margin && ex > win_left;
             coords.init_on_border_right = ex > win_right - margin && ex < win_right;
             coords.init_on_border_top = ey < win_top + margin && ey > win_top;
@@ -97,13 +104,12 @@ pub fn borderless_win_handler(
 
         enums::Event::Drag => {
             if (
-                (coords.x > 5) 
-                && (coords.x < coords.initial_window_width - 5)) 
-                && ((coords.y > 5) 
-                && (coords.y < coords.initial_window_height - 5)
+                (coords.x > (5 as f32 * win_ppu) as i32) 
+                && (coords.x < coords.initial_window_width - (5 as f32 * win_ppu) as i32)) 
+                && ((coords.y > (5 as f32 * win_ppu) as i32) 
+                && (coords.y < coords.initial_window_height - (5 as f32 * win_ppu) as i32)
             ) {
                 window.set_pos(app::event_x_root() - coords.x, app::event_y_root() - coords.y);
-                app::redraw();
             } else {
                 let mut new_w = coords.initial_window_width;
                 let mut new_h = coords.initial_window_height;
@@ -122,21 +128,26 @@ pub fn borderless_win_handler(
                     new_h = coords.initial_window_height + (app::event_y_root() - coords.y_start);
                 }
 
-                if new_w < 400 { 
-                    new_w = 400;
+                if new_w < (400 as f32 * win_ppu) as i32 { 
+                    new_w = (400 as f32 * win_ppu) as i32;
                     new_x = window.x_root();
                 }
-                if new_h < 150 { 
-                    new_h = 150;
+                if new_h < (150 as f32 * win_ppu) as i32 { 
+                    new_h = (150 as f32 * win_ppu) as i32;
                     new_y = window.y_root();
                 }
                 window.resize(new_x, new_y, new_w, new_h);
+            }
+            if win_ppu != 1.0 {
+                window.redraw();
+                app::flush();
             }
             true
         }
 
         enums::Event::Move | enums::Event::Enter => {
             if !(is_inner) {
+                //println!("{} > {} - {} && ", ex, win_right, margin);
                 let on_border_left = ex < win_left + margin && ex > win_left;
                 let on_border_right = ex > win_right - margin && ex < win_right;
                 let on_border_top = ey < win_top + margin && ey > win_top;

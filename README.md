@@ -10,7 +10,7 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 - **Translator services:** Google Translate, DeepL, Bergamot (local)
 - **Text-to-Speech (TTS):** Kokoro.js (local)
 - **Pronunciations:** Google, Wiktionary
-- **Extensions:** Supports extensions running as sidecar processes that communicate with the host application via stdio.
+- **Extensions:** Supports extensions running as sidecar processes. QTranslate services also supported.
 - **History & Favorites**
 
 ## Screenshots
@@ -21,7 +21,7 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 ## Default global hotkeys
 - **Translate the selected text:** Ctrl + Q
 - **Dictionary:** Ctrl + Shift + Q
-- **OCR:** Ctrl + ~
+- **OCR:** Ctrl + `
 
 ## Roadmap
 
