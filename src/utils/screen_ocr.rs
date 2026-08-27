@@ -278,7 +278,12 @@ impl ScreenOCR {
     }
 
     pub fn process_image(&mut self) -> Result<()> {
-        let monitor = Monitor::from_point(50, 50).unwrap(); //TODO!!!
+        let position = app::get_mouse();
+        let monitor_idx = app::screen_num(position.0, position.1);
+        let scale = app::screen_scale(monitor_idx);
+        let s_position = (position.0 as f32 * scale, position.1 as f32 * scale);
+
+        let monitor = Monitor::from_point(s_position.0 as i32, s_position.1 as i32)?; 
         let image = monitor.capture_image()?;
 
         let (screen_w, screen_h) = app::screen_size();
@@ -300,6 +305,20 @@ impl ScreenOCR {
         app::awake();
         self.win.hide();
         self.win.show();
+        
+        //self.win.set_pos(position.0, position.1);
+        let position = app::get_mouse();
+        let monitor_idx = app::screen_num(position.0, position.1);
+        let screen_scale = app::screen_scale(monitor_idx);
+
+        let screen_rect = app::Screen::xywh_num(monitor_idx)?;
+        self.win.resize(
+            (screen_rect.x as f32 * screen_scale) as i32, 
+            (screen_rect.y as f32 * screen_scale) as i32, 
+            (screen_rect.w as f32 * screen_scale) as i32, 
+            (screen_rect.h as f32 * screen_scale) as i32
+        );
+
         self.win.take_focus();
         Ok(())
     }
@@ -697,12 +716,16 @@ impl MaskableImage {
         let mut f_y = 0; 
 
         let mut released = false; 
-        let mut first_iter = true; 
+        let mut first_iter = true;
 
+        let position = app::get_mouse();
+        let monitor_idx = app::screen_num(position.0, position.1);
+        let screen_scale = app::screen_scale(monitor_idx);
+
+        //let screen_scale = main_win.pixels_per_unit();
         sb.frame.handle(move |t, ev| {
-            let screen_scale = fltk::app::screen_scale(0);
             let mut grey_img_c = grey_img.clone();
-            let s_clone = s; 
+            let s_clone = s;
             let mut rgc = rgb_image.clone();
             let (ex,ey) = app::event_coords();
 
@@ -745,7 +768,7 @@ impl MaskableImage {
 
                     released = true;
                     
-                    let overlay_x = if (tx + overlay_win.width()) > (t.x() + t.width()) {
+                    /*let overlay_x = if (tx + overlay_win.width()) > (t.x() + t.width()) {
                         (t.x() + t.width()) - overlay_win.width()
                     } else {
                         tx
@@ -755,11 +778,23 @@ impl MaskableImage {
                         (t.y() + t.height()) - overlay_win.height()
                     } else {
                         ty
-                    };
+                    };*/
 
                     if !overlay_win.shown() {
                         overlay_win.show();
-                        overlay_win.set_pos(overlay_x, overlay_y);
+                        let position = app::get_mouse();
+                        let rect = app::Screen::xywh_mouse();
+                        let screen_w = rect.w as i32;
+                        let screen_h = rect.h as i32;
+                        let max_x = rect.x + rect.w - overlay_win.w();
+                        let max_y = rect.y + rect.h - overlay_win.h();
+                        if max_x < rect.x || max_y < rect.y {
+                            overlay_win.set_pos(rect.x, rect.y);
+                        } else {
+                            let x = position.0.clamp(rect.x, max_x);
+                            let y = position.1.clamp(rect.y, max_y);
+                            overlay_win.set_pos(x, y);
+                        }
                         overlay_win.take_focus();
                     } else {
                         overlay_win.show();
@@ -800,6 +835,7 @@ impl MaskableImage {
             };
 
             t.draw(move |b|{
+                //TODO(bug): if monitor.0.scale > 1 && monitor.1.scale > 1
                 if screen_scale == 1.0 {
                     rgc.draw(b.x(), b.y(), x as i32, y as i32);
                 } else {

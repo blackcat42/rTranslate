@@ -511,19 +511,38 @@ impl AppView {
         win.hide();
         win.show();
 
+        let mut scale = win.pixels_per_unit();
         if hotspot {
-            //TODO: multi-monitor setup
             let position = app::get_mouse();
-            let screen_w = app::screen_size().0 as i32;
-            let screen_h = app::screen_size().1 as i32;
-            let max_x = screen_w - win.w();
-            let max_y = screen_h - win.h();
-            if max_x < 0 || max_y < 0 {
-                win.set_pos(0, 0);
+            let monitor_idx = app::screen_num(position.0, position.1);
+            /*let rect = if let Ok(r) = app::Screen::xywh_num(monitor_idx) {
+                r
             } else {
-                let x = position.0.clamp(0, max_x);
-                let y = position.1.clamp(0, max_y);
-                win.set_pos(x, y);
+                app::Screen::xywh_mouse()
+            };*/
+            let rect = app::Screen::xywh_mouse();
+            
+            scale = app::screen_scale(monitor_idx);
+            let screen_w = rect.w as i32;
+            let screen_h = rect.h as i32;
+            let max_x = rect.x + rect.w - win.w();
+            let max_y = rect.y + rect.h - win.h();
+            if max_x < rect.x || max_y < rect.y {
+                win.set_pos(rect.x, rect.y);
+            } else {
+                let x = position.0.clamp(rect.x, max_x);
+                let y = position.1.clamp(rect.y, max_y);
+
+                if scale != 1.0 {
+                    win.set_pos(rect.x, rect.y);
+                    app::flush();
+                    let w = win.w();
+                    let h = win.h();
+                    win.resize(x, y, w + 1, h);
+                    win.resize(x, y, w, h);
+                } else {
+                    win.set_pos(x, y);
+                }
             }
         }
 
@@ -532,7 +551,7 @@ impl AppView {
         fltk::app::add_timeout3(0.1, move |_| {
             win_clone.set_on_top();
             let _ = win_clone.take_focus();
-            if win_clone.pixels_per_unit() != 1.0 {
+            if scale != 1.0 {
                 win_clone.redraw();
                 //app::flush();
             }
