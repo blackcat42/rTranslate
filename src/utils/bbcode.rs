@@ -4,6 +4,8 @@
 pub struct BBRichText {
     pub text: String,
     pub is_bold: bool,
+    pub is_i: bool,
+    pub is_highlighted: bool,
     pub color: String,
 }
 
@@ -74,14 +76,22 @@ pub fn dsl_parse(s: &str) -> Vec<BBRichText> {
             };
         };
         let mut is_bold = false;
+        let mut is_i = false;
+        let mut is_highlighted = false;
         let mut color = "".to_string();
         for tag in tags {
             match tag.0 {
+                BBTag::Quote => {
+                    is_highlighted = true;
+                },
                 BBTag::FontColor => {
                     color = tag.1.clone();
                 },
                 BBTag::Bold => {
                     is_bold = true;
+                },
+                BBTag::Italic => {
+                    is_i = true;
                 },
                 _ => {
 
@@ -91,13 +101,18 @@ pub fn dsl_parse(s: &str) -> Vec<BBRichText> {
         #[allow(clippy::len_zero)]
         if value.text.len() > 0 {
             if let Some(el) = final_arr.last_mut() {
-                if el.is_bold == is_bold && el.color == color {
+                if el.is_bold == is_bold 
+                && el.is_i == is_i 
+                && el.color == color 
+                && el.is_highlighted == is_highlighted {
                     el.text.push_str(&value.text);
                 } else {
                     final_arr.push(
                         BBRichText {
                             text: value.text.clone(),
                             is_bold,
+                            is_i,
+                            is_highlighted,
                             color: color.to_string()
                         }
                     );
@@ -107,16 +122,17 @@ pub fn dsl_parse(s: &str) -> Vec<BBRichText> {
                     BBRichText {
                         text: value.text.clone(),
                         is_bold,
+                        is_i,
+                        is_highlighted,
                         color: color.to_string()
                     }
                 );
             }
         }
-        
     }
-
     final_arr
 }
+
 
 
 

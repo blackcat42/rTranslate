@@ -277,50 +277,91 @@ impl AppView {
             let text_chuncs = dsl_parse(&dict_text);
             //teal, red, green, blue, indigo
             let mut sbuf = fltk::text::TextBuffer::default();
-            let style_a = fltk::text::StyleTableEntry {
+            let style_a = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::Black,
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_b = fltk::text::StyleTableEntry {
+            let style_b = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::Black,
                 font: fltk::enums::Font::HelveticaBold,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_c = fltk::text::StyleTableEntry {
+            let style_c = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::Red,
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_d = fltk::text::StyleTableEntry {
+            let style_d = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::DarkGreen,
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_e = fltk::text::StyleTableEntry {
+            let style_e = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::DarkBlue,
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_f = fltk::text::StyleTableEntry {
+            let style_f = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::from_hex(0x008080), //teal
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
             };
-            let style_g = fltk::text::StyleTableEntry {
+            let style_g = fltk::text::StyleTableEntryExt {
                 color: fltk::enums::Color::from_hex(0x4B0082), //indigo
                 font: fltk::enums::Font::Helvetica,
                 size: GLOBAL_SETTINGS.text_font_size,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
+            };
+
+            let style_h = fltk::text::StyleTableEntryExt {
+                color: fltk::enums::Color::Black,
+                font: fltk::enums::Font::HelveticaItalic,
+                size: GLOBAL_SETTINGS.text_font_size,// - 1,
+                attr: fltk::text::TextAttr::None,
+                bgcolor: fltk::enums::Color::Yellow,
+            };
+            let style_i = fltk::text::StyleTableEntryExt {
+                color: fltk::enums::Color::Black,
+                font: fltk::enums::Font::Helvetica,
+                size: GLOBAL_SETTINGS.text_font_size,// - 1,
+                attr: fltk::text::TextAttr::BgColorExt,
+                bgcolor: enums::Color::from_hex(0xFFF2CC),
+            };
+            let style_j = fltk::text::StyleTableEntryExt {
+                color: fltk::enums::Color::Black,
+                font: fltk::enums::Font::HelveticaBold,
+                size: GLOBAL_SETTINGS.text_font_size,// - 1,
+                attr: fltk::text::TextAttr::BgColorExt,
+                bgcolor: enums::Color::from_hex(0xFFF2CC),
             };
         
 
             //sbuf.set_text("");
             let mut str_main = "".to_string();
             let mut str_f = "".to_string();
+            //dbg!(&text_chuncs);
             for chunc in text_chuncs.iter() {
                 
                 str_main.push_str(&chunc.text);
-                if &chunc.color == "red" {
+                if chunc.is_highlighted && chunc.is_bold {
+                    str_f.push_str(&"J".repeat(chunc.text.len()));
+                } else if chunc.is_highlighted {
+                    str_f.push_str(&"I".repeat(chunc.text.len()));
+                } else if &chunc.color == "red" {
                     str_f.push_str(&"C".repeat(chunc.text.len()));
                 } else if &chunc.color == "green" {
                     str_f.push_str(&"D".repeat(chunc.text.len()));
@@ -332,6 +373,8 @@ impl AppView {
                     str_f.push_str(&"G".repeat(chunc.text.len()));
                 } else if chunc.is_bold {
                     str_f.push_str(&"B".repeat(chunc.text.len()));
+                } else if chunc.is_i {
+                    str_f.push_str(&"H".repeat(chunc.text.len()));
                 } else {
                     str_f.push_str(&"A".repeat(chunc.text.len()));
                 }
@@ -342,10 +385,10 @@ impl AppView {
             sbuf.set_text(&str_f);
             
             self.dict_popup.txt_popup_dict.unset_highlight_data(sbuf.clone());
-            self.dict_popup.txt_popup_dict.set_highlight_data(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g]);
+            self.dict_popup.txt_popup_dict.set_highlight_data_ext(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g, style_h, style_i, style_j]);
 
             self.main_win.txt_dict_main.unset_highlight_data(sbuf.clone());
-            self.main_win.txt_dict_main.set_highlight_data(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g]);
+            self.main_win.txt_dict_main.set_highlight_data_ext(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g, style_h, style_i, style_j]);
         }
 
         //let from = LangNames::from_str(src.as_ref()).unwrap_or(LangNames::En);
