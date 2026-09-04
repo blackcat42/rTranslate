@@ -141,6 +141,9 @@ impl Dictionary for WDEn {
                             let t_text = html_to_bbcode(&t_text, HTMLSelectorType::Id("mw-content-text".to_string()), tag_handler);
                             match t_text {
                                 Ok(res) => {
+                                    let res = res.replace("([c blue]edit[/c])", "");
+                                    let res = res.replace("  • [quote]", "[quote]  ");
+
                                     app_sender.send(AppEvent::SaveDictEntry(DictResult {
                                         src_id,
                                         dict_uid: uid.clone(),

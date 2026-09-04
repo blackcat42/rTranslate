@@ -105,6 +105,7 @@ function getArgValue(argName) {
 }
 
 let s_args;
+let qtranslate_eval = '';
 /*if (typeof Deno !== "undefined") {
 	eval(`
 		let f1 = Deno.readTextFileSync("./extensions/qtranslate/Services/Common.js", "utf-8");
@@ -124,6 +125,14 @@ if (typeof std !== "undefined" && typeof std.loadScript === "function") {
 	std.loadScript('./extensions/qtranslate/Services/Common.js');
 	std.loadScript('./extensions/qtranslate/Services/' + srvc_id + '/Service.js');
 	
+    let qt_eval = getArgValue("qtranslate-eval");
+    if (qt_eval == 'FILE') {
+        std.loadScript('./qjs_tmp.js');
+        qtranslate_eval = eval_data;
+    } else {
+        qtranslate_eval = qt_eval;
+    }
+
 	//TODO no std, make temporary file common.js + service.js
 	std = null;
 	os = null;
@@ -145,6 +154,8 @@ addOption('LanguageCode', 'ru'); //TODO!!! target lang?
 
 let sh = serviceHeader();
 
+let request_type = cleanIDString(getArgValue("type"));
+
 if (sh.name === 'Yandex' && sh.id === 11) {
 	//TODO: <QT_STATE>
 	if (typeof YandexModel === "function"){
@@ -156,15 +167,46 @@ if (sh.name === 'Yandex' && sh.id === 11) {
 	//TODO detect lng
 }
 
-if (!!(sh.capabilities & Capability.TRANSLATE)) {
-	let qtranslate_eval = getArgValue("qtranslate-eval");
-	let arg_decoded = base64decode(qtranslate_eval);
-	//console.log("QT-args:", arg_decoded);
-	let result = eval(arg_decoded);
-	if (result.uri !== undefined) {
-		result.uri = serviceHost() + result.uri;
-	}
-	console.log('<SERVICE_RESPONSE_BEGIN>');
-	console.log(stringifyJSON(result));
-	console.log('<SERVICE_RESPONSE_END>');
+
+
+//TRANSLATE:1,DETECT_LANGUAGE:2,LISTEN:4,DICTIONARY:8
+if (request_type == Capability.TRANSLATE) {
+    if (!!(sh.capabilities & Capability.TRANSLATE)) {
+        let arg_decoded = base64decode(qtranslate_eval);
+        //console.log("QT-args:", arg_decoded);
+        let result = eval(arg_decoded);
+        if (result.uri !== undefined && !result.uri.startsWith("https://")) {
+            result.uri = serviceHost(Capability.TRANSLATE) + result.uri;
+        }
+        console.log('<SERVICE_RESPONSE_BEGIN>');
+        console.log(stringifyJSON(result));
+        console.log('<SERVICE_RESPONSE_END>');
+    }
+} else if (request_type == Capability.LISTEN) {
+    if (!!(sh.capabilities & Capability.LISTEN)) {
+        /*let qtranslate_eval = getArgValue("qtranslate-eval");
+        let arg_decoded = base64decode(qtranslate_eval);
+        //console.log("QT-args:", arg_decoded);
+        let result = eval(arg_decoded);
+        if (result.uri !== undefined) {
+            result.uri = serviceHost(Capability.LISTEN) + result.uri;
+        }
+        console.log('<SERVICE_RESPONSE_BEGIN>');
+        console.log(stringifyJSON(result));
+        console.log('<SERVICE_RESPONSE_END>');*/
+    }
+} else if (request_type == Capability.DICTIONARY) {
+    if (!!(sh.capabilities & Capability.DICTIONARY)) {
+        let arg_decoded = base64decode(qtranslate_eval);
+        //console.log("QT-args:", arg_decoded);
+        let result = eval(arg_decoded);
+        if (result.uri !== undefined && !result.uri.startsWith("https://")) {
+            result.uri = serviceHost(Capability.DICTIONARY) + result.uri;
+        }
+        console.log('<SERVICE_RESPONSE_BEGIN>');
+        console.log(stringifyJSON(result));
+        console.log('<SERVICE_RESPONSE_END>');
+    }
 }
+
+//https://tts.voicetech.yandex.net/tts?format=mp3&quality=hi&platform=web&application=translate&lang=en&text=Hello

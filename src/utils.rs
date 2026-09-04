@@ -7,3 +7,4 @@ pub mod i18n;
 pub mod bbcode;
 pub mod html_to_bbcode;
 pub mod screen_ocr;
+pub mod qtranslate;

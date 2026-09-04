@@ -51,6 +51,7 @@ mod dict_services;
 use dict_services::wiktionary_en;
 use dict_services::google_dict;
 use dict_services::user_dict;
+use dict_services::qt_dict;
 
 mod prnn_services;
 use prnn_services::prnn_wiki;
@@ -191,6 +192,7 @@ struct DictOption {
     #[serde(default = "default_as_false")]
     pub use_proxy: bool,
 
+    pub command: Option<String>,
     pub path: Option<String>,
     pub dict_path: Option<String>,
     pub emulation: Option<String>,
@@ -249,7 +251,8 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
         return settings;
     }
     let re_uid = Regex::new(r"^[\w ]+$").unwrap();
-    let mut seen_uids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut seen_uids_tr: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut seen_uids_dict: std::collections::HashSet<String> = std::collections::HashSet::new();
     let target_dir = "./extensions/qtranslate/Services"; 
     let path = std::path::Path::new(target_dir);
     if path.exists() && let Ok(paths) = std::fs::read_dir(path) {
@@ -260,10 +263,15 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
             if entry_path.is_dir() {
                 if let Some(folder_name_os) = entry_path.file_name() {
                     let folder_name = folder_name_os.to_string_lossy().into_owned();
-                    if re_uid.is_match(&folder_name) && seen_uids.insert(folder_name.clone()) {
+                    let contents = std::fs::read_to_string(entry_path.join("Service.js"));
+
+                    if let Ok(ref c) = contents 
+                    && c.contains("Capability.TRANSLATE") 
+                    && re_uid.is_match(&folder_name) 
+                    && seen_uids_tr.insert(folder_name.clone()) {
                         let new_tr = TranslatorOption {
                             uid: folder_name.clone(),
-                            name: folder_name,
+                            name: folder_name.clone(),
                             use_proxy: false,
                             command: Some("QTRANSLATE".to_string()),
                             args: None,
@@ -275,6 +283,42 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
                             settings.translators.push(new_tr);
                         }
                     }
+                    if let Ok(ref c) = contents 
+                    && c.contains("Capability.DICTIONARY") 
+                    && re_uid.is_match(&folder_name) 
+                    && seen_uids_dict.insert(folder_name.clone()) {
+                        let new_dict = DictOption {
+                            uid: folder_name.clone(),
+                            name: folder_name,
+                            use_proxy: false,
+                            command: Some("QTRANSLATE".to_string()),
+                            path: None,
+                            dict_path: None,
+                            emulation: None,
+                        };
+                        
+                        if !settings.dictionaries.iter().any(|item| item.uid == new_dict.uid) {
+                            settings.dictionaries.push(new_dict);
+                        }
+                    }
+                    //if let Ok(ref c) = contents 
+                    //&& c.contains("Capability.LISTEN") 
+                    //&& re_uid.is_match(&folder_name) 
+                    //&& seen_uids_tts.insert(folder_name.clone()) {
+                        /*let new_dict = DictOption {
+                            uid: folder_name.clone(),
+                            name: folder_name,
+                            use_proxy: false,
+                            command: Some("QTRANSLATE".to_string()),
+                            path: None,
+                            dict_path: None,
+                            emulation: None,
+                        };
+                        
+                        if !settings.dictionaries.iter().any(|item| item.uid == new_dict.uid) {
+                            settings.dictionaries.push(new_dict);
+                        }*/
+                    //}
                 }
             }
         }
@@ -450,7 +494,7 @@ fn main() {
 
         if let Some(command) = &value.command
         && command == "QTRANSLATE" {
-            app_state.translators.insert(value.uid.clone(), Box::new(qt_translator::QT::new(app_sender, value.name.clone(), value.uid.clone(), false, None )));
+            app_state.translators.insert(value.uid.clone(), Box::new(qt_translator::QT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone() )));
         } else if let Some(command) = &value.command 
         && command.chars().count() > 0
         && let Some(args) = &value.args 
@@ -472,7 +516,10 @@ fn main() {
             panic!("Error");
         }
         let use_proxy = value.use_proxy;
-        if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
+        if let Some(command) = &value.command
+        && command == "QTRANSLATE" {
+            app_state.dictionaries.insert(value.uid.clone(), Box::new(qt_dict::QTDict::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone() )));
+        } else if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone())));
         } else if value.uid == "dict_wiktionary_en" {
             app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));

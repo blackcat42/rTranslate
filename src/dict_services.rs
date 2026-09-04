@@ -4,3 +4,4 @@ use super::app_message;
 pub mod google_dict;
 pub mod wiktionary_en;
 pub mod user_dict;
+pub mod qt_dict;

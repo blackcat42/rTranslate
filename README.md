@@ -6,8 +6,8 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 
 - **Instant Translation:** Select text in any application and instantly translate it using a customizable shortcut.
 - **Screen OCR:** Press a customizable hotkey, select any screen area, and extract text instantly using a local offline OCR engine.
-- **Dictionaries:** Google, DSL (local)
-- **Translator services:** Google Translate, DeepL, Bergamot (local)
+- **Dictionaries:** Google, Lingvo DSL (local, able to work with large (>1 GB) .dsl files), Wiktionary
+- **Translator services:** Google Translate, DeepL, Bergamot (local),
 - **Text-to-Speech (TTS):** Kokoro.js (local)
 - **Pronunciations:** Google, Wiktionary
 - **Extensions:** Supports extensions running as sidecar processes. QTranslate services also supported.
@@ -28,12 +28,12 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 - [x] Offline OCR (PaddleOCR)
 - [ ] QTranslate services support
 	- [x] translation
-	- [ ] dictionaries
+	- [x] dictionaries
 	- [ ] tts
-- [ ] Wiktionary parser
+- [x] Wiktionary parser
 - [x] i18n
 - [ ] Double-key shortcuts, mouse mode
-- [ ] High-DPI and multi-monitor setups support
+- [x] High-DPI and multi-monitor setups support
 - [x] Windows 7, XP support
 - [ ] Builds for Linux
 - [ ] Codebase refactoring

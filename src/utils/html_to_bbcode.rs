@@ -119,10 +119,7 @@ pub fn html_to_bbcode(
     }
 
     let result = result.trim().to_owned();
-    
     let result = html_escape::decode_html_entities(&result).to_string();
-    let result = result.replace("([c blue]edit[/c])", "");
-    let result = result.replace("  • [quote]", "[quote]  ");
 
     Ok(normalize_text(&result))
 }
