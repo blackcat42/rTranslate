@@ -9,6 +9,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::sync::{OnceLock};
 
+use anyhow::{anyhow, Result};
+
 use crate::types::{
     BLWCoords
 };
@@ -172,4 +174,59 @@ pub fn borderless_win_handler(
         }
         _ => false,
     }
+}
+
+fn google_tk_b(mut value: i64, pattern: &[u8]) ->  Result<i64> {
+    let mut i = 0;
+
+    while i < pattern.len().saturating_sub(2) {
+        let shift = pattern[i + 2] as char;
+
+        let shift = if shift >= 'a' {
+            (shift as i64) - 87
+        } else {
+            shift.to_digit(10).ok_or(anyhow!("err"))? as i64
+        };
+        let shifted = if pattern[i + 1] as char == '+' {
+            (value as u32 >> (shift % 32)) as i64
+        } else {
+            ((value as i32).wrapping_shl(shift as u32)) as i64
+        };
+
+        value = if pattern[i] as char == '+' {
+            (value as i32).wrapping_add(shifted as i32) as i64
+        } else {
+            ((value as i32) ^ (shifted as i32)) as i64
+        };
+
+        i += 3;
+    }
+
+    Ok(value)
+}
+
+pub fn google_tk(input: &str, tkk: &str) -> Result<String> {
+    if !GLOBAL_SETTINGS.use_google_token {
+        return Err(anyhow!("err"));
+    }
+    let parts: Vec<&str> = tkk.split('.').collect();
+    let h: i64 = parts.first().and_then(|s| s.parse().ok()).unwrap_or(0);
+    let tk2: i64 = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+
+    let bytes = input.as_bytes();
+    let mut a = h;
+
+    for &b in bytes {
+        a = a.wrapping_add(b as i64);
+        a = google_tk_b(a, b"+-a^+6")?;
+    }
+
+    a = google_tk_b(a, b"+-3^+b+-f")?;
+    a = ((a as i32) ^ (tk2 as i32)) as i64;
+    a = (a as u32) as i64;
+    a %= 1_000_000;
+
+    let xor_h = (a as i32) ^ (h as i32);
+
+    Ok(format!("{}.{}", a, xor_h))
 }

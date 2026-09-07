@@ -114,6 +114,8 @@ pub struct Settings {
     pub download_all_pronunciations: bool,
     pub eng_accents: Vec<String>,
 
+    #[serde(default = "default_as_false")]
+    pub use_google_token: bool,
     pub google_translate_api_key: Option<String>,
 
     pub pinned_src_languages: Vec<String>,

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use crate::utils::rt_request::{
     Client
 };
+use crate::utils::helpers::google_tk;
 
 pub struct GT {
     is_running: Arc<AtomicBool>,
@@ -102,7 +103,13 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
     } else {
         "auto"
     };
-    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}", src_lang_ref, target_lang.as_ref());
+    let tk = if let Ok(token) = google_tk(&selected_text, "") {
+        format!("&tk={}", token)
+    } else {
+        "".to_string()
+    };
+
+    let req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&dt=t&tl={}{}", src_lang_ref, target_lang.as_ref(), tk);
     dprintln!("{}", req_string);
 
 
@@ -124,25 +131,25 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
     dprintln!("{}", resp);
     let result =  Ok(resp);
 
-
     match result {
         Ok(json_data) => {
             let value: Value = serde_json::from_str(json_data.as_str())?;
             let mut src_lng_suggested = src_lang.clone();
-            if let Some(items) = value.as_array()
-                && items.get(0).is_some() 
-                && let Some(tr_items) = items[0].as_array() {
-                    for item_value in tr_items {
-                        if item_value.get(0).is_some() && let Some(text) = item_value[0].as_str() {
-                            response.push_str(text);
-                            //dprintln!("{}", text);
-                        }
-                    };
-                    if let Some(lang) = items.get(2) {
-                        src_lng_suggested = Lang::from_str(lang.as_str().unwrap_or("auto")).unwrap_or(src_lang);
+
+            if let Some(tr_items) = value[0].as_array() {
+                for item_value in tr_items {
+                    if let Some(text) = item_value[0].as_str() {
+                        response.push_str(text);
+                        //dprintln!("{}", text);
                     }
                 }
-            if response.chars().count() > 1 {
+                
+                if let Some(lang) = value[8][0][0].as_str() {
+                    src_lng_suggested = Lang::from_str(lang).unwrap_or(src_lang);
+                }
+            }
+
+            if response.chars().nth(1).is_some() {
                 Ok((response, src_lng_suggested))
             } else {
                 Err(anyhow!("error"))
@@ -152,26 +159,4 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
             Err(err)
         }
     }
-    /*let config = Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout)))
-        .build();
-    let agent: Agent = config.into();
-    let json_data: String = agent.get(req_string)
-        .query("q", selected_text)
-        .call()?
-        .body_mut()
-        .read_to_string()?;
-
-    let value: Value = serde_json::from_str(json_data.as_str())?;
-
-    if let Some(items) = value.as_array()
-        && let Some(tr_items) = items[0].as_array() {
-            for item_value in tr_items {
-                if let Some(text) = item_value[0].as_str() {
-                    response.push_str(text);
-                    //dprintln!("{}", text);
-                }
-            }
-        }
-    Ok(response)*/
 }

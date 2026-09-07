@@ -255,6 +255,9 @@ fn run_qt_service(request_type: u8, srvc_id: &str, eval_str: &str) -> Result<QTD
             child_err = String::from_utf8_lossy(&output.stderr).into_owned();
             child_output = String::from_utf8_lossy(&output.stdout).into_owned();
         }
+        if let Err(e) = std::fs::remove_file("qjs_tmp.js") {
+            println!("error remove file: {}", e);
+        }
 
         //dprintln!("cmd: {:?}", child);
         

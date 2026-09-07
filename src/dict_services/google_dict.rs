@@ -9,6 +9,7 @@ use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 use crate::utils::rt_request::{
     Client,
 };
+use crate::utils::helpers::google_tk;
 
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -114,7 +115,8 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
     let src_lang = src_lang.as_ref();
     let target_lang = target_lang.as_ref();
 
-    let token: Option<String> = None;
+    let selected_text = selected_text.to_lowercase();
+    let token = google_tk(&selected_text, "");
 
     let mut req_string = format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={src_lang}&tl={target_lang}&hl={target_lang}");
     //&dt=bd&dt=t&dt=ld&dt=rm&ie=UTF-8&oe=UTF-8");
@@ -134,7 +136,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
     req_string.push_str("&dj=1&ie=UTF-8&oe=UTF-8"); //&dj=1 - json response with names
     //&dt=qca ???
 
-    if let Some(token) = token {
+    if let Ok(token) = token {
         req_string.push_str("&tk=");
         req_string.push_str(&token);
     }
@@ -154,7 +156,7 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
     }
     let client = client.build()?;
     
-    let resp = client.get(req_string).query([("q", selected_text.to_lowercase())]).send()?.text()?;
+    let resp = client.get(req_string).query([("q", selected_text)]).send()?.text()?;
     let result = Ok(resp);
 
 
