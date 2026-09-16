@@ -35,6 +35,9 @@ impl Translator for QT {
     fn terminate(&mut self) {
         
     }
+    fn is_processing(&self) -> bool {
+        false
+    }
     fn get_uid(&self) -> &str {
         &self.uid
     }

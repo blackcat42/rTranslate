@@ -43,6 +43,7 @@ use tray_item::{IconSource, TrayItem};
 mod tr_services;
 use tr_services::sidecar_translator;
 use tr_services::qt_translator;
+use tr_services::openai_translator;
 use tr_services::google_translate;
 use tr_services::google_translate2;
 use tr_services::deepl_translate;
@@ -59,6 +60,8 @@ use prnn_services::prnn_google;
 
 mod tts_services;
 use tts_services::nodejs_tts;
+use tts_services::openai_tts;
+use tts_services::fish_tts;
 
 mod types;
 mod app_state;
@@ -80,6 +83,7 @@ use utils::helpers::{
 fn default_as_true() -> bool { true }
 fn default_as_false() -> bool { false } //explicit is better
 fn default_as_minus_one() -> i32 { -1 }
+fn default_as_float_one() -> f32 { 1.0 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UIConfig {
@@ -140,6 +144,8 @@ pub struct Settings {
     pub ext_service_unload_timeout: u64,
     pub http_throttling: f64,
     pub http_request_timeout: u64,
+    pub openai_api_request_timeout: u64,
+    pub openai_api_stream_request_timeout: u64,
     pub proxy: Option<ProxyOption>,
     
     #[serde(default = "default_as_false")]
@@ -185,6 +191,18 @@ struct TranslatorOption {
     pub args: Option<Vec<String>>,
     pub reload_if_lang_changed: Option<bool>,
     pub emulation: Option<String>,
+
+    pub openai_url: Option<String>,
+    #[serde(default)]
+    pub openai_api_key: String,
+    pub openai_model: Option<String>,
+    pub openai_prompt: Option<String>,
+    #[serde(default = "default_as_true")]
+    pub stream: bool,
+    #[serde(default = "default_as_false")]
+    pub api_key_requied: bool,
+    #[serde(default)]
+    pub api_key_url: String,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct DictOption {
@@ -205,7 +223,23 @@ struct TTServiceOption {
     pub name: String,
     pub command: Option<String>,
     pub args: Option<Vec<String>>,
-    pub voices: Vec<String>
+    pub voices: Vec<String>,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+    pub emulation: Option<String>,
+
+    #[serde(default = "default_as_float_one")]
+    pub speed: f32,
+    pub openai_url: Option<String>,
+    #[serde(default)]
+    pub openai_api_key: String,
+    pub openai_model: Option<String>,
+    pub openai_response_format: Option<String>,
+    #[serde(default = "default_as_false")]
+    pub api_key_requied: bool,
+    #[serde(default)]
+    pub api_key_url: String,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct PRNNSourceOption {
@@ -262,6 +296,7 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
             let entry = entry.unwrap();
             let entry_path = entry.path();
 
+            #[allow(clippy::collapsible_if)]
             if entry_path.is_dir() {
                 if let Some(folder_name_os) = entry_path.file_name() {
                     let folder_name = folder_name_os.to_string_lossy().into_owned();
@@ -279,6 +314,14 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
                             args: None,
                             reload_if_lang_changed: None,
                             emulation: None,
+
+                            openai_url: None,
+                            openai_api_key: "".to_string(),
+                            openai_model: None,
+                            openai_prompt: None,
+                            stream: false,
+                            api_key_requied: false,
+                            api_key_url: "".to_string(),
                         };
                         
                         if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {
@@ -497,6 +540,36 @@ fn main() {
         if let Some(command) = &value.command
         && command == "QTRANSLATE" {
             app_state.translators.insert(value.uid.clone(), Box::new(qt_translator::QT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone() )));
+        } else if let Some(command) = &value.command && command == "OPENAI" 
+        && let Some(openai_url) = &value.openai_url 
+        && let Some(openai_model) = &value.openai_model {
+            let prompt = if let Some(f) = &value.openai_prompt {
+                let contents = std::fs::read_to_string(working_dir.join(f));
+                if let Ok(ref c) = contents {
+                    c.to_string()
+                } else {
+                    "Translate to <TARGET_LANG>: ".to_string()
+                }
+            } else {
+                "Translate to <TARGET_LANG>: ".to_string()
+            };
+            
+            app_state.translators.insert(value.uid.clone(), 
+                Box::new(openai_translator::OA::new(
+                    app_sender, 
+                    value.name.clone(), 
+                    value.uid.clone(), 
+                    use_proxy,
+                    value.emulation.clone(), 
+                    openai_url.clone(),
+                    value.openai_api_key.clone(), 
+                    openai_model.clone(), 
+                    prompt, 
+                    value.stream,
+                    value.api_key_requied,
+                    value.api_key_url.clone(),
+                ))
+            );
         } else if let Some(command) = &value.command 
         && command.chars().count() > 0
         && let Some(args) = &value.args 
@@ -537,12 +610,59 @@ fn main() {
             panic!("Error");
         }
 
-        if let Some(command) = &value.command 
+        let use_proxy = value.use_proxy;
+        if let Some(command) = &value.command && command == "OPENAI" 
+        && let Some(openai_url) = &value.openai_url 
+        && let Some(openai_model) = &value.openai_model {
+            let openai_response_format = if let Some(f) = &value.openai_response_format {
+                f
+            } else {
+                "mp3"
+            };
+            app_state.tts_services.insert(value.uid.clone(), 
+                Box::new(openai_tts::OATTS::new(
+                    app_sender, 
+                    value.uid.clone(), 
+                    value.name.clone(), 
+
+                    use_proxy,
+                    value.emulation.clone(),
+
+                    openai_url.clone(),
+                    value.openai_api_key.clone(), 
+                    openai_model.clone(),
+                    openai_response_format.to_string(),
+                    value.api_key_requied,
+                    value.api_key_url.clone(),
+                ))
+            );
+        } else if let Some(command) = &value.command 
         && command.chars().count() > 0
         && let Some(args) = &value.args {
             dbg!(value);
             app_state.tts_services.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone())));
-        }
+        } else if value.uid == "tts_fish" && let Some(openai_model) = &value.openai_model {
+            let openai_response_format = if let Some(f) = &value.openai_response_format {
+                f
+            } else {
+                "mp3"
+            };
+            app_state.tts_services.insert(
+                value.uid.clone(), 
+                Box::new(
+                    fish_tts::FTTS::new(
+                        app_sender, 
+                        value.uid.clone(), 
+                        value.name.clone(), 
+                        use_proxy, 
+                        value.emulation.clone(), 
+                        value.openai_api_key.clone(), 
+                        openai_model.clone(), 
+                        openai_response_format.to_string() 
+                    )
+                )
+            );
+        } 
     }
     
     for value in GLOBAL_SETTINGS.prnn_services.iter() {
@@ -703,6 +823,7 @@ fn main() {
     while app.wait() {
         let ev = fltk::app::event(); 
         //dprintln!("Main loop awoken by event: {:?}", &ev);
+        #[allow(clippy::while_let_loop)]
         loop {
             if let Some(msg) = app_receiver.recv() {
                 dprintln!("app main loop - recv");
@@ -711,6 +832,15 @@ fn main() {
                     //TODO: get ui_state from database by given src- and translation id's (single source of truth)
                     //or use global object (?) if db is not supported
                     AppEvent::UpdateUi(state, is_new_source) => {
+                        let mut is_proc = false;
+                        for t in app_state.translators.iter_mut() {
+                            if t.1.is_processing() {
+                                is_proc = true;
+                            }
+                        }
+                        if !is_proc {
+                            app_view.transl_popup.stop_button.hide();
+                        }
                         app_view.update_ui(state, is_new_source);
                     }
                     AppEvent::UpdateUiDict(state, is_new_source) => {
@@ -723,9 +853,22 @@ fn main() {
                     AppEvent::SetWaiting(text, is_dict) => {
                         app_view.set_waiting(text, is_dict);
                     }
+                    AppEvent::SetWaitingWithStream(is_dict) => {
+                        app_view.set_waiting_with_stream(is_dict);
+                    }
+                    AppEvent::ClearHighlights => {
+                        app_view.clear_highlights();
+                    }
                     AppEvent::SetReady(error, is_dict) => {
                         app_view.set_ready(error, is_dict);
                     }
+                    AppEvent::TerminateAll => {
+                        //TODO: dictionaries, tts, etc.
+                        for t in app_state.translators.iter_mut() {
+                            t.1.terminate();
+                        }
+                    }
+
                     AppEvent::UpdateHistoryBrowserView(state) => {
                         app_view.update_history_browser(state);
                     }
@@ -972,8 +1115,7 @@ fn main() {
                             &filename
                         );
                         if let Ok(file) = file {
-                            let filename = format!("{}.ogg", file);
-                            app_sender.send(AppEvent::TTSPlay(filename));
+                            app_sender.send(AppEvent::TTSPlay(file));
                         }
                     }
                     AppEvent::TTSPlay(filename) => {
@@ -998,6 +1140,10 @@ fn main() {
                             }
                         });
                         app::awake();
+                    }
+                    AppEvent::AppendToStreamBuf(chunk) => {
+                        dprintln!("{:?}", chunk);
+                        app_view.append_to_stream_buf(&chunk);
                     }
                 }
             } else {

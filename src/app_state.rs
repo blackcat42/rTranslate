@@ -465,7 +465,7 @@ impl AppState {
 
         match tts_file {
             Ok(tr) => {
-                let filename = format!("{}.ogg", tr);
+                let filename = format!("{}", tr);
                 self.app_sender.send(AppEvent::TTSPlay(filename));
             }
             Err(_) => {
@@ -477,7 +477,7 @@ impl AppState {
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, false));
                 if let Some(engine) = self.tts_services.get_mut(self.selected_tts_service.clone().as_str()) {
-                    engine.generate(
+                    let _ = engine.generate(
                         text.clone(), 
                         src_id, 
                         self.selected_tts_voice.clone()
@@ -510,7 +510,7 @@ impl AppState {
             match tts {
                 Ok(t) => {
                     dprintln!("tts found");
-                    let audio_path = format!(r"tts_cache\{t}.ogg");
+                    let audio_path = format!(r"tts_cache\{t}");
                     let working_dir = std::env::current_dir()?;
                     match working_dir.join(audio_path).try_exists() {
                         Ok(true) => Ok(t),
@@ -725,11 +725,11 @@ impl AppState {
             return Ok(filename.to_string());
         }
         if let Some(db) = db_ref {
-            let zxc = src_id.clone().to_string();
-            let path = format!(r"{zxc}_{tts_engine}_{tts_voice}");
+            //let zxc = src_id.clone().to_string();
+            //let path = format!(r"{zxc}_{tts_engine}_{tts_voice}");
             db.execute(
                 "REPLACE INTO tts (src_id, path, tts_service_uid, tts_voice_uid) VALUES (?1, ?2, ?3, ?4)",
-                params![src_id, path, tts_engine, tts_voice],
+                params![src_id, filename, tts_engine, tts_voice],
             )?;
             dprintln!("tts inserted/replaced");
             //Ok(db.last_insert_rowid())//TODO: RETURNING clause

@@ -35,12 +35,13 @@ if (voice == "AfHeart") voice = "af_heart";
 //let uid = (params['--kkr-voice'] && params['--kkr-voice'].length > 2) ? params['--kkr-voice'] : 'out';
 
 const inputPath = 'tmp_audio.wav';
-const outputPath = '../../tts_cache/' + uid + '.ogg';
+const outputPath = '../../tts_cache/' + uid;
 
 
 
   process.stdin.on("data", async data => {
     let text = data.toString();
+    text = /[.!?…,:;]$/.test(text) ? text : `${text}.`;
     //console.log(tts.list_voices())
     const audio = await tts.generate(text, {
       voice: voice,

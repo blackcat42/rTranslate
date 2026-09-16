@@ -9,7 +9,7 @@ const PORT = 8000;
 
 const encoder = new TextEncoder();
 
-const LOREM_WORDS = [
+const _LOREM_WORDS = [
   "Lorem",
   "ipsum",
   "dolor",
@@ -29,6 +29,8 @@ const LOREM_WORDS = [
   "dapibus",
   "diam.",
 ];
+
+const LOREM_WORDS = Array.from({ length: 10 }, () => _LOREM_WORDS).flat();
 
 type ChatRequest = {
   model?: string;
@@ -88,9 +90,11 @@ async function* completionStream(
     ],
   });
 
+  let counter = 0;
   for (const word of LOREM_WORDS) {
-    await sleep(1000);
-
+    await sleep(50);
+    counter++;
+    console.log(counter);
     yield sse({
       id,
       object: "chat.completion.chunk",
@@ -108,6 +112,7 @@ async function* completionStream(
       ],
     });
   }
+  //counter = 0;
 
   yield sse({
     id,
@@ -136,6 +141,7 @@ async function handleChatCompletions(req: Request): Promise<Response> {
     // The request body is not important for this mock server.
     console.error("Invalid JSON:", error);
   }
+  console.log(request);
 
   const model = request.model ?? "mock-model";
   const content = `${LOREM_WORDS.join(" ")} `;
@@ -208,6 +214,8 @@ async function handler(req: Request): Promise<Response> {
       },
     });
   }
+
+  console.log(req);
 
   if (
     req.method === "POST" &&

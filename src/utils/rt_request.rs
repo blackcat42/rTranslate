@@ -8,6 +8,7 @@ use std::{time::Duration};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+//use std::io::{BufRead, BufReader};
 
 use crate::utils::helpers::is_win7_or_greater;
 use super::GLOBAL_SETTINGS;
@@ -22,6 +23,7 @@ pub struct ClientBuilder {
 	gzip: bool,
 	use_proxy: bool,
 	expect_binary: bool,
+	expect_raw: bool,
 }
 impl ClientBuilder {
 
@@ -55,6 +57,11 @@ impl ClientBuilder {
 		self.expect_binary = b;
         self
 	}
+	#[allow(dead_code)]
+	pub fn expect_raw(mut self, b: bool) -> Self {
+		self.expect_raw = b;
+        self
+	}
 	pub fn build(self) -> Result<Client> {
         Ok(Client {
         	//lib: self.lib,
@@ -65,6 +72,7 @@ impl ClientBuilder {
         	gzip: self.gzip,
         	use_proxy: self.use_proxy,
         	expect_binary: self.expect_binary,
+        	expect_raw: self.expect_raw,
 
         	post: None,
         	body: None,
@@ -87,6 +95,7 @@ pub struct Client {
 	gzip: bool,
 	use_proxy: bool,
 	expect_binary: bool,
+	expect_raw: bool,
 
 	post: Option<String>,
 	body: Option<String>,
@@ -104,6 +113,7 @@ impl Client {
 			gzip: false,
 			use_proxy: false,
 			expect_binary: false,
+			expect_raw: false,
 		}
 	}
 	pub fn post(mut self, url: impl Into<String>) -> Self {
@@ -141,11 +151,15 @@ impl Client {
 		self.expect_binary = f;
         self
 	}
-	pub fn send(mut self) -> Result<Response> {
+	pub fn expect_raw(mut self, f: bool) -> Self {
+		self.expect_raw = f;
+        self
+	}
+	pub fn send(mut self) -> Result<Response<ureq::Body>> {
 		if GLOBAL_SETTINGS.use_proxy_global {
 			self.use_proxy = true;
 		}
-		if self.emulation.is_some() {
+		if self.emulation.is_some() && !self.expect_raw {
 			run_wreq_cli(self)
 		} else {
 			make_request_with_ureq(self)
@@ -155,12 +169,14 @@ impl Client {
 
 
 
-pub struct Response {
+pub struct Response<T> {
 	status: StatusCode,
+	pub headers: Option<HashMap<String, String>>,
 	text: Result<String>,
 	bytes: Result<Vec<u8>>,
+	raw: Result<http::response::Response<T>>,
 }
-impl Response {
+impl<T> Response<T> {
 	pub fn status(&self) -> StatusCode {
 		self.status.clone()
 	}
@@ -169,6 +185,9 @@ impl Response {
 	}
 	pub fn bytes(&self) -> Result<Vec<u8>> {
 		self.bytes.as_ref().map(|v| v.clone()).map_err(|e| anyhow::anyhow!("{e}"))
+	}
+	pub fn raw(self) -> Result<http::response::Response<T>> {
+		self.raw.map_err(|e| anyhow::anyhow!("{e}"))
 	}
 }
 
@@ -219,7 +238,7 @@ fn configure_request<B>(req: ureq::RequestBuilder<B>, request: Client) -> ureq::
 	    req
 	}
 
-fn make_request_with_ureq(request: Client) -> Result<Response> {
+fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
 
 	/*
 	emulation: Option<Emulation>,
@@ -276,30 +295,47 @@ fn make_request_with_ureq(request: Client) -> Result<Response> {
 
     let status = response.status();
     let status_descr = format!("{}", status);
-    let body = response.body_mut();
+    //let body = response.body_mut();
+    let resp_headers: HashMap<String, String> = response
+        .headers()
+        .iter()
+        .map(|(name, value)| {
+            (
+                name.to_string().to_lowercase(),
+                value.to_str().unwrap_or("").to_string(),
+            )
+        })
+        .collect();
+        
+    let mut response_raw: Result<http::response::Response<ureq::Body>> = Err(anyhow!("e"));
     let mut response_text: Result<String> = Err(anyhow!("e"));
     let mut response_bytes: Result<Vec<u8>> = Err(anyhow!("e"));
 
+	//TODO
     if request.expect_binary {
-    	response_bytes = body.read_to_vec().map_err(|e| anyhow!(e));
+    	response_bytes = response.body_mut().read_to_vec().map_err(|e| anyhow!(e));
+    } else if request.expect_raw {
+    	response_raw = Ok(response);
     } else {
-    	response_text = body.read_to_string().map_err(|e| anyhow!(e));
+    	response_text = response.body_mut().read_to_string().map_err(|e| anyhow!(e));
     }
     
     Ok(
     	Response {
         	text: response_text,
         	bytes: response_bytes,
+        	raw: response_raw,
         	status: StatusCode {
             		is_success: status.is_success(),
             		to_u16: status.as_u16(),
             		description: status_descr
-            }
+            },
+            headers: Some(resp_headers),
     	}
     )
 }
 
-fn run_wreq_cli(request: Client) -> Result<Response> {
+fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
 
 	/*lib: ReqLib,
 	emulation: Option<Emulation>,
@@ -507,11 +543,13 @@ fn run_wreq_cli(request: Client) -> Result<Response> {
         	Response {
             	text: Ok(response_text),
             	bytes: response_bytes,
+            	raw: Err(anyhow!("wreq_cli doesn't support returning raw responses")),
             	status: StatusCode {
 	            		is_success: status_success,
 	            		to_u16: status_u16,
 	            		description: status_descr
-	            }
+	            },
+	            headers: None, //TODO
         	}
         )
     } else {

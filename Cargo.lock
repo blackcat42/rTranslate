@@ -2954,6 +2954,7 @@ dependencies = [
  "get-selected-text",
  "global-hotkey",
  "html-escape",
+ "http",
  "image",
  "json5",
  "regex",

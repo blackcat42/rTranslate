@@ -50,6 +50,9 @@ pub enum AppEvent {
     TTSPlay(String),
 
     SetWaiting(Option<String>, bool),
+    SetWaitingWithStream(bool),
+    ClearHighlights,
+    TerminateAll,
     SetReady(Option<String>, bool),
     SetStatus(Box<str>, bool, bool),
     Message(Box<str>),
@@ -71,6 +74,8 @@ pub enum AppEvent {
     SetTTSEngine(String, String),
     SetPRNNEngine(String),
     UpdateTTState(i32),
+
+    AppendToStreamBuf(String),
 
 }
 
@@ -384,6 +389,7 @@ pub trait Translator {
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();
+    fn is_processing(&self) -> bool;
     fn get_uid(&self) -> &str;
     fn get_name(&self) -> &str;
 }
@@ -403,7 +409,7 @@ pub trait Dictionary {
     fn get_name(&self) -> &str;
 }
 pub trait TTService {
-    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> ();
+    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<()>;
     fn get_name(&self) -> &str;
 }
 

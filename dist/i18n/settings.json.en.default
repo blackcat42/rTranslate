@@ -77,7 +77,53 @@
             "reload_if_lang_changed": true
         },
 
+
+        /*
+         * --------------------------------------
+         * ollama.com Free cloud models: 
+         * gemma4:31b; gpt-oss:120b; gpt-oss:20b; 
+         * nemotron-3-nano:30b; nemotron-3-super; 
+         * nemotron-3-ultra
+         * --------------------------------------
+         */
+        {
+            "uid": "tr_gemma4_31b",
+            "name": "gemma4",
+            "command": "OPENAI",
+            "openai_url": "https://ollama.com/v1",
+            "openai_api_key": "",
+            "openai_model": "gemma4:31b",
+            "openai_prompt": ".\\prompts\\default.txt",
+            "stream": true,
+            //"use_proxy": false,
+            "api_key_requied": true,
+            "api_key_url": "https://signin.ollama.com/",
+        },
+
         // --- EXAMPLES ---
+        /*{
+            "uid": "tr_nova_micro_v1",
+            "name": "Amazon Nova",
+            "command": "OPENAI",
+            "openai_url": "https://gen.pollinations.ai/v1",
+            "openai_api_key": "", // Get api key: https://enter.pollinations.ai/
+            "openai_model": "amazon/nova-micro-v1",
+            "openai_prompt": ".\\prompts\\default.txt",
+            "stream": true,
+            //"use_proxy": false
+        },*/
+        /*{
+            "uid": "tr_gpt_6_astra",
+            "name": "GPT-6 Astra",
+            "command": "OPENAI",
+            "openai_url": "https://gen.pollinations.ai/v1",
+            "openai_api_key": "", // Get api key: https://enter.pollinations.ai/
+            "openai_model": "openai/gpt-6-astra",
+            "openai_prompt": ".\\prompts\\default.txt",
+            "stream": true,
+            "use_proxy": false
+        },*/
+
         /*{
             "uid": "QTExample",
             "name": "QT example",
@@ -158,7 +204,87 @@
                 "index.mjs"
             ],
             "voices": ["af_heart", "af_nicole"]
-        }
+        },
+
+
+        /*
+         * --------------------------------------
+         * easyvoice.ae
+         *
+         * Cloud Kokoro-tts. Free API keys include 12 voices: 
+         * af_aoede, af_heart, af_bella, af_nova, af_sky, am_adam, 
+         * am_eric, am_michael, bf_emma, bm_daniel, plus Arabic ar_m1 and ar_f1.
+         *
+         * Daily free limit: 5,000 characters. Resets at midnight UTC.
+         * Preview voices (no signup): https://easyvoice.ae/api-docs
+         * --------------------------------------
+         */
+        {
+            "uid": "tts_easyvoice",
+            "name": "easyvoice",
+            "command": "OPENAI",
+            "voices": ["af_heart", "af_bella"],
+            "speed": 1.0,
+            "openai_url": "https://easyvoice.ae/api/v1",
+            "openai_api_key": "",
+            "openai_model": "kokoro-82m",
+            "openai_response_format": "mp3",
+            "api_key_requied": true,
+            "api_key_url": "https://easyvoice.ae",
+        },
+
+        /*
+         * --------------------------------------
+         * Fish Audio
+         * https://fish.audio/blog/s2-1-pro-free-api/
+         * Free access is available through November 30, 2026.
+         *
+         * Get voices: https://fish.audio/ru/app/discovery/
+         * --------------------------------------
+         */
+        {
+            "uid": "tts_fish",
+            "name": "fish audio",
+            "voices": ["fb43143e46f44cc6ad7d06230215bab6", "e3cd384158934cc9a01029cd7d278634"],
+            "openai_api_key": "",
+            "openai_model": "s2.1-pro-free",
+            "openai_response_format": "mp3",
+        },
+
+        /*
+         * --------------------------------------
+         * openrouter
+         *
+         * Daily free limit: 50 requests.
+         * --------------------------------------
+         */
+        {
+            "uid": "tts_fish_openrouter",
+            "name": "fish audio (openrouter)",
+            "command": "OPENAI",
+            "voices": ["fb43143e46f44cc6ad7d06230215bab6", "e3cd384158934cc9a01029cd7d278634"],
+            "speed": 1.0,
+            "openai_url": "https://openrouter.ai/api/v1",
+            "openai_api_key": "",
+            "openai_model": "fish-audio/s2.1-pro-free:free",
+            "openai_response_format": "mp3",
+            "api_key_requied": true,
+            "api_key_url": "https://openrouter.ai",
+        },
+
+        /*{
+            "uid": "tts_flux",
+            "name": "flux",
+            "command": "OPENAI",
+            "voices": ["flux-alexis-en"],
+            "speed": 1.0,
+            "openai_url": "https://openrouter.ai/api/v1",
+            "openai_api_key": "",
+            "openai_model": "deepgram/flux-tts:free",
+            "openai_response_format": "mp3",
+            "api_key_requied": true,
+            "api_key_url": "https://openrouter.ai",
+        },*/
     ],
 
 
@@ -292,6 +418,8 @@
     "ext_service_unload_timeout": 120, //in seconds
     "http_throttling": 1.5, //rate limit for online translation services, in seconds (float values allowed)
     "http_request_timeout": 30, //in seconds
+    "openai_api_request_timeout": 60, //in seconds
+    "openai_api_stream_request_timeout": 300, //in seconds
 
 
 

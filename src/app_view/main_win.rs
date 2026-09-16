@@ -392,9 +392,8 @@ impl MainWinView {
                 if selected_index > 0 && let Some(text) = b.text(selected_index) {
                     dprintln!("Selected: {} at index {}", text, selected_index);
                     unsafe { //Type correctness (selected_index: i32) is insured by the developer
-                        if let Some(d) = b.data::<String>(selected_index) {
-                            dprintln!("Selected: {}", d);
-                            let filename = format!("{}.ogg", d);
+                        if let Some(filename) = b.data::<String>(selected_index) {
+                            dprintln!("Selected: {}", &filename);
                             app_sender.send(AppEvent::TTSPlay(filename));
                         }
                     }

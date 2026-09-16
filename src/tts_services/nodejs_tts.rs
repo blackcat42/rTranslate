@@ -22,7 +22,7 @@ pub struct NTTS {
     args: Vec<String>
 }
 
-//use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result};
 
 //TODO: platform-specific
 use std::os::windows::process::CommandExt;
@@ -41,11 +41,11 @@ impl TTService for NTTS {
     fn get_name(&self) -> &str {
         &self.name
     }
-    fn generate(&self, text: String, src_id: i64, speaker_uid: String) {
+    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<()> {
         if self.is_running.load(Ordering::SeqCst) {
             self.s.send(AppEvent::Message("tts service is still running".into()));
             //self.s.send(AppEvent::SetStatus("error: tts service is still running".into(), false, false));
-            return;
+            return Err(anyhow!("tts service is still running"));
         }
         
         let s = self.s;
@@ -65,7 +65,7 @@ impl TTService for NTTS {
             //let full_path = working_dir.join(entry_point.as_str());
             //let dir_str = &full_path.parent().unwrap();
             
-            let filename = format!("{src_id}_{engine_uid}_{voice}");
+            let filename = format!("{src_id}_{engine_uid}_{voice}.ogg");
 
             if which(&command).is_ok() {
                 if command.starts_with(".\\") {
@@ -148,6 +148,6 @@ impl TTService for NTTS {
             is_running.store(false, Ordering::SeqCst);
             s.send(AppEvent::TTSave(src_id, engine_uid, voice, filename));
         });
+        Ok(())
     }
-
 }

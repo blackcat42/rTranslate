@@ -20,6 +20,7 @@ use super::GLOBAL_SETTINGS;
 use std::str::FromStr;
 
 //TODO: catch thread panics
+//TODO: streaming
 
 #[allow(clippy::type_complexity)]
 pub struct ST {
@@ -58,6 +59,9 @@ impl Translator for ST {
             self.is_running.store(false, Ordering::Relaxed);
             let _ = self.tx.send(None);
         }
+    }
+    fn is_processing(&self) -> bool {
+        self.is_running.load(Ordering::Relaxed)
     }
     fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang, _is_lang_detected: bool) {
         dprintln!("new src or target lang: {}", (self.src_lang != src_lang || self.target_lang != target_lang));

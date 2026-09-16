@@ -9,6 +9,7 @@ publish = false
 which = "8.0.0"
 fltk = { version = "^1.5", features = ["fltk-bundled"] } #"static-msvcrt", "no-gdiplus"
 anyhow = "1.0.100"
+http = "=1.5.0"
 ureq = { version = "=3.3.0", features = ["socks-proxy"] }
 image = "0.25.9"
 #tray-icon = "0.24.1"

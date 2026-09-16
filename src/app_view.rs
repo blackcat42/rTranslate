@@ -61,7 +61,9 @@ pub struct AppView {
     dict_buf: text::TextBuffer,
     waiting_buf: text::TextBuffer,
     error_buf: text::TextBuffer,
-    is_processing: Arc<AtomicBool>,    
+    s_buf: text::TextBuffer,
+    is_processing: Arc<AtomicBool>,
+    is_streaming: Arc<AtomicBool>,
 }
 
 impl AppView {
@@ -86,6 +88,7 @@ impl AppView {
         let translation_buf = text::TextBuffer::default();
         let waiting_buf = text::TextBuffer::default();
         let error_buf = text::TextBuffer::default();
+        let s_buf = fltk::text::TextBuffer::default();
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
 
@@ -110,32 +113,6 @@ impl AppView {
 
         ////////////////////---------------END UI---------------/////////////////////
 
-        
-        
-        //fltk bug? panic or high cpu usage when we trying to hide the windows. spawning a new thread and hiding them inside it works
-        //TODO: should be called after app's event loop run?
-        /*std::thread::spawn({
-            let win_popup = win_popup.clone();
-            let win_popup_dict = win_popup_dict.clone();
-            move || {
-                win_popup.platform_hide();
-                win_popup_dict.platform_hide(); //doesn't work and causing cpu utilization issue, w/o spawning separate thread
-                app::awake();
-            }
-        });*/
-        // !!!!!!!!!!!!!!!!!!!!!!!!! app::flush();
-        //app::wait_for(0.0);
-        
-        
-        /*app::add_timeout3(0.1, {
-            let win_popup = win_popup.clone();
-            let win_popup_dict = win_popup_dict.clone();
-            move|_| {
-                win_popup.platform_hide();
-                win_popup_dict.platform_hide();
-            }
-        });*/
-
         AppView {
             //app_sender,
             dict_popup,
@@ -148,8 +125,10 @@ impl AppView {
             
             waiting_buf,
             error_buf,
+            s_buf,
 
             is_processing: Arc::new(AtomicBool::new(false)),
+            is_streaming: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -157,16 +136,75 @@ impl AppView {
         self.is_processing.store(true, Ordering::Relaxed);
         if !is_dict {
             self.transl_popup.txt_popup.set_buffer(self.waiting_buf.clone());
-            self.main_win.txt_main.set_buffer(self.waiting_buf.clone());      
+            self.main_win.txt_main.set_buffer(self.waiting_buf.clone());
+            self.run_anim(text, self.transl_popup.title_frame.clone());
         } else {
             self.dict_popup.txt_popup_dict.set_buffer(self.waiting_buf.clone());
             self.main_win.txt_dict_main.set_buffer(self.waiting_buf.clone());
+            self.run_anim(text, self.dict_popup.title_frame_dict.clone());
         }
-        self.run_anim(text);
+        
+    }
+
+    pub fn set_waiting_with_stream(&mut self, is_dict: bool) {
+        self.is_streaming.store(true, Ordering::Relaxed);
+        self.transl_popup.stop_button.show();
+        self.recalc_layout(self.transl_popup.win_popup.clone());
+        //win.redraw();
+
+        self.waiting_buf.set_text("");
+        let style_a = fltk::text::StyleTableEntryExt {
+            color: fltk::enums::Color::Black,
+            font: fltk::enums::Font::Helvetica,
+            size: GLOBAL_SETTINGS.text_font_size,// - 1,
+            attr: fltk::text::TextAttr::BgColor,
+            bgcolor: enums::Color::from_hex(0xFFEF00),
+        };
+
+        if !is_dict {
+            self.transl_popup.txt_popup.set_buffer(self.waiting_buf.clone());
+            self.main_win.txt_main.set_buffer(self.waiting_buf.clone());
+
+            self.transl_popup.txt_popup.unset_highlight_data(None);
+            self.transl_popup.txt_popup.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.main_win.txt_main.unset_highlight_data(None);
+            self.main_win.txt_main.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+        } else {
+            self.dict_popup.txt_popup_dict.set_buffer(self.waiting_buf.clone());
+            self.main_win.txt_dict_main.set_buffer(self.waiting_buf.clone());
+
+            self.dict_popup.txt_popup_dict.unset_highlight_data(None);
+            self.dict_popup.txt_popup_dict.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.main_win.txt_dict_main.unset_highlight_data(None);
+            self.main_win.txt_dict_main.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+        }
+        //self.run_anim(text);
+    }
+
+    pub fn append_to_stream_buf(&mut self, text: &str) {
+        self.waiting_buf.append(text);
+        self.s_buf.append(&"A".repeat(text.len()));         
+    }
+    pub fn clear_highlights(&mut self) {
+        self.s_buf.set_text("");
+        self.dict_popup.txt_popup_dict.unset_highlight_data(self.s_buf.clone());
+        self.main_win.txt_dict_main.unset_highlight_data(self.s_buf.clone());
+    }
+
+    pub fn recalc_layout(&mut self, mut win: fltk::window::DoubleWindow) {
+        let w = win.width();
+        let h = win.height();
+        win.resize(win.x(), win.y(), w + 1, h);
+        win.resize(win.x(), win.y(), w, h);
     }
 
     pub fn set_ready(&mut self, error: Option<String>, is_dict: bool) {
         self.is_processing.store(false, Ordering::Relaxed);
+        self.is_streaming.store(false, Ordering::Relaxed);
+        //self.transl_popup.stop_button.hide();
+        self.recalc_layout(self.transl_popup.win_popup.clone());
+        
+        //self.transl_popup.win_popup.redraw();
         if let Some(err) = error {
             self.set_error(err.as_str(), is_dict);
             self.main_win.status_frame_main.set_label(err.as_str());
@@ -209,6 +247,7 @@ impl AppView {
         state: UIState,
         is_new_source: bool
     ) {
+        self.clear_highlights();
         dprintln!("update_ui");
         let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
 
@@ -228,9 +267,14 @@ impl AppView {
             self.set_ready(None, false);
         }
 
-        if let Some(lang_from) = src && let Some(lang_to) = target && let Some(translator_name) = translator {
+        if let Some(lang_from) = src 
+        && let Some(lang_to) = target 
+        && let Some(translator_name) = translator {
             let title_text = format!("{}->{} ({})", lang_from.name(), lang_to.name(), translator_name);
-            self.transl_popup.title_frame.set_label(&title_text);
+            let mut f = self.transl_popup.title_frame.clone();
+            fltk::app::add_timeout3(0.1, move |_| {
+                f.set_label(&title_text);
+            });
         }
 
         if let Some(is_fav) = is_fav {
@@ -255,6 +299,7 @@ impl AppView {
     }
 
     pub fn update_ui_dict(&mut self, state: UIStateDict, is_new_source: bool) {
+        self.clear_highlights();
         dprintln!("update_ui {is_new_source}");
         let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, src, target, dict_text, is_fav} = state;
 
@@ -430,7 +475,8 @@ impl AppView {
     }
 
 
-    fn run_anim(&mut self, text: Option<String>) {
+    fn run_anim(&mut self, text: Option<String>, mut frame: fltk::frame::Frame) {
+        let arr_title = ["/ ", "--", "\\ ", "| ", "/ ", "--"];
         let arr = if text.is_some() {
             [".  ", ".. ", "...", " ..", "  .", "   "]
         } else {
@@ -442,7 +488,9 @@ impl AppView {
         }
 
         let is_processing_clone = Arc::clone(&self.is_processing);
+        let is_streaming_clone = Arc::clone(&self.is_streaming);
         let mut txt_buf_clone = self.waiting_buf.clone();
+        //let mut label_clone = self.transl_popup.title_frame.clone();
         std::thread::spawn({
             move || {
                 dprintln!("---animation loop start---");
@@ -452,7 +500,11 @@ impl AppView {
                     if is_processing_n > 4 {
                         is_processing_n = 0;
                     }
-                    txt_buf_clone.set_text(format!("{txt}{}", arr[is_processing_n]).as_str());
+                    if is_streaming_clone.load(Ordering::Relaxed) {
+                        frame.set_label(arr_title[is_processing_n]);
+                    } else {
+                        txt_buf_clone.set_text(format!("{txt}{}", arr[is_processing_n]).as_str());
+                    }
                     app::awake();
                     thread::sleep(Duration::from_millis(100));
                 }

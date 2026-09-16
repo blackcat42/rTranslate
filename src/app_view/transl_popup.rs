@@ -45,6 +45,7 @@ pub struct TranslPopupView {
     pub title_frame: Frame,
     pub src: String, //todo: use src_buf?
     pub win_popup: DoubleWindow,
+    pub stop_button: button::Button,
 }
 
 impl TranslPopupView {
@@ -70,6 +71,10 @@ impl TranslPopupView {
         close_button.set_png_icon("close");
         //close_button.set_tooltip(t!(close));
         close_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
+
+        let mut stop_button = button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        stop_button.set_png_icon("stop");
+        stop_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
 
         
         let mut title_frame = Frame::default().with_label("").with_align(fltk::enums::Align::Right);
@@ -112,6 +117,7 @@ impl TranslPopupView {
         open_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(open_main_win));
 
         flex_titlebar.fixed(&close_button, ui_scale(18));
+        flex_titlebar.fixed(&stop_button, ui_scale(18));
         flex_titlebar.fixed(&title_frame, ui_scale(1));
         flex_titlebar.fixed(&fav_button, ui_scale(18));
         flex_titlebar.fixed(&refresh_button, ui_scale(18));
@@ -340,6 +346,12 @@ impl TranslPopupView {
                 win_popup.hide();
             }
         });
+        stop_button.set_callback({
+            let s = app_sender;
+            move |_| {
+                s.send(AppEvent::TerminateAll);
+            }
+        });
         
         fav_button.set_callback({
             let s = app_sender;
@@ -403,7 +415,7 @@ impl TranslPopupView {
 
         win_popup.resize(100, 100, UICONFIG.popup_w, UICONFIG.popup_h);
 
-
+        stop_button.hide();
 
 		TranslPopupView {
 			txt_popup: txt,
@@ -411,6 +423,7 @@ impl TranslPopupView {
             win_popup,
             translator_buttons,
             fav_button,
+            stop_button,
             src: "".to_string(),
 		}
     }

@@ -30,6 +30,9 @@ impl Translator for GT2 {
     fn terminate(&mut self) {
         
     }
+    fn is_processing(&self) -> bool {
+        false
+    }
     fn get_uid(&self) -> &str {
         &self.uid
     }

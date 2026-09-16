@@ -230,3 +230,24 @@ pub fn google_tk(input: &str, tkk: &str) -> Result<String> {
 
     Ok(format!("{}.{}", a, xor_h))
 }
+
+pub fn extract_detected_lang(mut text: String) -> (Option<String>, String) {
+    const PREFIX: &str = "<DETECTED_LANG=";
+
+    let Some(start) = text.find(PREFIX) else {
+        return (None, text);
+    };
+
+    let value_start = start + PREFIX.len();
+
+    let Some(relative_end) = text[value_start..].find('>') else {
+        return (None, text);
+    };
+
+    let end = value_start + relative_end;
+    let language = text[value_start..end].to_owned();
+
+    text.replace_range(start..=end, "");
+
+    (Some(language), text)
+}
