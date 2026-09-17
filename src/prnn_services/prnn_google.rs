@@ -1,5 +1,6 @@
 use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, PRNNService, Lang, PRNNSourceOption};
+use crate::types::{AppEvent, PRNNService, Lang};
+use crate::settings::PRNNSourceOption;
 use std::{thread, time::Duration};
 use std::sync::{Arc };
 use std::sync::atomic::{AtomicBool, Ordering};

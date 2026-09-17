@@ -1,6 +1,7 @@
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult, TranslatorOption};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
+use crate::settings::TranslatorOption;
 
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};

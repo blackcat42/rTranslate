@@ -26,9 +26,9 @@ use std::fs::File;
 
 use crate::types::{
     AppEvent,
-    BLWCoords,
-    OCRModelOption
+    BLWCoords
 };
+use crate::settings::OCRModelOption;
 use crate::utils::helpers::{
     borderless_win_handler, 
     borderless_win_frame_handler,

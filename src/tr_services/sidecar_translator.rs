@@ -8,7 +8,8 @@ use which::which;
 use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult, TranslatorOption};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
+use crate::settings::TranslatorOption;
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, };

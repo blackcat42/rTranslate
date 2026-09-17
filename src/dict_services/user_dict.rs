@@ -2,7 +2,8 @@
 #![allow(clippy::len_zero)]
 use debug_print::{debug_println as dprintln};
 
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult, DictOption};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
+use crate::settings::DictOption;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread};
 use std::io::{Seek, SeekFrom};

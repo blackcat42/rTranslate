@@ -5,7 +5,8 @@ use serde_json::Value;
 use anyhow::{anyhow, Result};
 
 use super::GLOBAL_SETTINGS;
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult, DictOption};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
+use crate::settings::DictOption;
 use crate::utils::rt_request::{
     Client,
 };

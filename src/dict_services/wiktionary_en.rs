@@ -1,5 +1,6 @@
 use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult, DictOption};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
+use crate::settings::DictOption;
 use crate::utils::rt_request::{
     Client,
     //Version

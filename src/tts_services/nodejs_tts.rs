@@ -1,6 +1,7 @@
 //TODO: async, non-blocking
 //use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, TTService, TTServiceOption};
+use crate::types::{AppEvent, TTService};
+use crate::settings::TTServiceOption;
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
