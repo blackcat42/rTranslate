@@ -8,7 +8,7 @@ use which::which;
 use std::{thread, time::Duration};
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult, TranslatorOption};
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, };
@@ -30,26 +30,46 @@ pub struct ST {
     current_src_id: Arc<AtomicI64>,
     current_src_text: Arc<RwLock<String>>,
     s: fltk::app::Sender<AppEvent>,
-    uid: String,
-    name: String,
     command: String,
     args: Vec<String>,
     src_lang: Lang,
     target_lang: Lang,
     reload_if_lang_changed: bool,
-    use_proxy: bool
+    options: TranslatorOption
 }
 
 impl ST {
-    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>, reload_if_lang_changed: bool, use_proxy: bool) -> Self {
-        let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
-        let shared_receiver = Arc::new(Mutex::new(rx));
-        let is_running = Arc::new(AtomicBool::new(false));
-        let current_src_id = Arc::new(AtomicI64::new(0));
-        let current_src_text = Arc::new(RwLock::new(String::from("")));
-        let src_lang = Lang::En;
-        let target_lang = Lang::Ru;
-        Self { tx, shared_receiver, is_running, current_src_id, current_src_text, s, uid, name, command, args, src_lang, target_lang, reload_if_lang_changed, use_proxy}
+    pub fn new(s: fltk::app::Sender<AppEvent>, options: TranslatorOption) -> Result<Self> {
+
+        if let Some(command) = &options.command 
+        && command.chars().count() > 0
+        && let Some(args) = &options.args 
+        && let Some(reload_if_lang_changed) = &options.reload_if_lang_changed {
+            let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
+            let shared_receiver = Arc::new(Mutex::new(rx));
+            let is_running = Arc::new(AtomicBool::new(false));
+            let current_src_id = Arc::new(AtomicI64::new(0));
+            let current_src_text = Arc::new(RwLock::new(String::from("")));
+            let src_lang = Lang::En;
+            let target_lang = Lang::Ru;
+            Ok(Self { 
+                tx, 
+                shared_receiver, 
+                is_running, 
+                current_src_id, 
+                current_src_text, 
+                s, 
+                command: command.clone(), 
+                args: args.clone(), 
+                src_lang, 
+                target_lang, 
+                reload_if_lang_changed: *reload_if_lang_changed,
+                options
+            })
+        } else {
+            Err(anyhow!("error: "))
+        }
+        
     }
 }
 
@@ -90,9 +110,9 @@ impl Translator for ST {
             let target_lang = self.target_lang.clone();
             let command = self.command.clone();
             let args = self.args.clone();
-            let uid = self.uid.clone();
+            let uid = self.options.uid.clone();
             let service_name = self.get_name().to_string();
-            let use_proxy = self.use_proxy;
+            let use_proxy = self.options.use_proxy;
 
             std::thread::spawn(
                 move || {
@@ -138,10 +158,10 @@ impl Translator for ST {
     }
 
     fn get_uid(&self) -> &str {
-        &self.uid
+        &self.options.uid
     }
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
 }
 

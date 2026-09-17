@@ -1,6 +1,6 @@
 //TODO: async, non-blocking
 //use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, TTService};
+use crate::types::{AppEvent, TTService, TTServiceOption};
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -16,10 +16,9 @@ pub struct NTTS {
     //shared_receiver: Arc<Mutex<Receiver<(String, i64)>>>,
     is_running: Arc<AtomicBool>, 
     s: fltk::app::Sender<AppEvent>,
-    uid: String,
-    name: String,
     command: String,
-    args: Vec<String>
+    args: Vec<String>,
+    options: TTServiceOption
 }
 
 use anyhow::{anyhow, Result};
@@ -29,17 +28,23 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 impl NTTS {
-    pub fn new(s: fltk::app::Sender<AppEvent>, uid: String, name: String, command: String, args: Vec<String>) -> Self {
+    pub fn new(s: fltk::app::Sender<AppEvent>, options: TTServiceOption) -> Result<Self> {
         //let (tx, rx) = mpsc::channel::<(String, i64)>();
         //let shared_receiver = Arc::new(Mutex::new(rx));
-        let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, s, uid, name, command, args}
+        if let Some(command) = &options.command 
+        && command.chars().count() > 0
+        && let Some(args) = &options.args {
+            let is_running = Arc::new(AtomicBool::new(false));
+            Ok(Self { is_running, s, command: command.clone(), args: args.clone(), options})
+        } else {
+            Err(anyhow!("error: "))
+        }
     }
 }
 
 impl TTService for NTTS {
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
     fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<()> {
         if self.is_running.load(Ordering::SeqCst) {
@@ -49,7 +54,7 @@ impl TTService for NTTS {
         }
         
         let s = self.s;
-        let engine_uid = self.uid.clone();
+        let engine_uid = self.options.uid.clone();
         //let entry_point = self.entry_point.clone();
         let command = self.command.clone();
         let args = self.args.clone();

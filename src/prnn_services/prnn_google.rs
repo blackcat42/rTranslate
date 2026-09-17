@@ -1,5 +1,5 @@
 use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, PRNNService, Lang};
+use crate::types::{AppEvent, PRNNService, Lang, PRNNSourceOption};
 use std::{thread, time::Duration};
 use std::sync::{Arc };
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,21 +20,19 @@ use super::GLOBAL_SETTINGS;
 pub struct GP {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
-    name: String,
-    use_proxy: bool,
-    emulation: Option<String>
+    options: PRNNSourceOption
 }
 
 impl GP {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, use_proxy: bool, emulation: Option<String>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, options: PRNNSourceOption) ->  Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self { is_running, app_sender, name, use_proxy, emulation}
+        Ok(Self { is_running, app_sender, options})
     }
 }
 //TODO! language detect
 impl PRNNService for GP {
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
     
     fn generate(&self, text: String, src_lang: Lang, src_id: i64) -> Result<()> {
@@ -43,8 +41,8 @@ impl PRNNService for GP {
                 let app_sender = self.app_sender;
                 let is_running = Arc::clone(&self.is_running);
                 let src_lang = src_lang.clone();
-                let use_proxy = self.use_proxy;
-                let emulation = self.emulation.clone();
+                let use_proxy = self.options.use_proxy;
+                let emulation = self.options.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                     

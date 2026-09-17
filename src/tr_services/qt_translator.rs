@@ -1,6 +1,6 @@
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult, TranslatorOption};
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
@@ -19,16 +19,13 @@ use crate::utils::qtranslate::send_tr_request;
 pub struct QT {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
-    name: String,
-    uid: String,
-    use_proxy: bool,
-    emulation: Option<String>
+    options: TranslatorOption
 }
 
 impl QT {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool, emulation: Option<String>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, options: TranslatorOption) -> Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, name, uid, use_proxy, emulation}
+        Ok(Self {is_running, app_sender, options})
     }
 }
 impl Translator for QT {
@@ -39,10 +36,10 @@ impl Translator for QT {
         false
     }
     fn get_uid(&self) -> &str {
-        &self.uid
+        &self.options.uid
     }
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
@@ -53,8 +50,8 @@ impl Translator for QT {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
-                let use_proxy = self.use_proxy;
-                let emulation = self.emulation.clone(); 
+                let use_proxy = self.options.use_proxy;
+                let emulation = self.options.emulation.clone(); 
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                                         

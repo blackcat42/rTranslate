@@ -14,6 +14,90 @@ use strum_macros::EnumIter;
 use crate::utils::screen_ocr::CropSegment;
 use serde::{Deserialize, Serialize};
 
+fn default_as_true() -> bool { true }
+fn default_as_false() -> bool { false } //explicit is better
+fn default_as_minus_one() -> i32 { -1 }
+fn default_as_float_one() -> f32 { 1.0 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TranslatorOption {
+    pub uid: String,
+    pub name: String,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub reload_if_lang_changed: Option<bool>,
+    pub emulation: Option<String>,
+
+    pub openai_url: Option<String>,
+    #[serde(default)]
+    pub openai_api_key: String,
+    pub openai_model: Option<String>,
+    pub openai_prompt: Option<String>,
+    #[serde(default = "default_as_true")]
+    pub stream: bool,
+    #[serde(default = "default_as_false")]
+    pub api_key_requied: bool,
+    #[serde(default)]
+    pub api_key_url: String,
+    #[serde(default = "default_as_false")]
+    pub markdown: bool,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DictOption {
+    pub uid: String,
+    pub name: String,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+
+    pub command: Option<String>,
+    pub path: Option<String>,
+    pub dict_path: Option<String>,
+    pub emulation: Option<String>,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TTServiceOption {
+    pub uid: String,
+    pub name: String,
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub voices: Vec<String>,
+
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+    pub emulation: Option<String>,
+
+    #[serde(default = "default_as_float_one")]
+    pub speed: f32,
+    pub openai_url: Option<String>,
+    #[serde(default)]
+    pub openai_api_key: String,
+    pub openai_model: Option<String>,
+    pub openai_response_format: Option<String>,
+    #[serde(default = "default_as_false")]
+    pub api_key_requied: bool,
+    #[serde(default)]
+    pub api_key_url: String,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PRNNSourceOption {
+    pub uid: String,
+    pub name: String,
+    #[serde(default = "default_as_false")]
+    pub use_proxy: bool,
+    pub emulation: Option<String>,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ProxyOption {
+    pub url: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
 #[derive(Debug)]
 pub enum TrayEvent {
     ShowMainWin,

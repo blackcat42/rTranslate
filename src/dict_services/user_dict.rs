@@ -2,7 +2,7 @@
 #![allow(clippy::len_zero)]
 use debug_print::{debug_println as dprintln};
 
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult, DictOption};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread};
 use std::io::{Seek, SeekFrom};
@@ -25,24 +25,25 @@ use super::app_message;
 pub struct DSLDict {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
-    uid: String,
-    name: String,
-    dict_path: String
+    dict_path: String,
+    options: DictOption
 }
 
 //TODO: multiple titles support (not allowed by spec, but widely used)
 
 impl DSLDict {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, uid: String, name: String, dict_path: String) -> Self {
-
-        let re_uid = Regex::new(r"^\w+$").unwrap();
-        if !re_uid.is_match(&uid) {
-            app_message("settings.json: Failed to parse uid");
-            panic!("settings.json: Failed to parse uid");
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, options: DictOption) -> Result<Self> {
+        if let Some(dict_path) = &options.dict_path && dict_path.chars().count() > 0 {
+            let re_uid = Regex::new(r"^\w+$").unwrap();
+            if !re_uid.is_match(&options.uid) {
+                app_message("settings.json: Failed to parse uid");
+                panic!("settings.json: Failed to parse uid");
+            } 
+            let is_running = Arc::new(AtomicBool::new(false));
+            Ok(Self {is_running, app_sender, dict_path: dict_path.clone(), options})
+        } else {
+            Err(anyhow!("error: "))
         }
-
-        let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, uid, name, dict_path}
     }
 
     pub fn rebuild_index(&self) -> Result<()> {
@@ -138,10 +139,10 @@ impl Dictionary for DSLDict {
     fn terminate(&mut self) {}
 
     fn get_uid(&self) -> &str {
-        &self.uid
+        &self.options.uid
     }
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, _src_lang: Lang,_target_lang: Lang) {

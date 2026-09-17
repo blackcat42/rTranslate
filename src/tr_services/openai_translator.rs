@@ -2,71 +2,62 @@
 #![allow(clippy::needless_return)]
 
 use debug_print::{debug_println as dprintln};
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
+use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult, TranslatorOption};
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use std::io::{BufRead, BufReader};
-use anyhow::Result;
 use super::GLOBAL_SETTINGS;
 use crate::utils::helpers::extract_detected_lang;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use crate::utils::rt_request;
-
+use anyhow::{anyhow, Result};
 
 pub struct OA {
     is_running: Arc<AtomicBool>,
     is_processing: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
-    name: String,
-    uid: String,
-    use_proxy: bool,
-    emulation: Option<String>,
     kill_sender: Option<std::sync::mpsc::Sender<()>>,
-    base_url: String, 
-    api_key: String, 
-    model: String, 
+    base_url: String,
+    model: String,
     prompt: String,
-    stream: bool,
-    api_key_requied: bool, 
-    api_key_url: String
+    options: TranslatorOption
 }
 
 impl OA {
     pub fn new(
-        app_sender: fltk::app::Sender<AppEvent>, 
-        name: String, 
-        uid: String, 
-        use_proxy: bool, 
-        emulation: Option<String>, 
-        base_url: String, 
-        api_key: String, 
-        model: String, 
-        prompt: String, 
-        stream: bool, 
-        api_key_requied: bool, 
-        api_key_url: String
-    ) -> Self {
+        app_sender: fltk::app::Sender<AppEvent>, working_dir: std::path::PathBuf, options: TranslatorOption
+    ) -> Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
         let is_processing = Arc::new(AtomicBool::new(false));
-        Self {
-            is_running, 
-            is_processing, 
-            app_sender, 
-            name, 
-            uid, 
-            use_proxy, 
-            emulation, 
-            kill_sender: None, 
-            base_url, 
-            api_key, 
-            model, 
-            prompt, 
-            stream, 
-            api_key_requied, 
-            api_key_url
+        let prompt = if let Some(f) = &options.openai_prompt {
+            let contents = std::fs::read_to_string(working_dir.join(f));
+            if let Ok(ref c) = contents {
+                c.to_string()
+            } else {
+                "Translate to <TARGET_LANG>: ".to_string()
+            }
+        } else {
+            "Translate to <TARGET_LANG>: ".to_string()
+        };
+
+        if let Some(model) = &options.openai_model
+        && let Some(base_url) = &options.openai_url {
+            Ok(Self {
+                is_running, 
+                is_processing, 
+                app_sender, 
+                kill_sender: None, 
+                base_url: base_url.clone(),  
+                model: model.clone(), 
+                prompt,
+                options
+            })
+        } else {
+            Err(anyhow!("error: "))
         }
+        
     }
 }
 impl Translator for OA {
@@ -79,17 +70,17 @@ impl Translator for OA {
         self.is_processing.load(Ordering::SeqCst)
     }
     fn get_uid(&self) -> &str {
-        &self.uid
+        &self.options.uid
     }
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
 
         if !self.is_running.load(Ordering::SeqCst) {
-            if self.api_key.is_empty() && self.api_key_requied {
-                let msg = format!("{} service requires an API key. Get one at {}", self.name, self.api_key_url);
+            if self.options.openai_api_key.is_empty() && self.options.api_key_requied {
+                let msg = format!("{} service requires an API key. Get one at {}", self.get_name(), self.options.api_key_url);
                 self.app_sender.send(AppEvent::Message(msg.clone().into()));
                 self.app_sender.send(AppEvent::SetReady(Some(msg), false));
                 return;
@@ -104,14 +95,14 @@ impl Translator for OA {
                 let is_processing = Arc::clone(&self.is_processing);
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
-                let use_proxy = self.use_proxy;
-                let emulation = self.emulation.clone();
+                let use_proxy = self.options.use_proxy;
+                let emulation = self.options.emulation.clone();
 
                 let base_url = self.base_url.clone();
-                let api_key = self.api_key.clone();
+                let api_key = self.options.openai_api_key.clone();
                 let model = self.model.clone();
                 let prompt = self.prompt.clone();
-                let stream = self.stream;
+                let stream = self.options.stream;
 
                 move || {
                     is_running.store(true, Ordering::SeqCst);

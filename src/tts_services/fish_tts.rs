@@ -2,7 +2,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_return)]
 
-use crate::types::{AppEvent, TTService};
+use crate::types::{AppEvent, TTService, TTServiceOption};
 use std::env;
 use std::io::Write;
 use serde::Serialize;
@@ -17,18 +17,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 #[allow(clippy::upper_case_acronyms)]
 pub struct FTTS {
     is_running: Arc<AtomicBool>, 
-    s: fltk::app::Sender<AppEvent>,
-    uid: String,
-    name: String,
-
-    use_proxy: bool,
-    emulation: Option<String>,
-    
-    api_key: String,
+    s: fltk::app::Sender<AppEvent>,    
     model: String,
     response_format: String,
-    api_key_requied: bool, 
-    api_key_url: String
+    options: TTServiceOption
 }
 
 use anyhow::{anyhow, Result};
@@ -37,27 +29,25 @@ use anyhow::{anyhow, Result};
 impl FTTS {
     pub fn new(
         s: fltk::app::Sender<AppEvent>, 
-        uid: String, 
-        name: String, 
-        use_proxy: bool, 
-        emulation: Option<String>, 
-        api_key: String, 
-        model: String, 
-        response_format: String
-    ) -> Self {
-        let is_running = Arc::new(AtomicBool::new(false));
-        Self { 
-            is_running, 
-            s, 
-            uid, 
-            name, 
-            use_proxy, 
-            emulation, 
-            api_key, 
-            model, 
-            response_format, 
-            api_key_requied: true, 
-            api_key_url: "https://fish.audio".to_string()
+        options: TTServiceOption
+    ) -> Result<Self> {
+        if let Some(model) = &options.openai_model {
+            let response_format = if let Some(f) = &options.openai_response_format {
+                f
+            } else {
+                "mp3"
+            };
+            let is_running = Arc::new(AtomicBool::new(false));
+            Ok(Self { 
+                is_running, 
+                s,  
+                model: model.clone(), 
+                response_format: response_format.to_string(), 
+                options
+                //api_key_url: "https://fish.audio".to_string()
+            })
+        } else {
+            Err(anyhow!("error: "))
         }
     }
 }
@@ -72,7 +62,7 @@ struct TTSRequest {
 
 impl TTService for FTTS {
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
     fn generate(&self, text: String, src_id: i64, voice: String) -> Result<()> {
         if self.is_running.load(Ordering::Relaxed) {
@@ -80,15 +70,15 @@ impl TTService for FTTS {
             return Err(anyhow!("tts service is still running"));
         }
 
-        if self.api_key.is_empty() && self.api_key_requied {
-            let msg = format!("{} service requires an API key. Get one at {}", self.name, self.api_key_url);
+        if self.options.openai_api_key.is_empty() && self.options.api_key_requied {
+            let msg = format!("{} service requires an API key. Get one at {}", self.options.name, self.options.api_key_url);
             self.s.send(AppEvent::Message(msg.clone().into()));
             self.s.send(AppEvent::SetReady(None, false));
             return Err(anyhow!(msg));
         }
         
         let s = self.s;
-        let engine_uid = self.uid.clone();
+        let engine_uid = self.options.uid.clone();
 
         let body = TTSRequest {
             reference_id: voice.clone(),
@@ -106,7 +96,7 @@ impl TTService for FTTS {
 
         
         let mut headers = std::collections::HashMap::new();
-        headers.insert("Authorization".into(), format!("Bearer {}", self.api_key));
+        headers.insert("Authorization".into(), format!("Bearer {}", self.options.openai_api_key));
         headers.insert("Content-Type".into(), "application/json".into());
         headers.insert("model".into(), self.model.clone());
         headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36".into());
@@ -115,8 +105,8 @@ impl TTService for FTTS {
             .default_headers(headers)
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_request_timeout))
             .gzip(true)
-            .proxy(self.use_proxy);
-        if let Some(e) = &self.emulation {
+            .proxy(self.options.use_proxy);
+        if let Some(e) = &self.options.emulation {
             client = client.emulation(e);
         }
         let client = client.build()?;

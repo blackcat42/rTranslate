@@ -5,7 +5,7 @@ use serde_json::Value;
 use anyhow::{anyhow, Result};
 
 use super::GLOBAL_SETTINGS;
-use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
+use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult, DictOption};
 use crate::utils::rt_request::{
     Client,
 };
@@ -20,26 +20,23 @@ use crate::utils::qtranslate::send_dict_request;
 pub struct QTDict {
     is_running: Arc<AtomicBool>,
     app_sender: fltk::app::Sender<AppEvent>,
-    name: String,
-    uid: String,
-    use_proxy: bool,
-    emulation: Option<String>
+    options: DictOption
 }
 
 impl QTDict {
-    pub fn new(app_sender: fltk::app::Sender<AppEvent>, name: String, uid: String, use_proxy: bool, emulation: Option<String>) -> Self {
+    pub fn new(app_sender: fltk::app::Sender<AppEvent>, options: DictOption) -> Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
-        Self {is_running, app_sender, name, uid, use_proxy, emulation}
+        Ok(Self {is_running, app_sender, options})
     }
 }
 impl Dictionary for QTDict {
     fn terminate(&mut self) {}
 
     fn get_uid(&self) -> &str {
-        &self.uid
+        &self.options.uid
     }
     fn get_name(&self) -> &str {
-        &self.name
+        &self.options.name
     }
 
     fn translate(&mut self, src_id: i64, text: String, mut src_lang: Lang, target_lang: Lang) {
@@ -50,8 +47,8 @@ impl Dictionary for QTDict {
                 let is_running = Arc::clone(&self.is_running);
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
-                let use_proxy = self.use_proxy;
-                let emulation = self.emulation.clone();
+                let use_proxy = self.options.use_proxy;
+                let emulation = self.options.emulation.clone();
                 move || {
                     is_running.store(true, Ordering::SeqCst);
 

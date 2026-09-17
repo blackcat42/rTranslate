@@ -67,7 +67,17 @@ mod types;
 mod app_state;
 mod app_view;
 mod utils;
-use types::{AppEvent, TrayEvent, OCRModelOption};
+use types::{
+    AppEvent, 
+    TrayEvent, 
+    OCRModelOption,
+    TranslatorOption,
+    DictOption,
+    TTServiceOption,
+    PRNNSourceOption,
+    ProxyOption,
+
+};
 use app_state::{AppState};
 use app_view::{AppView};
 use utils::screen_ocr::{ScreenOCR};
@@ -179,84 +189,7 @@ pub struct Settings {
 
     pub ui_scaling: f32,
 }
-#[derive(Debug, Deserialize, Serialize)]
-struct TranslatorOption {
-    pub uid: String,
-    pub name: String,
 
-    #[serde(default = "default_as_false")]
-    pub use_proxy: bool,
-
-    pub command: Option<String>,
-    pub args: Option<Vec<String>>,
-    pub reload_if_lang_changed: Option<bool>,
-    pub emulation: Option<String>,
-
-    pub openai_url: Option<String>,
-    #[serde(default)]
-    pub openai_api_key: String,
-    pub openai_model: Option<String>,
-    pub openai_prompt: Option<String>,
-    #[serde(default = "default_as_true")]
-    pub stream: bool,
-    #[serde(default = "default_as_false")]
-    pub api_key_requied: bool,
-    #[serde(default)]
-    pub api_key_url: String,
-    #[serde(default = "default_as_false")]
-    pub markdown: bool,
-}
-#[derive(Debug, Deserialize, Serialize)]
-struct DictOption {
-    pub uid: String,
-    pub name: String,
-
-    #[serde(default = "default_as_false")]
-    pub use_proxy: bool,
-
-    pub command: Option<String>,
-    pub path: Option<String>,
-    pub dict_path: Option<String>,
-    pub emulation: Option<String>,
-}
-#[derive(Debug, Deserialize, Serialize)]
-struct TTServiceOption {
-    pub uid: String,
-    pub name: String,
-    pub command: Option<String>,
-    pub args: Option<Vec<String>>,
-    pub voices: Vec<String>,
-
-    #[serde(default = "default_as_false")]
-    pub use_proxy: bool,
-    pub emulation: Option<String>,
-
-    #[serde(default = "default_as_float_one")]
-    pub speed: f32,
-    pub openai_url: Option<String>,
-    #[serde(default)]
-    pub openai_api_key: String,
-    pub openai_model: Option<String>,
-    pub openai_response_format: Option<String>,
-    #[serde(default = "default_as_false")]
-    pub api_key_requied: bool,
-    #[serde(default)]
-    pub api_key_url: String,
-}
-#[derive(Debug, Deserialize, Serialize)]
-struct PRNNSourceOption {
-    pub uid: String,
-    pub name: String,
-    #[serde(default = "default_as_false")]
-    pub use_proxy: bool,
-    pub emulation: Option<String>,
-}
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ProxyOption {
-    pub url: String,
-    pub username: Option<String>,
-    pub password: Option<String>,
-}
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     
@@ -535,74 +468,75 @@ fn main() {
     let re_uid = Regex::new(r"^[\w ]+$").unwrap();
     for value in GLOBAL_SETTINGS.translators.iter() {
         if !re_uid.is_match(&value.uid) {
-            app_message("settings.json: Failed to parse uid");
-            panic!("Error");
+            app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
+            continue;
         }
-        let use_proxy = value.use_proxy;
+        let t: Result<Box<dyn types::Translator>>;
 
         if let Some(command) = &value.command
         && command == "QTRANSLATE" {
-            app_state.translators.insert(value.uid.clone(), Box::new(qt_translator::QT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone() )));
+            t = qt_translator::QT::new(app_sender, value.clone()).map(|t| Box::new(t) as Box<dyn types::Translator>);
         } else if let Some(command) = &value.command && command == "OPENAI" 
-        && let Some(openai_url) = &value.openai_url 
-        && let Some(openai_model) = &value.openai_model {
-            let prompt = if let Some(f) = &value.openai_prompt {
-                let contents = std::fs::read_to_string(working_dir.join(f));
-                if let Ok(ref c) = contents {
-                    c.to_string()
-                } else {
-                    "Translate to <TARGET_LANG>: ".to_string()
-                }
-            } else {
-                "Translate to <TARGET_LANG>: ".to_string()
-            };
-            
-            app_state.translators.insert(value.uid.clone(), 
-                Box::new(openai_translator::OA::new(
-                    app_sender, 
-                    value.name.clone(), 
-                    value.uid.clone(), 
-                    use_proxy,
-                    value.emulation.clone(), 
-                    openai_url.clone(),
-                    value.openai_api_key.clone(), 
-                    openai_model.clone(), 
-                    prompt, 
-                    value.stream,
-                    value.api_key_requied,
-                    value.api_key_url.clone(),
-                ))
-            );
+        && value.openai_url.is_some() 
+        && value.openai_model.is_some() {
+            t = openai_translator::OA::new(app_sender, working_dir.clone(), value.clone())
+            .map(|t| Box::new(t) as Box<dyn types::Translator>);
         } else if let Some(command) = &value.command 
-        && command.chars().count() > 0
-        && let Some(args) = &value.args 
-        && let Some(reload) = &value.reload_if_lang_changed {
-            app_state.translators.insert(value.uid.clone(), Box::new(sidecar_translator::ST::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone(), *reload, use_proxy )));
+        && command.chars().count() > 0 {
+            t = sidecar_translator::ST::new(app_sender, value.clone())
+            .map(|t| Box::new(t) as Box<dyn types::Translator>);
         } else if value.uid == "tr_google" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate::GT::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
+            t = google_translate::GT::new(app_sender, value.clone())
+            .map(|t| Box::new(t) as Box<dyn types::Translator>);
         } else if value.uid == "tr_google2" {
-            app_state.translators.insert(value.uid.clone(), Box::new(google_translate2::GT2::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
+            t = google_translate2::GT2::new(app_sender, value.clone())
+            .map(|t| Box::new(t) as Box<dyn types::Translator>);
         } else if value.uid == "tr_deepl" {
-            app_state.translators.insert(value.uid.clone(), Box::new(deepl_translate::DL::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
+            t = deepl_translate::DL::new(app_sender, value.clone())
+            .map(|t| Box::new(t) as Box<dyn types::Translator>);
+        } else {
+            t = Err(anyhow!("err"));
+        }
+        match t {
+            Ok(t) => {
+                app_state.translators.insert(value.uid.clone(), t);
+            }
+            Err(e) => {
+                app_message(&format!("{}", e));
+            }
         }
     }
     //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
 
     for value in GLOBAL_SETTINGS.dictionaries.iter() {
         if !re_uid.is_match(&value.uid) {
-            app_message("settings.json: Failed to parse uid");
-            panic!("Error");
+            app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
+            continue;
         }
-        let use_proxy = value.use_proxy;
+        let d: Result<Box<dyn types::Dictionary>>;
         if let Some(command) = &value.command
         && command == "QTRANSLATE" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(qt_dict::QTDict::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone() )));
-        } else if let Some(dict_path) = &value.dict_path && dict_path.chars().count() > 0 {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(user_dict::DSLDict::new(app_sender, value.uid.clone(), value.name.clone(), dict_path.clone())));
+            d = qt_dict::QTDict::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
+        } else if value.dict_path.is_some() {
+            d = user_dict::DSLDict::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
         } else if value.uid == "dict_wiktionary_en" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(wiktionary_en::WDEn::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
+            d = wiktionary_en::WDEn::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
         } else if value.uid == "dict_google" {
-            app_state.dictionaries.insert(value.uid.clone(), Box::new(google_dict::GD::new(app_sender, value.name.clone(), value.uid.clone(), use_proxy, value.emulation.clone())));
+            d = google_dict::GD::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
+        } else {
+            d = Err(anyhow!("err"));
+        }
+        match d {
+            Ok(d) => {
+                app_state.dictionaries.insert(value.uid.clone(), d);
+            }
+            Err(e) => {
+                app_message(&format!("{}", e));
+            }
         }
     }
     //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
@@ -613,70 +547,51 @@ fn main() {
             panic!("Error");
         }
 
-        let use_proxy = value.use_proxy;
-        if let Some(command) = &value.command && command == "OPENAI" 
-        && let Some(openai_url) = &value.openai_url 
-        && let Some(openai_model) = &value.openai_model {
-            let openai_response_format = if let Some(f) = &value.openai_response_format {
-                f
-            } else {
-                "mp3"
-            };
-            app_state.tts_services.insert(value.uid.clone(), 
-                Box::new(openai_tts::OATTS::new(
-                    app_sender, 
-                    value.uid.clone(), 
-                    value.name.clone(), 
-
-                    use_proxy,
-                    value.emulation.clone(),
-
-                    openai_url.clone(),
-                    value.openai_api_key.clone(), 
-                    openai_model.clone(),
-                    openai_response_format.to_string(),
-                    value.api_key_requied,
-                    value.api_key_url.clone(),
-                ))
-            );
-        } else if let Some(command) = &value.command 
-        && command.chars().count() > 0
-        && let Some(args) = &value.args {
+        let tts: Result<Box<dyn types::TTService>>;
+        if let Some(command) = &value.command && command == "OPENAI" {
+            tts = openai_tts::OATTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>);
+        } else if value.command.is_some() {
             dbg!(value);
-            app_state.tts_services.insert(value.uid.clone(), Box::new(nodejs_tts::NTTS::new(app_sender, value.uid.clone(), value.name.clone(), command.clone(), args.clone())));
-        } else if value.uid == "tts_fish" && let Some(openai_model) = &value.openai_model {
-            let openai_response_format = if let Some(f) = &value.openai_response_format {
-                f
-            } else {
-                "mp3"
-            };
-            app_state.tts_services.insert(
-                value.uid.clone(), 
-                Box::new(
-                    fish_tts::FTTS::new(
-                        app_sender, 
-                        value.uid.clone(), 
-                        value.name.clone(), 
-                        use_proxy, 
-                        value.emulation.clone(), 
-                        value.openai_api_key.clone(), 
-                        openai_model.clone(), 
-                        openai_response_format.to_string() 
-                    )
-                )
-            );
-        } 
+            tts = nodejs_tts::NTTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>);
+        } else if value.uid == "tts_fish" {
+            tts = fish_tts::FTTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>);
+        } else {
+            tts = Err(anyhow!("err"));
+        }
+        match tts {
+            Ok(tts) => {
+                app_state.tts_services.insert(value.uid.clone(), tts);
+            }
+            Err(e) => {
+                app_message(&format!("{}", e));
+            }
+        }
     }
     
     for value in GLOBAL_SETTINGS.prnn_services.iter() {
         /*if let Some(path) = &value.path && path.chars().count() > 0 {
             //
         } else*/ 
-        let use_proxy = value.use_proxy;
+        let prnn: Result<Box<dyn types::PRNNService>>;
         if value.uid == "prnn_wiki" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_wiki::WP::new(app_sender, value.name.clone(), use_proxy, value.emulation.clone())));
+            prnn = prnn_wiki::WP::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::PRNNService>);
         } else if value.uid == "prnn_google" {
-            app_state.prnn_services.insert(value.uid.clone(), Box::new(prnn_google::GP::new(app_sender, value.name.clone(), use_proxy, value.emulation.clone())));
+            prnn = prnn_google::GP::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::PRNNService>);
+        } else {
+            prnn = Err(anyhow!("err"));
+        }
+        match prnn {
+            Ok(prnn) => {
+                app_state.prnn_services.insert(value.uid.clone(), prnn);
+            }
+            Err(e) => {
+                app_message(&format!("{}", e));
+            }
         }
     }
 
