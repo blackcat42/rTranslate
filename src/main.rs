@@ -203,6 +203,8 @@ struct TranslatorOption {
     pub api_key_requied: bool,
     #[serde(default)]
     pub api_key_url: String,
+    #[serde(default = "default_as_false")]
+    pub markdown: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
 struct DictOption {
@@ -322,6 +324,7 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
                             stream: false,
                             api_key_requied: false,
                             api_key_url: "".to_string(),
+                            markdown: false,//m
                         };
                         
                         if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {

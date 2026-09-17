@@ -189,7 +189,10 @@ impl AppView {
 
     pub fn append_to_stream_buf(&mut self, text: &str) {
         self.waiting_buf.append(text);
-        self.translation_buf_h.append(&"A".repeat(text.len()));         
+        self.translation_buf_h.append(&"A".repeat(text.len()));
+        //let total_lines = self.waiting_buf.count_lines(0, self.waiting_buf.length());
+        self.transl_popup.txt_popup.scroll(1_000_000, 0);
+        self.main_win.txt_main.scroll(1_000_000, 0);
     }
     pub fn clear_highlights(&mut self) {
         self.translation_buf_h.set_text("");
@@ -264,24 +267,36 @@ impl AppView {
             return;
         }
 
-        if let Some(uid) = tr_uid && let Some(ref name) = translator {
-            self.set_translator(name, &uid);
+        if let Some(ref uid) = tr_uid && let Some(ref name) = translator {
+            self.set_translator(name, uid);
         }
         
         if let Some(t_text) = translation_text {
             let t_text = format!("{}\n", &t_text);
             //let mut sbuf = fltk::text::TextBuffer::default();
 
-            let (fin_text, fin_style, styles) = crate::utils::highlight_data_gen::from_md(&t_text);
-            self.translation_buf_h.set_text(&fin_style);
-
             self.transl_popup.txt_popup.unset_highlight_data(None);
-            self.transl_popup.txt_popup.set_highlight_data_ext(self.translation_buf_h.clone(), styles.clone());
             self.main_win.txt_main.unset_highlight_data(None);
-            self.main_win.txt_main.set_highlight_data_ext(self.translation_buf_h.clone(), styles);
 
-            self.translation_buf.set_text(&fin_text);
+            let is_md = if let Some(ref uid) = tr_uid && let Some(t) = GLOBAL_SETTINGS.translators.iter().find(|tr| tr.uid == *uid) {
+                t.markdown
+            } else {
+                false
+            };
+
+            if is_md {
+                let (fin_text, fin_style, styles) = crate::utils::highlight_data_gen::from_md(&t_text);
+                self.translation_buf_h.set_text(&fin_style);
+                self.transl_popup.txt_popup.set_highlight_data_ext(self.translation_buf_h.clone(), styles.clone());
+                self.main_win.txt_main.set_highlight_data_ext(self.translation_buf_h.clone(), styles);
+                self.translation_buf.set_text(&fin_text);
+            } else {
+                self.translation_buf.set_text(&t_text);
+            }
+            
             self.set_ready(None, false);
+            self.transl_popup.txt_popup.scroll(0, 0);
+            self.main_win.txt_main.scroll(0, 0);
         }
 
         if let Some(lang_from) = src 
