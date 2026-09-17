@@ -8,3 +8,4 @@ pub mod bbcode;
 pub mod html_to_bbcode;
 pub mod screen_ocr;
 pub mod qtranslate;
+pub mod highlight_data_gen;

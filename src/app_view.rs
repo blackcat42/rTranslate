@@ -58,10 +58,12 @@ pub struct AppView {
     pub src_buf: text::TextBuffer,
     pub src_dict_buf: text::TextBuffer,
     translation_buf: text::TextBuffer,
+    translation_buf_h: text::TextBuffer,
     dict_buf: text::TextBuffer,
+    dict_buf_h: text::TextBuffer,
     waiting_buf: text::TextBuffer,
     error_buf: text::TextBuffer,
-    s_buf: text::TextBuffer,
+    //s_buf: text::TextBuffer,
     is_processing: Arc<AtomicBool>,
     is_streaming: Arc<AtomicBool>,
 }
@@ -83,12 +85,14 @@ impl AppView {
 
         
         let dict_buf = text::TextBuffer::default();
+        let dict_buf_h = text::TextBuffer::default();
         let src_buf = text::TextBuffer::default();
         let src_dict_buf = text::TextBuffer::default();
         let translation_buf = text::TextBuffer::default();
+        let translation_buf_h = text::TextBuffer::default();
         let waiting_buf = text::TextBuffer::default();
         let error_buf = text::TextBuffer::default();
-        let s_buf = fltk::text::TextBuffer::default();
+        //let s_buf = fltk::text::TextBuffer::default();
 
         ////////////////////---------------BEGIN UI---------------/////////////////////
 
@@ -120,12 +124,14 @@ impl AppView {
             main_win,
             src_buf,
             dict_buf,
+            dict_buf_h,
             src_dict_buf,
             translation_buf,
+            translation_buf_h,
             
             waiting_buf,
             error_buf,
-            s_buf,
+            //s_buf,
 
             is_processing: Arc::new(AtomicBool::new(false)),
             is_streaming: Arc::new(AtomicBool::new(false)),
@@ -166,29 +172,29 @@ impl AppView {
             self.main_win.txt_main.set_buffer(self.waiting_buf.clone());
 
             self.transl_popup.txt_popup.unset_highlight_data(None);
-            self.transl_popup.txt_popup.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.transl_popup.txt_popup.set_highlight_data_ext(self.translation_buf_h.clone(), vec![style_a]);
             self.main_win.txt_main.unset_highlight_data(None);
-            self.main_win.txt_main.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.main_win.txt_main.set_highlight_data_ext(self.translation_buf_h.clone(), vec![style_a]);
         } else {
             self.dict_popup.txt_popup_dict.set_buffer(self.waiting_buf.clone());
             self.main_win.txt_dict_main.set_buffer(self.waiting_buf.clone());
 
             self.dict_popup.txt_popup_dict.unset_highlight_data(None);
-            self.dict_popup.txt_popup_dict.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.dict_popup.txt_popup_dict.set_highlight_data_ext(self.dict_buf_h.clone(), vec![style_a]);
             self.main_win.txt_dict_main.unset_highlight_data(None);
-            self.main_win.txt_dict_main.set_highlight_data_ext(self.s_buf.clone(), vec![style_a]);
+            self.main_win.txt_dict_main.set_highlight_data_ext(self.dict_buf_h.clone(), vec![style_a]);
         }
         //self.run_anim(text);
     }
 
     pub fn append_to_stream_buf(&mut self, text: &str) {
         self.waiting_buf.append(text);
-        self.s_buf.append(&"A".repeat(text.len()));         
+        self.translation_buf_h.append(&"A".repeat(text.len()));         
     }
     pub fn clear_highlights(&mut self) {
-        self.s_buf.set_text("");
-        self.dict_popup.txt_popup_dict.unset_highlight_data(self.s_buf.clone());
-        self.main_win.txt_dict_main.unset_highlight_data(self.s_buf.clone());
+        self.translation_buf_h.set_text("");
+        self.dict_popup.txt_popup_dict.unset_highlight_data(None);
+        self.main_win.txt_dict_main.unset_highlight_data(None);
     }
 
     pub fn recalc_layout(&mut self, mut win: fltk::window::DoubleWindow) {
@@ -263,7 +269,18 @@ impl AppView {
         }
         
         if let Some(t_text) = translation_text {
-            self.translation_buf.set_text(format!("{}\n", &t_text).as_str());
+            let t_text = format!("{}\n", &t_text);
+            //let mut sbuf = fltk::text::TextBuffer::default();
+
+            let (fin_text, fin_style, styles) = crate::utils::highlight_data_gen::from_md(&t_text);
+            self.translation_buf_h.set_text(&fin_style);
+
+            self.transl_popup.txt_popup.unset_highlight_data(None);
+            self.transl_popup.txt_popup.set_highlight_data_ext(self.translation_buf_h.clone(), styles.clone());
+            self.main_win.txt_main.unset_highlight_data(None);
+            self.main_win.txt_main.set_highlight_data_ext(self.translation_buf_h.clone(), styles);
+
+            self.translation_buf.set_text(&fin_text);
             self.set_ready(None, false);
         }
 
@@ -319,121 +336,17 @@ impl AppView {
 
         if let Some(dict_text) = dict_text {
             self.set_ready(None, true);
-            let text_chuncs = dsl_parse(&dict_text);
-            //teal, red, green, blue, indigo
-            let mut sbuf = fltk::text::TextBuffer::default();
-            let style_a = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Black,
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_b = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Black,
-                font: fltk::enums::Font::HelveticaBold,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_c = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Red,
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_d = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::DarkGreen,
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_e = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::DarkBlue,
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_f = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::from_hex(0x008080), //teal
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_g = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::from_hex(0x4B0082), //indigo
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
+            //let mut sbuf = fltk::text::TextBuffer::default();
+            let (fin_text, fin_style, styles) = crate::utils::highlight_data_gen::from_bbcode(&dict_text);
 
-            let style_h = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Black,
-                font: fltk::enums::Font::HelveticaItalic,
-                size: GLOBAL_SETTINGS.text_font_size,// - 1,
-                attr: fltk::text::TextAttr::None,
-                bgcolor: fltk::enums::Color::Yellow,
-            };
-            let style_i = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Black,
-                font: fltk::enums::Font::Helvetica,
-                size: GLOBAL_SETTINGS.text_font_size,// - 1,
-                attr: fltk::text::TextAttr::BgColorExt,
-                bgcolor: enums::Color::from_hex(0xFFF2CC),
-            };
-            let style_j = fltk::text::StyleTableEntryExt {
-                color: fltk::enums::Color::Black,
-                font: fltk::enums::Font::HelveticaBold,
-                size: GLOBAL_SETTINGS.text_font_size,// - 1,
-                attr: fltk::text::TextAttr::BgColorExt,
-                bgcolor: enums::Color::from_hex(0xFFF2CC),
-            };
-        
-
-            //sbuf.set_text("");
-            let mut str_main = "".to_string();
-            let mut str_f = "".to_string();
-            //dbg!(&text_chuncs);
-            for chunc in text_chuncs.iter() {
-                
-                str_main.push_str(&chunc.text);
-                if chunc.is_highlighted && chunc.is_bold {
-                    str_f.push_str(&"J".repeat(chunc.text.len()));
-                } else if chunc.is_highlighted {
-                    str_f.push_str(&"I".repeat(chunc.text.len()));
-                } else if &chunc.color == "red" {
-                    str_f.push_str(&"C".repeat(chunc.text.len()));
-                } else if &chunc.color == "green" {
-                    str_f.push_str(&"D".repeat(chunc.text.len()));
-                } else if &chunc.color == "blue" || &chunc.color == "darkblue" {
-                    str_f.push_str(&"E".repeat(chunc.text.len()));
-                } else if &chunc.color == "teal" {
-                    str_f.push_str(&"F".repeat(chunc.text.len()));
-                } else if &chunc.color == "indigo" {
-                    str_f.push_str(&"G".repeat(chunc.text.len()));
-                } else if chunc.is_bold {
-                    str_f.push_str(&"B".repeat(chunc.text.len()));
-                } else if chunc.is_i {
-                    str_f.push_str(&"H".repeat(chunc.text.len()));
-                } else {
-                    str_f.push_str(&"A".repeat(chunc.text.len()));
-                }
-                
-            }
-
-            self.dict_buf.set_text(&str_main);
-            sbuf.set_text(&str_f);
+            self.dict_buf.set_text(&fin_text);
+            self.dict_buf_h.set_text(&fin_style);
             
-            self.dict_popup.txt_popup_dict.unset_highlight_data(sbuf.clone());
-            self.dict_popup.txt_popup_dict.set_highlight_data_ext(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g, style_h, style_i, style_j]);
+            self.dict_popup.txt_popup_dict.unset_highlight_data(None);
+            self.dict_popup.txt_popup_dict.set_highlight_data_ext(self.dict_buf_h.clone(), styles.clone());
 
-            self.main_win.txt_dict_main.unset_highlight_data(sbuf.clone());
-            self.main_win.txt_dict_main.set_highlight_data_ext(sbuf.clone(), vec![style_a, style_b, style_c, style_d, style_e, style_f, style_g, style_h, style_i, style_j]);
+            self.main_win.txt_dict_main.unset_highlight_data(None);
+            self.main_win.txt_dict_main.set_highlight_data_ext(self.dict_buf_h.clone(), styles);
         }
 
         //let from = LangNames::from_str(src.as_ref()).unwrap_or(LangNames::En);
