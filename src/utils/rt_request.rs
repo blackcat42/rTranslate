@@ -235,7 +235,7 @@ impl StatusCode {
 }
 impl std::fmt::Display for StatusCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", &self.description)
+        write!(f, "{}", self.description)
     }
 }
 
@@ -604,7 +604,7 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
                 	.stdout(std::process::Stdio::from(output_file)) 
                 	.stderr(std::process::Stdio::from(output_err_file));
                 let mut child = child.spawn()?;
-                let status = child.wait()?;
+                let _status = child.wait()?;
             }
 
             if let Ok(mut file) = File::open("wreq_output.tmp") {

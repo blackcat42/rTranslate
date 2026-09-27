@@ -1,5 +1,6 @@
 //use serde_json::Value;
 #![allow(clippy::len_zero)]
+#![allow(clippy::chunks_exact_to_as_chunks)]
 use debug_print::{debug_println as dprintln};
 
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};

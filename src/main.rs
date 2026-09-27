@@ -687,7 +687,8 @@ fn main() {
                     AppEvent::HotKey(e) => 'hotkey_arm: {
                         dbg!(e);
                         if e.state == HotKeyState::Released {
-                            let mut is_dict: bool;
+                            #[allow(clippy::needless_late_init)]
+                            let is_dict: bool;
                             if Some(e.id) == tr_hotkey_id {
                                 is_dict = false;
                             } else if Some(e.id) == dict_hotkey_id {
@@ -775,7 +776,7 @@ fn main() {
                     }
 
                     AppEvent::OCRInit => {
-                        screen_ocr.process_image();
+                        let _ = screen_ocr.process_image();
                     }
                     AppEvent::OCRDrop => {
                         screen_ocr.clear();
@@ -784,7 +785,7 @@ fn main() {
                         screen_ocr.update_crop(crop);
                     }
                     AppEvent::OCRun => {
-                        screen_ocr.run_ocr();
+                        let _ = screen_ocr.run_ocr();
                     }
                     AppEvent::OCRSuccess(s) => {
                         screen_ocr.set_ocr_results(s);
@@ -1031,7 +1032,7 @@ fn safe_delete(file: std::path::PathBuf) -> Result<()> {
                     Ok(())
                 },
                 Err(e) => {
-                    eprintln!("Error deleting file: {} ({})", &canonical_path.display(), e);
+                    eprintln!("Error deleting file: {} ({})", canonical_path.display(), e);
                     Err(e.into())
                 }
             }

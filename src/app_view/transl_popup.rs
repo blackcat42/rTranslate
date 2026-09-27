@@ -8,7 +8,7 @@ use fltk::{
     button,
     group,
     //image::SvgImage,
-    image::PngImage,
+    //image::PngImage,
     image::IcoImage,
     frame::Frame,
 };
@@ -159,9 +159,9 @@ impl TranslPopupView {
         for qwe in GLOBAL_SETTINGS.translators.iter() {
             let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
             let icon_path = if let Some(cmd) = &qwe.command && cmd == "QTRANSLATE" {
-                format!(r"extensions/qtranslate/Services/{}/Service.ico", &qwe.uid)
+                format!(r"extensions/qtranslate/Services/{}/Service.ico", qwe.uid)
             } else {
-                format!(r"icons/{}.ico", &qwe.uid)
+                format!(r"icons/{}.ico", qwe.uid)
             };
             dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {

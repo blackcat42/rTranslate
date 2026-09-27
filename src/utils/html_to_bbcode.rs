@@ -1,4 +1,4 @@
-use debug_print::{debug_println as dprintln};
+//use debug_print::{debug_println as dprintln};
 use tl::{Node, Parser, ParserOptions};
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -6,8 +6,7 @@ use regex::Regex;
 fn normalize_text(text: &str) -> String {
     let multiple_newlines = Regex::new(r"\r?\n(?:[ \t]*\r?\n)+").unwrap();
     let text = multiple_newlines.replace_all(text, "\n").into_owned();
-    let text = text.replace("$RT_NEWLINE$", "\n");
-    text
+    text.replace("$RT_NEWLINE$", "\n")
 }
 
 /*fn trim_to_one(text: &str) -> String {
@@ -31,7 +30,7 @@ pub fn node_to_bb(
         Node::Raw(raw) => {
             raw.as_utf8_str().into_owned()
         },
-        Node::Comment(raw) => {
+        Node::Comment(_raw) => {
             "".to_string()
         },
         Node::Tag(tag) => {
@@ -48,6 +47,7 @@ pub fn node_to_bb(
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum HTMLSelectorType {
     Id(String),
     QuerySelector(String),
@@ -68,9 +68,7 @@ pub fn html_to_bbcode(
     let dom = tl::parse(&html, ParserOptions::default())?;
 
     let parser = dom.parser();
-    let container_tag: &tl::HTMLTag;
-
-    match container {
+    let container_tag: &tl::HTMLTag = match container {
         HTMLSelectorType::Id(id) => {
             let container_handle = dom.get_element_by_id(id.as_str()).ok_or(
                 anyhow!("dom.get_element_by_id error")
@@ -78,9 +76,9 @@ pub fn html_to_bbcode(
             let container_node = container_handle.get(parser).ok_or(
                 anyhow!("container_handle.get error")
             )?;
-            container_tag = container_node.as_tag().ok_or(
+            container_node.as_tag().ok_or(
                 anyhow!("container_node.as_tag() error")
-            )?;
+            )?
         },
 
         HTMLSelectorType::QuerySelector(selector) => {
@@ -91,9 +89,9 @@ pub fn html_to_bbcode(
             let container_node = container_handle.get(parser).ok_or(
                 anyhow!("container_handle.get error")
             )?;
-            container_tag = container_node.as_tag().ok_or(
+            container_node.as_tag().ok_or(
                 anyhow!("container_node.as_tag() error")
-            )?;
+            )?
         },
 
         HTMLSelectorType::None => {
@@ -104,9 +102,9 @@ pub fn html_to_bbcode(
             let container_node = container_handle.get(parser).ok_or(
                 anyhow!("container_handle.get error")
             )?;
-            container_tag = container_node.as_tag().ok_or(
+            container_node.as_tag().ok_or(
                 anyhow!("container_node.as_tag() error")
-            )?;
+            )?
         }
     };
 

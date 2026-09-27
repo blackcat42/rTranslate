@@ -1,17 +1,19 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::needless_return)]
+#![allow(non_snake_case)]
 
 use debug_print::{debug_println as dprintln};
-use serde_json::Value;
-use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
-use std::sync::{Arc};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{thread, time::Duration};
+//use serde_json::Value;
+use crate::types::{Lang};
+//use std::sync::{Arc};
+//use std::sync::atomic::{AtomicBool, Ordering};
+use std::{time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
 use crate::utils::helpers::is_win7_or_greater;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+//use std::str::FromStr;
 use crate::utils::rt_request;
 use std::fs::File;
 use std::io::Read;
@@ -54,18 +56,17 @@ fn send_request(
     selected_text: String, 
     src_lang: Lang, 
     target_lang: Lang, 
-    is_lang_detected: bool, 
+    _is_lang_detected: bool, 
     proxy: bool, 
     emulation: Option<String>, 
     cookies: bool
 ) -> Result<(String, Lang)> {
-    let mut response = "".to_string();
 
-    let src_lang_ref = if is_lang_detected {
-        src_lang.as_ref()
-    } else {
-        "auto"
-    };
+    // let src_lang_ref = if is_lang_detected {
+    //     src_lang.as_ref()
+    // } else {
+    //     "auto"
+    // };
 
     let src_lang = convert_lang_to_qt_isize(src_lang);
     let target_lang = convert_lang_to_qt_isize(target_lang);
@@ -91,7 +92,7 @@ fn qt_service_get_request_data(request_type: u8, srvc_id: &str, src_text: &str, 
     }
     JS_CALLS.with(|d| d.set(calls + 1));
 
-    let mut eval_str = "".to_string();
+    let eval_str: String;
     if let Some(h) = handler && !h.is_empty() && is_valid_js_function_name(&h) {
         eval_str = format!("{h}({src_text}, {from}, {to})");
     } else {
@@ -146,7 +147,8 @@ fn make_req(d: RequestData, proxy: bool, emulation: Option<&str>, srvc_uid: &str
         client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
     }
     let mut client = client.build()?;
-    let resp = if d.method == 1 {
+
+    if d.method == 1 {
         client.get(d.uri).send()?.text()
     } else if d.method == 2 {
         client = client.post(d.uri);
@@ -157,8 +159,7 @@ fn make_req(d: RequestData, proxy: bool, emulation: Option<&str>, srvc_uid: &str
         client.send()?.text()
     } else {
         Err(anyhow!("http method undefined"))
-    };
-    resp
+    }
 }
 
 fn qt_service_process_response_data(
@@ -172,7 +173,7 @@ fn qt_service_process_response_data(
     proxy: bool, emulation: Option<&str>, cookies: bool
 ) -> Result<ResponseData> {
 
-    let mut eval_str = "".to_string();
+    let eval_str: String;
     
     let response_text = serde_json::to_string(response_text)?;
     //let response_text = response_text.replace('\'', "\\\'");
@@ -223,7 +224,7 @@ fn run_qt_service(request_type: u8, srvc_id: &str, eval_str: &str) -> Result<QTD
             .creation_flags(CREATE_NO_WINDOW)
             .current_dir(working_dir);
 
-            let js_code = format!("let eval_data = '{}';\n", &eval_str);
+            let js_code = format!("let eval_data = '{}';\n", eval_str);
             let mut file = std::fs::File::create("qjs_tmp.js")?;
             file.write_all(js_code.as_bytes())?;
 
@@ -245,12 +246,12 @@ fn run_qt_service(request_type: u8, srvc_id: &str, eval_str: &str) -> Result<QTD
             let output_err_file = File::create("qjs_output_err.tmp")?;
 
             {
-                let mut child = child
+                let child = child
                 .stdin(std::process::Stdio::null()) 
                 .stdout(std::process::Stdio::from(output_file)) 
                 .stderr(std::process::Stdio::from(output_err_file));
                 let mut child = child.spawn()?;
-                let status = child.wait()?;
+                let _status = child.wait()?;
             }
 
             if let Ok(mut file) = File::open("qjs_output.tmp") {
@@ -290,12 +291,12 @@ fn run_qt_service(request_type: u8, srvc_id: &str, eval_str: &str) -> Result<QTD
         let r = response_text.trim();
         dprintln!("QTrespnse-{}-", r);
 
-        let req: Result<RequestData> = serde_json::from_str(&r).map_err(|e| anyhow::anyhow!("{e}"));
+        let req: Result<RequestData> = serde_json::from_str(r).map_err(|e| anyhow::anyhow!("{e}"));
         if let Ok(request_data) = req {
             return Ok(QTData::RequestData(request_data));
         }
 
-        let res: Result<ResponseData> = serde_json::from_str(&r).map_err(|e| anyhow::anyhow!("{e}"));
+        let res: Result<ResponseData> = serde_json::from_str(r).map_err(|e| anyhow::anyhow!("{e}"));
         if let Ok(response_data) = res {
             return Ok(QTData::ResponseData(response_data));
         } else {
@@ -332,7 +333,7 @@ pub struct ResponseData {
   nextRequestHandler: Option<String>
 }
 
-
+#[allow(unused)]
 fn decode_base64_string(encoded: String) -> Result<String> {
     let encoded = encoded.trim();
     match BASE64_STANDARD.decode(encoded).map_err(|e| anyhow::anyhow!("{e}")) {

@@ -1,4 +1,4 @@
-use debug_print::{debug_println as dprintln};
+//use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 use crate::settings::DictOption;
 use crate::utils::rt_request::{
@@ -53,7 +53,7 @@ fn tag_handler(tag: &tl::HTMLTag, inner_text: String) -> String {
         }
 
         if class_name.contains("etytree-block") {
-            let t = format!("{}", inner_text.trim());
+            let t = inner_text.trim().to_string();
             return t;
         }
 
@@ -67,10 +67,9 @@ fn tag_handler(tag: &tl::HTMLTag, inner_text: String) -> String {
         }
         
     }
-    if let Some(Some(title)) = tag.attributes().get("title") {
-        if title == "Appendix:Glossary" {
-            return inner_text;
-        }
+    if let Some(Some(title)) = tag.attributes().get("title")
+    && title == "Appendix:Glossary" {
+        return inner_text;
     }
 
     match tag_name.as_ref() {
@@ -96,12 +95,12 @@ fn tag_handler(tag: &tl::HTMLTag, inner_text: String) -> String {
             format!("\n{}", inner_text)
         },
         "span" => {
-            format!("{}", inner_text)
+            inner_text.to_string()
         },
         "script" | "style" | "head" | "nav" | "sup" => {
             "".to_string() 
         },
-        _ => format!("{}", inner_text),    
+        _ => inner_text.to_string(),
     }
 }
 

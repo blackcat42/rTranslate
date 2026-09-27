@@ -97,7 +97,7 @@ impl TTService for OATTS {
 
 
         let working_dir = env::current_dir().unwrap();
-        let filename = format!("{src_id}_{engine_uid}_{voice}.{}", &self.response_format);
+        let filename = format!("{src_id}_{engine_uid}_{voice}.{}", self.response_format);
         let audio_path = format!(r"tts_cache\{filename}");
         let audio_path_full = working_dir.join(&audio_path);
 

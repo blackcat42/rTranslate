@@ -31,7 +31,7 @@ use crate::types::{
     UIState, UIStateDict,
 };
 
-use crate::utils::bbcode::{dsl_parse};
+//use crate::utils::bbcode::{dsl_parse};
 use crate::utils::helpers::ui_scale;
 /*use crate::utils::helpers::{
     borderless_win_handler, 
@@ -261,7 +261,7 @@ impl AppView {
         let UIState {src_text, tr_uid, translator, src, target, translation_text, is_fav} = state;
 
         if is_new_source {  
-            self.src_buf.set_text(format!("{}\n", &src_text).as_str()); //new line is req bc fltk widget bug
+            self.src_buf.set_text(format!("{}\n", src_text).as_str()); //new line is req bc fltk widget bug
             self.transl_popup.src = src_text;
         } else if src_text != self.transl_popup.src {
             return;
@@ -272,7 +272,7 @@ impl AppView {
         }
         
         if let Some(t_text) = translation_text {
-            let t_text = format!("{}\n", &t_text);
+            let t_text = format!("{}\n", t_text);
             //let mut sbuf = fltk::text::TextBuffer::default();
 
             self.transl_popup.txt_popup.unset_highlight_data(None);
@@ -336,7 +336,7 @@ impl AppView {
         let UIStateDict {src_id, src_text_dict, dict_uid, dict_name, src, target, dict_text, is_fav} = state;
 
         if is_new_source {  
-            self.src_dict_buf.set_text(format!("{}\n", &src_text_dict).as_str()); //new line is req bc fltk widget bug
+            self.src_dict_buf.set_text(format!("{}\n", src_text_dict).as_str()); //new line is req bc fltk widget bug
             self.dict_popup.src_dict = src_text_dict;
             self.dict_popup.prnn_index = -1;
         } else if src_text_dict != self.dict_popup.src_dict {
@@ -369,7 +369,7 @@ impl AppView {
         //let title_text = format!("{}->{} ({})", from.as_ref(), to.as_ref(), dict_name);
 
         if let Some(dict_name) = dict_name {
-            let mut title_text = format!("\"{}\" - {}", &self.dict_popup.src_dict, dict_name);
+            let mut title_text = format!("\"{}\" - {}", self.dict_popup.src_dict, dict_name);
             if src.is_some() || target.is_some() {
                 title_text.push_str(" (");
                 if let Some(src) = src {
@@ -450,7 +450,7 @@ impl AppView {
     pub fn set_dict_assets_browser_data(&mut self, data: Vec<PRNNSource>) {
         self.main_win.dict_assets_browser.clear();
         for item in data {
-            let name = format!("{}: {}", &item.service, &item.path);
+            let name = format!("{}: {}", item.service, item.path);
             self.main_win.dict_assets_browser.add_with_data(&name, item.path);
         }
     }
@@ -546,8 +546,8 @@ impl AppView {
             let rect = app::Screen::xywh_mouse();
             
             scale = app::screen_scale(monitor_idx);
-            let screen_w = rect.w as i32;
-            let screen_h = rect.h as i32;
+            //let screen_w = rect.w;
+            //let screen_h = rect.h;
             let max_x = rect.x + rect.w - win.w();
             let max_y = rect.y + rect.h - win.h();
             if max_x < rect.x || max_y < rect.y {

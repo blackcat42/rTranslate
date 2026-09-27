@@ -1,20 +1,17 @@
 #![allow(clippy::collapsible_if)]
 
-use debug_print::{debug_println as dprintln};
-use serde_json::Value;
-use anyhow::{anyhow, Result};
+//use debug_print::{debug_println as dprintln};
+//use serde_json::Value;
+use anyhow::{Result};
 
 use super::GLOBAL_SETTINGS;
 use crate::types::{AppEvent, Dictionary, Lang, UIStateDict, DictResult};
 use crate::settings::DictOption;
-use crate::utils::rt_request::{
-    Client,
-};
 
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
-use std::str::FromStr;
+//use std::str::FromStr;
 
 use crate::utils::qtranslate::send_dict_request;
 

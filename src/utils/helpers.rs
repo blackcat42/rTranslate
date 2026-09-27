@@ -80,7 +80,7 @@ pub fn borderless_win_handler(
     let is_inner = *is_inner.borrow();
     let win_ppu = window.pixels_per_unit();
     let (ex, ey) = app::event_coords();
-    let margin = (5 as f32 * win_ppu) as i32; // border detection
+    let margin = (5_f32 * win_ppu) as i32; // border detection
     //.x() - inner coords
     //.x_root() - coords relative to screen
     let win_left = 0;
@@ -106,10 +106,10 @@ pub fn borderless_win_handler(
 
         enums::Event::Drag => {
             if (
-                (coords.x > (5 as f32 * win_ppu) as i32) 
-                && (coords.x < coords.initial_window_width - (5 as f32 * win_ppu) as i32)) 
-                && ((coords.y > (5 as f32 * win_ppu) as i32) 
-                && (coords.y < coords.initial_window_height - (5 as f32 * win_ppu) as i32)
+                (coords.x > (5_f32 * win_ppu) as i32) 
+                && (coords.x < coords.initial_window_width - (5_f32 * win_ppu) as i32)) 
+                && ((coords.y > (5_f32 * win_ppu) as i32) 
+                && (coords.y < coords.initial_window_height - (5_f32 * win_ppu) as i32)
             ) {
                 window.set_pos(app::event_x_root() - coords.x, app::event_y_root() - coords.y);
             } else {
@@ -130,12 +130,12 @@ pub fn borderless_win_handler(
                     new_h = coords.initial_window_height + (app::event_y_root() - coords.y_start);
                 }
 
-                if new_w < (400 as f32 * win_ppu) as i32 { 
-                    new_w = (400 as f32 * win_ppu) as i32;
+                if new_w < (400_f32 * win_ppu) as i32 { 
+                    new_w = (400_f32 * win_ppu) as i32;
                     new_x = window.x_root();
                 }
-                if new_h < (150 as f32 * win_ppu) as i32 { 
-                    new_h = (150 as f32 * win_ppu) as i32;
+                if new_h < (150_f32 * win_ppu) as i32 { 
+                    new_h = (150_f32 * win_ppu) as i32;
                     new_y = window.y_root();
                 }
                 window.resize(new_x, new_y, new_w, new_h);

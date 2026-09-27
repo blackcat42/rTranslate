@@ -1,3 +1,4 @@
+#![allow(clippy::manual_strip)]
 use super::GLOBAL_SETTINGS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,6 +18,7 @@ impl Mark {
             Mark::Header => 'D',
         }
     }
+    #[allow(clippy::inherent_to_string)]
     fn to_string(self) -> String {
         self.as_char().to_string()
     }
@@ -141,7 +143,7 @@ pub fn from_md(input: &str) -> (String, String, Vec<fltk::text::StyleTableEntryE
         .replace("$\\Leftrightarrow;", "⇔");
 
     for line in input.split_inclusive('\n') {
-        let (line_text, line_style) = parse_line(&line);
+        let (line_text, line_style) = parse_line(line);
 
         result_text.push_str(&line_text);
         result_style.push_str(&line_style);

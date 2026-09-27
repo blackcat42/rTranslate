@@ -465,7 +465,7 @@ impl AppState {
 
         match tts_file {
             Ok(tr) => {
-                let filename = format!("{}", tr);
+                let filename = tr.to_string();
                 self.app_sender.send(AppEvent::TTSPlay(filename));
             }
             Err(_) => {

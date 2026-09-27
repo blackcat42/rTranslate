@@ -4,7 +4,7 @@ use crate::utils::helpers::{
     app_message, 
 };
 use serde::{Deserialize, Serialize};
-use sys_locale::get_locale;
+//use sys_locale::get_locale;
 use super::GLOBAL_SETTINGS;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -103,12 +103,12 @@ pub static LOCALIZATION: LazyLock<Locale> = LazyLock::new(|| {
 
     if let Ok(l_json) = l_json {
         let l10n: Locale = json5::from_str(&l_json).unwrap_or_else(|e| {
-            app_message(&format!("Failed to parse {}: {}", &file, e));
+            app_message(&format!("Failed to parse {}: {}", file, e));
             Locale::default()
         });
         l10n
     } else {
-        app_message(&format!("Failed to open {}", &file));
+        app_message(&format!("Failed to open {}", file));
         Locale::default()
     }
 });
@@ -116,6 +116,6 @@ pub static LOCALIZATION: LazyLock<Locale> = LazyLock::new(|| {
 #[macro_export]
 macro_rules! t {
     ($key:ident) => {
-        &crate::utils::i18n::LOCALIZATION.$key
+        &$crate::utils::i18n::LOCALIZATION.$key
     };
 }

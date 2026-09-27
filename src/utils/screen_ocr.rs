@@ -1,19 +1,16 @@
+#![allow(clippy::too_many_arguments)]
 use debug_print::{debug_println as dprintln};
 use fltk::{
     app,
     prelude::*,
     window,
     window::DoubleWindow,
-    text,
     enums,
-    browser,
     button,
     group,
-    image::PngImage,
-    image::IcoImage,
     frame::Frame,
 };
-use image::GenericImageView;
+//use image::GenericImageView;
 use xcap::Monitor;
 use anyhow::{anyhow, Result};
 
@@ -39,9 +36,9 @@ use crate::utils::helpers::ui_scale;
 use super::GLOBAL_SETTINGS;
 //use super::UICONFIG;
 
-enum OCREvent {
-    Success(String),
-}
+// enum OCREvent {
+//     Success(String),
+// }
 
 pub struct ScreenOCR {
     pub win: DoubleWindow,
@@ -60,19 +57,20 @@ pub struct ScreenOCR {
 
     pub ocr_text_buf: fltk::text::TextBuffer,
     //pub ocr_waiting_buf: fltk::text::TextBuffer,
+    #[allow(unused)]
     text_widget: fltk::text::TextEditor,
 }
 
 impl ScreenOCR {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>) -> Self {
         let (screen_w, screen_h) = app::screen_size();
-        let working_dir = std::env::current_dir().unwrap();
+        //let working_dir = std::env::current_dir().unwrap();
 
         let mut win = window::Window::default().with_pos(0, 0).with_size(screen_w as i32, screen_h as i32).with_label("Screen OCR");
          win.set_border(true);
     
         let mut win_screenshot_wrapper = fltk::group::Group::new(0, 0, screen_w as i32, screen_h as i32, "");
-        let mut img: Option<MaskableImage> = None;        
+        let img: Option<MaskableImage> = None;        
         win_screenshot_wrapper.end();
         win_screenshot_wrapper.make_resizable(false);
 
@@ -116,7 +114,7 @@ impl ScreenOCR {
         let mut flex_buttons_wrapper = group::Flex::default().column();
         flex_buttons_wrapper.set_margins(ui_scale(15), 0, ui_scale(15), 0);
         let mut flex_buttons = group::Flex::default().row();
-        let mut checkbox_ocr_append = button::CheckButton::default().with_label("Keep previous text")
+        let checkbox_ocr_append = button::CheckButton::default().with_label("Keep previous text")
             .with_align(fltk::enums::Align::Inside | fltk::enums::Align::Left | fltk::enums::Align::ImageNextToText);
         flex_buttons.fixed(&checkbox_ocr_append, ui_scale(150));
 
@@ -168,12 +166,12 @@ impl ScreenOCR {
         overlay_win.size_range(ui_scale(400), ui_scale(150), 0 ,0); //1510
         overlay_win.end();
         
-        win.set_callback(move |w| {
+        win.set_callback(move |_w| {
             if app::event() == fltk::enums::Event::Close {
                 app_sender.send(AppEvent::OCRDrop);
             }
         });
-        win.handle(move |w, ev| match ev {
+        win.handle(move |_w, ev| match ev {
             enums::Event::KeyDown => {
                 if app::event_key() == enums::Key::Escape {
                     app_sender.send(AppEvent::OCRDrop);
@@ -187,7 +185,7 @@ impl ScreenOCR {
 
         close_button.set_callback({
             let mut overlay_win = overlay_win.clone();
-            let mut win = win.clone();
+            //let mut win = win.clone();
             move |_| {
                 overlay_win.hide();
             }
@@ -210,7 +208,7 @@ impl ScreenOCR {
             }
         });
         btn_exit.set_callback({
-            let win = win.clone();
+            //let win = win.clone();
             move |_| {
                 app_sender.send(AppEvent::OCRDrop);
             }
@@ -319,7 +317,7 @@ impl ScreenOCR {
             (screen_rect.h as f32 * screen_scale) as i32
         );
 
-        self.win.take_focus();
+        let _ = self.win.take_focus();
         Ok(())
     }
 
@@ -361,7 +359,7 @@ impl ScreenOCR {
         } else {
             return Err(anyhow!("no image data"));
         }
-        let size = image_data.len() as u32;
+        //let size = image_data.len() as u32;
         
         let (kill_tx, kill_rx) = std::sync::mpsc::channel();
         self.kill_sender = Some(kill_tx);
@@ -423,7 +421,7 @@ impl ScreenOCR {
         self.set_waiting();
         let handle = std::thread::spawn(move || {
             loop {
-                if let Ok(_) = kill_rx.try_recv() {
+                if kill_rx.try_recv().is_ok() {
                     dprintln!("Kill signal received");
                     let _ = child.kill();
                     let _ = child.wait();
@@ -446,7 +444,7 @@ impl ScreenOCR {
 
             let mut final_output = String::new();
             stdout.read_to_string(&mut final_output).unwrap();
-            let _ = app_sender.send(AppEvent::OCRSuccess(final_output));
+            app_sender.send(AppEvent::OCRSuccess(final_output));
             dprintln!("ocr_thread_reader stopping");
         });
         self.ocr_thread = Some(handle);
@@ -478,7 +476,7 @@ impl ScreenOCR {
         } else {
             return Err(anyhow!("no image data"));
         }
-        let size = image_data.len() as u32;
+        //let size = image_data.len() as u32;
 
         image::save_buffer(
             "ocr_image.png",
@@ -541,7 +539,7 @@ impl ScreenOCR {
         self.set_waiting();
         let handle = std::thread::spawn(move || {
             loop {
-                if let Ok(_) = kill_rx.try_recv() {
+                if kill_rx.try_recv().is_ok() {
                     dprintln!("Kill signal received");
                     let _ = child.kill();
                     let _ = child.wait();
@@ -571,7 +569,7 @@ impl ScreenOCR {
 
             //let mut output = String::new();
             //stdout.read_to_string(&mut output)?;
-            let _ = app_sender.send(AppEvent::OCRSuccess(child_output));
+            app_sender.send(AppEvent::OCRSuccess(child_output));
             dprintln!("ocr_thread_reader stopping");
             if let Err(e) = std::fs::remove_file("ocr_output.tmp") {
                 println!("error remove file: {}", e);
@@ -663,6 +661,7 @@ impl ScreenOCR {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct CropSegment{
     pub x: i32, 
     pub y: i32, 
@@ -672,15 +671,14 @@ pub struct CropSegment{
 }
 
 impl CropSegment {
-    pub fn new(x: i32, y: i32, width: i32, height: i32, cs_img: Vec<u8>) -> Self {
-        let mut cs = CropSegment{
-            x: x,
-            y: y, 
-            width: width,
-            height: height,
-            img: cs_img, 
-        };
-        cs
+    pub fn new(x: i32, y: i32, width: i32, height: i32, img: Vec<u8>) -> Self {
+        CropSegment{
+            x,
+            y, 
+            width,
+            height,
+            img, 
+        }
     }
 }
 pub struct MaskableImage {
@@ -698,14 +696,14 @@ impl MaskableImage {
         sb.frame.set_color(fltk::enums::Color::Green);
 
 
-        let mut img = img_path.unwrap();
+        let img = img_path.unwrap();
         
         println!("w is: {}, h is: {}", img.width(), img.height());
         let (x, y) = img.dimensions();
 
-        let mut grey_img = img.clone();
+        let grey_img = img.clone();
 
-        let mut dyn_img = image::DynamicImage::ImageRgba8(img.clone());
+        let dyn_img = image::DynamicImage::ImageRgba8(img.clone());
 
         let img = image::imageops::colorops::brighten(&dyn_img, -35);
 
@@ -731,7 +729,7 @@ impl MaskableImage {
             let mut grey_img_c = grey_img.clone();
             let s_clone = s;
             let mut rgc = rgb_image.clone();
-            let (ex,ey) = app::event_coords();
+            //let (ex,ey) = app::event_coords();
 
             match ev {
                 enums::Event::KeyDown => {
@@ -757,14 +755,14 @@ impl MaskableImage {
                     let (tx, ty) = app::event_coords();
                     if ty <= t.y(){
                         f_y = t.y();
-                    } else if (ty >= t.y() + t.height()) {
+                    } else if ty >= t.y() + t.height() {
                         f_y = t.y() + t.height();
                     } else {
                         f_y = ty;
                     }
                     if tx <= t.x(){
                         f_x = t.x();
-                    } else if (tx >= t.x() + t.width()) {
+                    } else if tx >= t.x() + t.width() {
                         f_x = t.x() + t.width();
                     } else {
                         f_x = tx;
@@ -788,8 +786,8 @@ impl MaskableImage {
                         overlay_win.show();
                         let position = app::get_mouse();
                         let rect = app::Screen::xywh_mouse();
-                        let screen_w = rect.w as i32;
-                        let screen_h = rect.h as i32;
+                        //let screen_w = rect.w as i32;
+                        //let screen_h = rect.h as i32;
                         let max_x = rect.x + rect.w - overlay_win.w();
                         let max_y = rect.y + rect.h - overlay_win.h();
                         if max_x < rect.x || max_y < rect.y {
@@ -799,10 +797,10 @@ impl MaskableImage {
                             let y = position.1.clamp(rect.y, max_y);
                             overlay_win.set_pos(x, y);
                         }
-                        overlay_win.take_focus();
+                        let _ = overlay_win.take_focus();
                     } else {
                         overlay_win.show();
-                        overlay_win.take_focus();
+                        let _ = overlay_win.take_focus();
                     }
                 }
 
@@ -812,14 +810,14 @@ impl MaskableImage {
 
                     if ty <= t.y(){
                         f_y = t.y();
-                    } else if (ty >= t.y() + t.height()) {
+                    } else if ty >= t.y() + t.height() {
                         f_y = t.y() + t.height();
                     } else {
                         f_y = ty;
                     }
                     if tx <= t.x(){
                         f_x = t.x();
-                    } else if (tx >= t.x() + t.width()) {
+                    } else if tx >= t.x() + t.width() {
                         f_x = t.x() + t.width();
                     } else {
                         f_x = tx;

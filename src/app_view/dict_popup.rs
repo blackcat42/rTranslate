@@ -7,7 +7,7 @@ use fltk::{
     enums,
     button,
     group,
-    image::PngImage,
+    //image::PngImage,
     image::IcoImage,
     frame::Frame,
 };
@@ -144,7 +144,7 @@ impl DictPopupView {
         let mut dict_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
         for qwe in GLOBAL_SETTINGS.dictionaries.iter() {
             let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
-            let icon_path = format!(r"icons/{}.ico", &qwe.uid);
+            let icon_path = format!(r"icons/{}.ico", qwe.uid);
             dprintln!("{}", icon_path);
             if let Ok(image) = IcoImage::load(working_dir.join(&icon_path).to_str().unwrap_or("")) {
                 button.set_image(Some(image));

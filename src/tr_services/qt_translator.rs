@@ -1,19 +1,11 @@
-use debug_print::{debug_println as dprintln};
-use serde_json::Value;
+//use debug_print::{debug_println as dprintln};
 use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
 use crate::settings::TranslatorOption;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use super::GLOBAL_SETTINGS;
-use crate::utils::helpers::is_win7_or_greater;
-use base64::{prelude::BASE64_STANDARD, Engine};
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use crate::utils::rt_request;
-use std::fs::File;
-use std::io::Read;
 
 use crate::utils::qtranslate::send_tr_request;
 

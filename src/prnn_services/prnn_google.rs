@@ -128,6 +128,7 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
 
         let mut count = 1;
         let urls_len = arr_urls.len();
+        #[allow(clippy::explicit_counter_loop)]
         for url in arr_urls {
             #[allow(clippy::double_ended_iterator_last)]
             let filename = url.trim_end_matches('/').split('/').last().unwrap_or("tmp.mp3");

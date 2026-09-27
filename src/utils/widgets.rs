@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use fltk::{
     app,
     //dialog,
@@ -91,7 +92,7 @@ impl IconExt for Button {
             image_path = working_dir.join(format!("icons\\{}.png", icon));
         }
         
-        if let Ok(mut image) = PngImage::load(image_path.to_str().unwrap_or("")) {
+        if let Ok(image) = PngImage::load(image_path.to_str().unwrap_or("")) {
             //image.scale(15, 15, true, true);
             if screen_scale == 1.0 {
                 self.set_image(Some(image));
@@ -101,7 +102,9 @@ impl IconExt for Button {
                 self.draw(move |b| {
                     fltk::draw::draw_box(b.frame(), b.x(), b.y(), b.w(), b.h(), b.color());
                     
-                    let (mut img_data, img_w, img_h, depth) = if scale >= 1.25 && scale < 1.50{
+                    #[allow(clippy::if_same_then_else)]
+                    #[allow(clippy::manual_range_contains)]
+                    let (mut img_data, img_w, img_h, _depth) = if scale >= 1.25 && scale < 1.50{
                         (image.to_rgb_image().unwrap(), image.width(), image.height(), 4)
                     } else {
                         (image.to_rgb_image().unwrap(), image.width(), image.height(), 4)
