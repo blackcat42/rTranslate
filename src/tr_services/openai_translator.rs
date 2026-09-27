@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use crate::utils::rt_request;
 use anyhow::{anyhow, Result};
+use path_slash::PathBufExt as _;
 
 pub struct OA {
     is_running: Arc<AtomicBool>,
@@ -104,11 +105,13 @@ impl Translator for OA {
                 let model = self.model.clone();
                 let prompt = self.prompt.clone();
                 let stream = self.options.stream;
+                let cookies = self.options.cookies;
 
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                     is_processing.store(true, Ordering::SeqCst);
                     let transl_result = send_tr_request(
+                        &uid,
                         app_sender, 
                         kill_rx, 
                         text.clone(), 
@@ -120,7 +123,8 @@ impl Translator for OA {
                         &base_url, 
                         &api_key, 
                         &model, 
-                        &prompt
+                        &prompt,
+                        cookies
                     );
                     is_processing.store(false, Ordering::SeqCst);
                     match transl_result {
@@ -189,6 +193,7 @@ struct ChunkDelta {
 
 
 fn send_tr_request(
+    srvc_uid: &str,
     app_sender: fltk::app::Sender<AppEvent>, 
     kill_rec: std::sync::mpsc::Receiver<()>, 
     selected_text: String, 
@@ -200,7 +205,8 @@ fn send_tr_request(
     base_url: &str, 
     api_key: &str, 
     model: &str, 
-    prompt: &str
+    prompt: &str,
+    cookies: bool
 ) -> Result<(String, Lang)> {
 
     let src_lang_ref = if is_lang_detected {
@@ -243,6 +249,15 @@ fn send_tr_request(
         .proxy(proxy);
     if let Some(e) = emulation {
         client = client.emulation(e);
+    }
+    if cookies {
+        let cookie_path = format!(
+            "cookies/{}_{}.txt", 
+            srvc_uid, 
+            twox_hash::XxHash32::oneshot(42, base_url.as_bytes())
+        );
+        client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
+        client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
     }
     let client = client.build()?;
 

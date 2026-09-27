@@ -1,4 +1,4 @@
-use anyhow::Result;
+//use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use crate::utils::helpers::{
@@ -133,6 +133,8 @@ pub struct TranslatorOption {
     pub api_key_url: String,
     #[serde(default = "default_as_false")]
     pub markdown: bool,
+    #[serde(default = "default_as_false")]
+    pub cookies: bool,
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DictOption {
@@ -146,6 +148,8 @@ pub struct DictOption {
     pub path: Option<String>,
     pub dict_path: Option<String>,
     pub emulation: Option<String>,
+    #[serde(default = "default_as_false")]
+    pub cookies: bool,
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TTServiceOption {
@@ -244,7 +248,8 @@ pub mod app_settings {
                                 stream: false,
                                 api_key_requied: false,
                                 api_key_url: "".to_string(),
-                                markdown: false,//m
+                                markdown: false,
+                                cookies: false,
                             };
                             
                             if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {
@@ -263,6 +268,7 @@ pub mod app_settings {
                                 path: None,
                                 dict_path: None,
                                 emulation: None,
+                                cookies: false,
                             };
                             
                             if !settings.dictionaries.iter().any(|item| item.uid == new_dict.uid) {

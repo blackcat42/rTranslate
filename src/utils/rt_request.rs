@@ -8,13 +8,23 @@ use std::{time::Duration};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-//use std::io::{BufRead, BufReader};
+use std::io::{Write, BufRead, BufReader};
+use std::path::PathBuf;
 
 use crate::utils::helpers::is_win7_or_greater;
 use super::GLOBAL_SETTINGS;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 
+struct NetscapeCookie {
+    domain: String,
+    include_subdomains: String, 
+    path: String, 
+    secure: String, 
+    exp: String,
+    name: String,
+    value: String
+}
 pub struct ClientBuilder {
 	emulation: Option<String>,
 	default_headers: Option<HashMap<String, String>>,
@@ -24,6 +34,8 @@ pub struct ClientBuilder {
 	use_proxy: bool,
 	expect_binary: bool,
 	expect_raw: bool,
+	netscape_cookies_write: Option<PathBuf>,
+	netscape_cookies_send: Option<PathBuf>
 }
 impl ClientBuilder {
 
@@ -62,6 +74,14 @@ impl ClientBuilder {
 		self.expect_raw = b;
         self
 	}
+	pub fn netscape_cookies_write(mut self, path: PathBuf) -> Self {
+		self.netscape_cookies_write = Some(path);
+        self
+	}
+	pub fn netscape_cookies_send(mut self, path: PathBuf) -> Self {
+		self.netscape_cookies_send = Some(path);
+        self
+	}
 	pub fn build(self) -> Result<Client> {
         Ok(Client {
         	//lib: self.lib,
@@ -73,6 +93,8 @@ impl ClientBuilder {
         	use_proxy: self.use_proxy,
         	expect_binary: self.expect_binary,
         	expect_raw: self.expect_raw,
+        	netscape_cookies_write: self.netscape_cookies_write,
+        	netscape_cookies_send: self.netscape_cookies_send,
 
         	post: None,
         	body: None,
@@ -96,6 +118,8 @@ pub struct Client {
 	use_proxy: bool,
 	expect_binary: bool,
 	expect_raw: bool,
+	netscape_cookies_write: Option<PathBuf>,
+	netscape_cookies_send: Option<PathBuf>,
 
 	post: Option<String>,
 	body: Option<String>,
@@ -114,6 +138,8 @@ impl Client {
 			use_proxy: false,
 			expect_binary: false,
 			expect_raw: false,
+			netscape_cookies_write: None,
+			netscape_cookies_send: None
 		}
 	}
 	pub fn post(mut self, url: impl Into<String>) -> Self {
@@ -213,7 +239,7 @@ impl std::fmt::Display for StatusCode {
     }
 }
 
-fn configure_request<B>(req: ureq::RequestBuilder<B>, request: Client) -> ureq::RequestBuilder<B> {
+fn configure_request<B>(req: ureq::RequestBuilder<B>, request: Client, uri: &str) -> (ureq::RequestBuilder<B>, Vec<NetscapeCookie>) {
 	let mut req = req;
 	    match request.version.as_deref() {
 	        Some("HTTP_11") => {
@@ -235,7 +261,19 @@ fn configure_request<B>(req: ureq::RequestBuilder<B>, request: Client) -> ureq::
 	    if let Some(query) = request.query {
 	    	req = req.query_pairs(query);
 	    }
-	    req
+
+	    let mut old_cookies: Vec<NetscapeCookie> = Vec::new();
+
+	    if let Some(c) = request.netscape_cookies_send {
+	    	let arr = read_cookies(c, uri)
+	    		.unwrap_or((Vec::new(), Vec::new()));
+	    	old_cookies = arr.0;
+	    	let cookies_val = arr.1.join("; ");
+            dprintln!("{}", &cookies_val);
+	    	req = req.header("Cookie", cookies_val);
+	    }
+
+	    (req, old_cookies)
 	}
 
 fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
@@ -277,9 +315,13 @@ fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
     let agent: ureq::Agent = config.into();
 	let mut response;
 
+	let host;
+	let old_cookies: Vec<NetscapeCookie>;
     if let Some(ref url) = request.post {
     	let client = agent.post(url);
-    	let client = configure_request(client, request.clone());
+    	host = client.uri_ref().unwrap().host().map(|host| host.to_string());
+    	let (client, cookies) = configure_request(client, request.clone(), url);
+    	old_cookies = cookies;
     	if let Some(b) = request.body {
 	    	response = client.send(b)?;
 	    } else {
@@ -287,7 +329,9 @@ fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
 	    }
     } else if let Some(ref url) = request.get {
     	let client = agent.get(url);
-    	let client = configure_request(client, request.clone());
+    	host = client.uri_ref().unwrap().host().map(|host| host.to_string());
+    	let (client, cookies) = configure_request(client, request.clone(), url);
+    	old_cookies = cookies;
     	response = client.call()?;
     } else {
     	return Err(anyhow!("url requied"));
@@ -306,7 +350,51 @@ fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
             )
         })
         .collect();
-        
+    
+    if let Some(c) = request.netscape_cookies_write && let Some(ref host) = host {
+    	let mut netscape_cookies: Vec<NetscapeCookie> = Vec::new();
+    	let cookies_raw = response.headers().get_all(http::header::SET_COOKIE);
+    	for val in cookies_raw.iter() {
+    		let cookie_str = match val.to_str() {
+	            Ok(s) => s,
+	            Err(_) => continue,
+        	};
+    		if let Ok(cookie) = cookie::Cookie::parse(cookie_str) {
+    			let domain = cookie.domain_raw();
+                let include_subdomains = if domain.is_some() { "TRUE" } else { "FALSE" };
+                let domain = domain.unwrap_or(host);
+
+                let path = cookie.path().unwrap_or("/");
+                let secure = if cookie.secure().unwrap_or(false) { "TRUE" } else { "FALSE" };
+
+                let max_age = cookie.max_age()
+                    .map(|dt| {
+                        timestamp_from_max_age(dt.try_into().unwrap_or(std::time::Duration::from_secs(0)))
+                    }).unwrap_or(0);
+                  
+                let expires = cookie.expires_datetime()
+                    .map(|dt| {
+                        timestamp_from_expires_str(dt.into())
+                    }).unwrap_or(0);
+
+                let exp = if max_age > 1 {max_age} else {expires};
+                let name = cookie.name();
+                let value = cookie.value();
+                //let prefix = if cookie.http_only().unwrap_or(false) { "#HttpOnly_" } else { "" };
+                netscape_cookies.push(NetscapeCookie{
+                    domain: domain.to_string(), 
+                    include_subdomains: include_subdomains.into(), 
+                    path: path.into(), 
+                    secure: secure.into(), 
+                    exp: exp.to_string(), 
+                    name: name.into(), 
+                    value: value.into()
+                });
+    		}
+        }
+        let _ = write_cookies(c, netscape_cookies, old_cookies);
+    }
+
     let mut response_raw: Result<http::response::Response<ureq::Body>> = Err(anyhow!("e"));
     let mut response_text: Result<String> = Err(anyhow!("e"));
     let mut response_bytes: Result<Vec<u8>> = Err(anyhow!("e"));
@@ -364,6 +452,8 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
 	let mut arg_emulation: Option<String> = None;
 	let mut arg_http: Option<String> = None;
 	let mut arg_timeout: Option<String> = None;
+	let mut arg_c: Option<std::ffi::OsString> = None;
+	let mut arg_b: Option<std::ffi::OsString> = None;
 	let mut arg_gzip = false;
 	let mut arg_base64 = false;
 
@@ -425,6 +515,16 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
     if let Some(t) = request.timeout {
     	arg_timeout = Some(format!("--connect-timeout={}", t.as_secs()));
     }
+    if let Some(c) = request.netscape_cookies_write {
+    	let mut p = std::ffi::OsString::from("-c ");
+    	p.push(&c);
+    	arg_c = Some(p);
+    }
+    if let Some(b) = request.netscape_cookies_send {
+    	let mut p = std::ffi::OsString::from("-b ");
+    	p.push(&b);
+    	arg_b = Some(p);
+    }
     if request.gzip {
     	arg_gzip = true;
     }
@@ -473,6 +573,14 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
         if let Some(t) = arg_timeout {
         	child.arg(&t);
         }
+        if let Some(a) = arg_c {
+        	child.arg(&a);
+        	dprintln!("{:?}", &a);
+        }
+        if let Some(a) = arg_b {
+        	child.arg(&a);
+        	dprintln!("{:?}", &a);
+        }
         if arg_gzip {
         	child.arg("--gzip");
         }
@@ -491,7 +599,7 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
             let output_err_file = File::create("wreq_output_err.tmp")?;
 
             {
-                let mut child = child
+                let child = child
                 	.stdin(std::process::Stdio::null()) 
                 	.stdout(std::process::Stdio::from(output_file)) 
                 	.stderr(std::process::Stdio::from(output_err_file));
@@ -574,4 +682,138 @@ fn extract_text(start_tag: &str, end_tag: &str, input: &str) -> String {
     } else {
     	"".to_string()
     }
+}
+
+fn read_cookies(f: PathBuf, url: &str) -> Result<(Vec<NetscapeCookie>, Vec<String>)> {
+    let mut netscape_cookies: Vec<NetscapeCookie> = Vec::new();
+    if !f.exists() {
+        return Err(anyhow!("path"));
+    }
+    let parsed_url = url.parse::<http::Uri>().unwrap();
+    let request_path = parsed_url.path();
+    let request_domain = parsed_url.host().unwrap();
+
+    let mut cookie_pairs = Vec::new();
+    let file = File::open(f)?;
+    let reader = BufReader::new(file);
+    
+    for line in reader.lines() {
+        let line = line?;
+        //println!("{:?}", &line);
+        if (line.starts_with('#') && !line.starts_with("#HttpOnly")) || line.trim().is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() >= 7 {
+            let name = parts[5];
+            let value = parts[6];
+            let cookie_path = parts[2];
+            let cookie_domain = parts[0].to_string().replace("#HttpOnly_", "");
+            let include_subdomains = parts[1].to_string();
+
+            netscape_cookies.push(
+                NetscapeCookie {domain: cookie_domain.clone(), include_subdomains: include_subdomains.clone(), path: cookie_path.to_string(), secure: parts[3].to_string(), exp: parts[4].to_string(), name: name.to_string(), value: value.to_string()}
+            );
+
+            if !domain_match(request_domain, &cookie_domain, &include_subdomains) {
+                continue;
+            }
+            if !path_match(request_path, cookie_path) {
+                continue;
+            }
+            if let Ok(expires) = parts[4].parse::<i64>() {
+                let now = get_timestamp();
+                if expires > 1 && expires < now {
+                    continue;
+                }
+            }
+
+            cookie_pairs.push(format!("{}={}", name, value));
+        }
+    }
+    Ok((netscape_cookies, cookie_pairs))
+}
+
+fn write_cookies(f: PathBuf, new_cookies: Vec<NetscapeCookie>, old_cookies: Vec<NetscapeCookie>) -> Result<()> {
+    let mut file = File::create(f)?;
+    writeln!(file, "# Netscape HTTP Cookie File\n")?;
+    let cookies = merge_cookies(new_cookies, old_cookies);
+    for cookie in cookies {
+        let NetscapeCookie {domain, include_subdomains, path, secure, exp, name, value} = cookie;
+        writeln!(
+            file,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            domain, include_subdomains, path, secure, exp, name, value
+        )?;
+    }
+    Ok(())
+}
+
+fn merge_cookies(
+    new_cookies: Vec<NetscapeCookie>,
+    old_cookies: Vec<NetscapeCookie>
+) -> Vec<NetscapeCookie> {
+    let mut merged: std::collections::HashMap<(String, String, String), NetscapeCookie> = std::collections::HashMap::new();
+
+    for cookie in old_cookies {
+        let key = (cookie.domain.clone(), cookie.path.clone(), cookie.name.clone());
+        merged.insert(key, cookie);
+    }
+    
+    for cookie in new_cookies {
+        let key = (cookie.domain.clone(), cookie.path.clone(), cookie.name.clone());
+        merged.insert(key, cookie);
+    }
+
+    merged.into_values().collect()
+}
+
+fn timestamp_from_max_age(max_age_secs: std::time::Duration) -> i64 {
+    let expire_time = std::time::SystemTime::now() + max_age_secs;
+    expire_time
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn timestamp_from_expires_str(expires: std::time::SystemTime) -> i64 {
+    expires
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn get_timestamp() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn domain_match(request_host: &str, cookie_host: &str, include_subdomains: &str) -> bool {
+    //println!("request_host: {}, cookie_host: {}", request_host, cookie_host);
+    if (include_subdomains == "TRUE" && request_host.ends_with(cookie_host)) 
+	|| request_host == cookie_host {
+        return true;
+    }
+    false
+}
+
+fn path_match(request_path: &str, cookie_path: &str) -> bool {
+    //println!("request_path: {}, cookie_path: {}", request_path, cookie_path);
+    if request_path == cookie_path {
+        return true;
+    }
+    if request_path.starts_with(cookie_path) {
+        if cookie_path.ends_with('/') {
+            return true;
+        }
+
+        //cookie_path = "/api", request_path = "/api/v1"
+        if request_path.as_bytes().get(cookie_path.len()) == Some(&b'/') {
+            return true;
+        }
+    }
+    false
 }

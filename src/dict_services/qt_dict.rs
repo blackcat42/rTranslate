@@ -50,10 +50,11 @@ impl Dictionary for QTDict {
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.options.use_proxy;
                 let emulation = self.options.emulation.clone();
+                let cookies = self.options.cookies;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
 
-                    let transl_result = send_dict_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), use_proxy, emulation);
+                    let transl_result = send_dict_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), use_proxy, emulation, cookies);
                     match transl_result {
                         Ok(t_text) => {
                             

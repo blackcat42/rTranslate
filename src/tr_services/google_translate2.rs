@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
@@ -7,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 use anyhow::{anyhow, Result};
 use super::GLOBAL_SETTINGS;
+use path_slash::PathBufExt as _;
 
 use std::str::FromStr;
 use crate::utils::rt_request;
@@ -48,10 +51,11 @@ impl Translator for GT2 {
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.options.use_proxy;
                 let emulation = self.options.emulation.clone();
+                let cookies = self.options.cookies;
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                                         
-                    let transl_result = send_tr_request(text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation);
+                    let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation, cookies);
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
@@ -90,7 +94,7 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: bool, emulation: Option<String>) -> Result<(String, Lang)> {
+fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: bool, emulation: Option<String>, cookies: bool) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if is_lang_detected {
@@ -126,6 +130,15 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, is_
                 .proxy(proxy);
             if let Some(e) = emulation {
                 client = client.emulation(e);
+            }
+            if cookies {
+                let cookie_path = format!(
+                    "cookies/{}_{}.txt", 
+                    srvc_uid, 
+                    twox_hash::XxHash32::oneshot(42, "https://translate-pa.googleapis.com".as_bytes())
+                );
+                client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
+                client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
             }
             let client = client.build()?;
 

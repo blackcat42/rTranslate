@@ -37,6 +37,7 @@ target
 /todo_api.txt
 /dist/settings.json
 /dist/ui_config.json
+/dist/cookies/*.txt
 
 /dist/extensions/qtranslate/Services/*
 !/dist/extensions/qtranslate/Services/-QTExample/

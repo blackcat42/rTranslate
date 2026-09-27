@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use debug_print::{debug_println as dprintln};
 use serde_json::Value;
 use crate::types::{AppEvent, Translator, Lang, UIState, TranslResult};
@@ -14,6 +16,7 @@ use crate::utils::rt_request;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
+use path_slash::PathBufExt as _;
 
 thread_local! {
     static JS_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
@@ -26,9 +29,10 @@ pub fn send_tr_request(
     target_lang: Lang, 
     is_lang_detected: bool, 
     proxy: bool, 
-    emulation: Option<String>
+    emulation: Option<String>, 
+    cookies: bool
 ) -> Result<(String, Lang)> {
-    send_request(1, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation)
+    send_request(1, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation, cookies)
 }
 
 pub fn send_dict_request(
@@ -37,10 +41,11 @@ pub fn send_dict_request(
     src_lang: Lang, 
     target_lang: Lang, 
     proxy: bool, 
-    emulation: Option<String>
+    emulation: Option<String>, 
+    cookies: bool
 ) -> Result<(String, Lang)> {
     let is_lang_detected = true; //TODO
-    send_request(8, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation)
+    send_request(8, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation, cookies)
 }
 
 fn send_request(
@@ -51,7 +56,8 @@ fn send_request(
     target_lang: Lang, 
     is_lang_detected: bool, 
     proxy: bool, 
-    emulation: Option<String>
+    emulation: Option<String>, 
+    cookies: bool
 ) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
@@ -67,7 +73,7 @@ fn send_request(
     let selected_text = serde_json::to_string(&selected_text)?;
 
 
-    let response = qt_service_get_request_data(request_type, srvc_id, &selected_text, src_lang, target_lang, None, proxy, emulation.as_deref())?;
+    let response = qt_service_get_request_data(request_type, srvc_id, &selected_text, src_lang, target_lang, None, proxy, emulation.as_deref(), cookies)?;
     let src_lang = convert_qt_isize_to_lang(response.sourceLanguage.unwrap_or(-1)).unwrap_or(Lang::Auto);
     //let target_lang = convert_qt_isize_to_lang(response.translationLanguage.unwrap_or(-1)).unwrap_or(Lang::Ru);
     if let Some(t) = response.translation {
@@ -77,7 +83,7 @@ fn send_request(
     }
 }
 
-fn qt_service_get_request_data(request_type: u8, srvc_id: &str, src_text: &str, from: isize, to: isize, handler: Option<String>, proxy: bool, emulation: Option<&str>) -> Result<ResponseData> {
+fn qt_service_get_request_data(request_type: u8, srvc_id: &str, src_text: &str, from: isize, to: isize, handler: Option<String>, proxy: bool, emulation: Option<&str>, cookies: bool) -> Result<ResponseData> {
 
     let calls = JS_CALLS.with(|d| d.get());
     if calls >= 10 {
@@ -101,8 +107,8 @@ fn qt_service_get_request_data(request_type: u8, srvc_id: &str, src_text: &str, 
 
     match request_data {
         QTData::RequestData(d) => {
-            let r_resp = make_req(d.clone(), proxy, emulation)?;
-            qt_service_process_response_data(request_type, srvc_id, src_text, &r_resp, from, to, d.responseHandler.clone(), proxy, emulation)
+            let r_resp = make_req(d.clone(), proxy, emulation, srvc_id, cookies)?;
+            qt_service_process_response_data(request_type, srvc_id, src_text, &r_resp, from, to, d.responseHandler.clone(), proxy, emulation, cookies)
         }
         _ => {
             Err(anyhow!("qtranslate service error"))
@@ -110,7 +116,7 @@ fn qt_service_get_request_data(request_type: u8, srvc_id: &str, src_text: &str, 
     }
 }
 
-fn make_req(d: RequestData, proxy: bool, emulation: Option<&str>) -> Result<String> {
+fn make_req(d: RequestData, proxy: bool, emulation: Option<&str>, srvc_uid: &str, cookies: bool) -> Result<String> {
     let mut headers_map = std::collections::HashMap::new();
     if let Some(hdrs) = d.headers {
         for line in hdrs.split("\r\n") {
@@ -129,6 +135,15 @@ fn make_req(d: RequestData, proxy: bool, emulation: Option<&str>) -> Result<Stri
         .proxy(proxy);
     if let Some(e) = emulation {
         client = client.emulation(e);
+    }
+    if cookies {
+        let cookie_path = format!(
+            "cookies/{}.txt", 
+            srvc_uid, //TODO: base_url
+            //twox_hash::XxHash32::oneshot(42, "https://translate-pa.googleapis.com".as_bytes())
+        );
+        client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
+        client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
     }
     let mut client = client.build()?;
     let resp = if d.method == 1 {
@@ -154,7 +169,7 @@ fn qt_service_process_response_data(
     from: isize, 
     to: isize,
     handler: Option<String>,
-    proxy: bool, emulation: Option<&str>
+    proxy: bool, emulation: Option<&str>, cookies: bool
 ) -> Result<ResponseData> {
 
     let mut eval_str = "".to_string();
@@ -177,7 +192,7 @@ fn qt_service_process_response_data(
     match response {
         QTData::ResponseData(d) => {
             if let Some(ref h) = d.nextRequestHandler && !h.is_empty() {
-                qt_service_get_request_data(request_type, srvc_id, src_text, from, to, Some(h.to_string()), proxy, emulation)
+                qt_service_get_request_data(request_type, srvc_id, src_text, from, to, Some(h.to_string()), proxy, emulation, cookies)
             } else {
                 Ok(d.clone())
             }

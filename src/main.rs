@@ -18,7 +18,7 @@ use std::ffi::OsString;
 
 use anyhow::{anyhow, Result};
 
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 use regex::Regex;
 
 use get_selected_text::get_selected_text; //todo: high ram usage
@@ -75,7 +75,7 @@ use app_state::{AppState};
 use app_view::{AppView};
 use utils::screen_ocr::{ScreenOCR};
 use std::sync::{LazyLock};
-use std::sync::{OnceLock};
+//use std::sync::{OnceLock};
 use utils::helpers::{
     app_message, 
     //screen_center
@@ -168,6 +168,10 @@ fn main() {
     //create directories
     let audio_path = working_dir.join("tts_cache");
     if let Err(err) = std::fs::create_dir_all(audio_path) {
+        dprintln!("{err:?}");
+    }
+    let cookies_path = working_dir.join("cookies");
+    if let Err(err) = std::fs::create_dir_all(cookies_path) {
         dprintln!("{err:?}");
     }
 
@@ -490,7 +494,7 @@ fn main() {
     });*/
 
     while app.wait() {
-        let ev = fltk::app::event(); 
+        //let ev = fltk::app::event(); 
         //dprintln!("Main loop awoken by event: {:?}", &ev);
         #[allow(clippy::while_let_loop)]
         loop {

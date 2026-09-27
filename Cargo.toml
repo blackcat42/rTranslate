@@ -40,7 +40,9 @@ debug_print = "1.0.0"
 unicode-segmentation = "1.13.3"
 sys-locale = "0.3.2"
 single-instance = "0.3.3"
-
+cookie = "0.18.2"
+#url = "=2.5.8"
+path-slash = "0.2.1"
 windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation"] }
 
 #tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread"] }

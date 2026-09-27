@@ -134,7 +134,7 @@ async function* completionStream(
 async function handleChatCompletions(req: Request): Promise<Response> {
 
   let request: ChatRequest = {};
-
+  console.log(req.headers.get("cookie"));
   try {
     request = await req.json();
   } catch (error) {
@@ -181,6 +181,7 @@ async function handleChatCompletions(req: Request): Promise<Response> {
         "connection": "keep-alive",
         "access-control-allow-origin": "*",
         "x-accel-buffering": "no",
+        "set-cookie": "test=test123; Path=/v1/chat/completions; Max-Age=3600",
       },
     });
   }
