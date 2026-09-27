@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(clippy::get_first)]
+#![allow(clippy::collapsible_match)]
 
 use debug_print::{debug_println as dprintln};
 
@@ -84,12 +85,14 @@ use utils::helpers::{
 mod settings;
 use settings::{Settings, UIConfig};
 
+use crate::settings::ServiceType;
+
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     if !std::path::Path::new("./settings.json").exists() {
         let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
         let locale: String = locale.chars().take(2).collect();
         dprintln!("{}", locale);
-        let mut default_settings_file = format!("./i18n/settings.json.{}.default", locale);
+        let mut default_settings_file ="./i18n/settings.json.en.default".to_string();
         if !std::path::Path::new(&default_settings_file).exists() {
             default_settings_file = "./i18n/settings.json.en.default".to_string();
             //TODO: impl default for struct
@@ -226,32 +229,44 @@ fn main() {
             app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
             continue;
         }
-        let t: Result<Box<dyn types::Translator>>;
-
-        if let Some(command) = &value.command
-        && command == "QTRANSLATE" {
-            t = qt_translator::QT::new(app_sender, value.clone()).map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else if let Some(command) = &value.command && command == "OPENAI" 
-        && value.openai_url.is_some() 
-        && value.openai_model.is_some() {
-            t = openai_translator::OA::new(app_sender, working_dir.clone(), value.clone())
-            .map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else if let Some(command) = &value.command 
-        && command.chars().count() > 0 {
-            t = sidecar_translator::ST::new(app_sender, value.clone())
-            .map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else if value.uid == "tr_google" {
-            t = google_translate::GT::new(app_sender, value.clone())
-            .map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else if value.uid == "tr_google2" {
-            t = google_translate2::GT2::new(app_sender, value.clone())
-            .map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else if value.uid == "tr_deepl" {
-            t = deepl_translate::DL::new(app_sender, value.clone())
-            .map(|t| Box::new(t) as Box<dyn types::Translator>);
-        } else {
-            t = Err(anyhow!("err"));
-        }
+        let t: Result<Box<dyn types::Translator>> = match value.service_type {
+            ServiceType::Native => {
+                if value.uid == "tr_google" {
+                    google_translate::GT::new(app_sender, value.clone())
+                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
+                } else if value.uid == "tr_google2" {
+                    google_translate2::GT2::new(app_sender, value.clone())
+                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
+                } else if value.uid == "tr_deepl" {
+                    deepl_translate::DL::new(app_sender, value.clone())
+                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
+                } else {
+                    Err(anyhow!("err"))
+                }
+            },
+            ServiceType::Sidecar => {
+                if let Some(command) = &value.command 
+                && value.service_type == ServiceType::Sidecar
+                && command.chars().count() > 0 {
+                    sidecar_translator::ST::new(app_sender, value.clone())
+                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
+                } else {
+                    Err(anyhow!("err"))
+                }
+            },
+            ServiceType::OpenAI => {
+                if value.openai_url.is_some() && value.openai_model.is_some() {
+                    openai_translator::OA::new(app_sender, working_dir.clone(), value.clone())
+                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
+                } else {
+                    Err(anyhow!("err"))
+                }
+            },
+            ServiceType::QTranslate => {
+                qt_translator::QT::new(app_sender, value.clone()).map(|t| Box::new(t) as Box<dyn types::Translator>)
+            },
+            ServiceType::DSLDict => Err(anyhow!("err")),
+        };
         match t {
             Ok(t) => {
                 app_state.translators.insert(value.uid.clone(), t);
@@ -268,23 +283,35 @@ fn main() {
             app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
             continue;
         }
-        let d: Result<Box<dyn types::Dictionary>>;
-        if let Some(command) = &value.command
-        && command == "QTRANSLATE" {
-            d = qt_dict::QTDict::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
-        } else if value.dict_path.is_some() {
-            d = user_dict::DSLDict::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
-        } else if value.uid == "dict_wiktionary_en" {
-            d = wiktionary_en::WDEn::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
-        } else if value.uid == "dict_google" {
-            d = google_dict::GD::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::Dictionary>);
-        } else {
-            d = Err(anyhow!("err"));
-        }
+        let d: Result<Box<dyn types::Dictionary>> = match value.service_type {
+            ServiceType::Native => {
+                if value.uid == "dict_wiktionary_en" {
+                    wiktionary_en::WDEn::new(app_sender, value.clone())
+                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
+                } else if value.uid == "dict_google" {
+                    google_dict::GD::new(app_sender, value.clone())
+                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
+                } else {
+                    Err(anyhow!("err"))
+                }
+            },
+            ServiceType::QTranslate => {
+                qt_dict::QTDict::new(app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
+            },
+            ServiceType::DSLDict => {
+                if value.dict_path.is_some() {
+                    user_dict::DSLDict::new(app_sender, value.clone())
+                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
+                } else {
+                    Err(anyhow!("err"))
+                }
+            },
+            _ => {
+                Err(anyhow!("err"))
+            }
+        };
+        
         match d {
             Ok(d) => {
                 app_state.dictionaries.insert(value.uid.clone(), d);
@@ -302,20 +329,18 @@ fn main() {
             panic!("Error");
         }
 
-        let tts: Result<Box<dyn types::TTService>>;
-        if let Some(command) = &value.command && command == "OPENAI" {
-            tts = openai_tts::OATTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>);
-        } else if value.command.is_some() {
-            dbg!(value);
-            tts = nodejs_tts::NTTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>);
-        } else if value.uid == "tts_fish" {
-            tts = fish_tts::FTTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>);
+        let tts: Result<Box<dyn types::TTService>> = if value.service_type == ServiceType::OpenAI {
+            openai_tts::OATTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>)
+        } else if value.service_type == ServiceType::Sidecar && value.command.is_some() {
+            nodejs_tts::NTTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>)
+        } else if value.service_type == ServiceType::Native && value.uid == "tts_fish" {
+            fish_tts::FTTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>)
         } else {
-            tts = Err(anyhow!("err"));
-        }
+            Err(anyhow!("err"))
+        };
         match tts {
             Ok(tts) => {
                 app_state.tts_services.insert(value.uid.clone(), tts);
@@ -330,16 +355,15 @@ fn main() {
         /*if let Some(path) = &value.path && path.chars().count() > 0 {
             //
         } else*/ 
-        let prnn: Result<Box<dyn types::PRNNService>>;
-        if value.uid == "prnn_wiki" {
-            prnn = prnn_wiki::WP::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::PRNNService>);
+        let prnn: Result<Box<dyn types::PRNNService>> = if value.uid == "prnn_wiki" {
+            prnn_wiki::WP::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::PRNNService>)
         } else if value.uid == "prnn_google" {
-            prnn = prnn_google::GP::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::PRNNService>);
+            prnn_google::GP::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::PRNNService>)
         } else {
-            prnn = Err(anyhow!("err"));
-        }
+            Err(anyhow!("err"))
+        };
         match prnn {
             Ok(prnn) => {
                 app_state.prnn_services.insert(value.uid.clone(), prnn);

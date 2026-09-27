@@ -107,8 +107,21 @@ pub struct Settings {
     pub ui_scaling: f32,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ServiceType {
+    #[default]
+    Native,
+    Sidecar,
+    OpenAI,
+    QTranslate,
+    DSLDict,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TranslatorOption {
+    #[serde(default)]
+    pub service_type: ServiceType,
     pub uid: String,
     pub name: String,
 
@@ -138,6 +151,8 @@ pub struct TranslatorOption {
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DictOption {
+    #[serde(default)]
+    pub service_type: ServiceType,
     pub uid: String,
     pub name: String,
 
@@ -153,6 +168,8 @@ pub struct DictOption {
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TTServiceOption {
+    #[serde(default)]
+    pub service_type: ServiceType,
     pub uid: String,
     pub name: String,
     pub command: Option<String>,
@@ -177,6 +194,8 @@ pub struct TTServiceOption {
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PRNNSourceOption {
+    #[serde(default)]
+    pub service_type: ServiceType,
     pub uid: String,
     pub name: String,
     #[serde(default = "default_as_false")]
@@ -233,10 +252,11 @@ pub mod app_settings {
                         && re_uid.is_match(&folder_name) 
                         && seen_uids_tr.insert(folder_name.clone()) {
                             let new_tr = TranslatorOption {
+                                service_type: ServiceType::QTranslate,
                                 uid: folder_name.clone(),
                                 name: folder_name.clone(),
                                 use_proxy: false,
-                                command: Some("QTRANSLATE".to_string()),
+                                command: None,
                                 args: None,
                                 reload_if_lang_changed: None,
                                 emulation: None,
@@ -261,10 +281,11 @@ pub mod app_settings {
                         && re_uid.is_match(&folder_name) 
                         && seen_uids_dict.insert(folder_name.clone()) {
                             let new_dict = DictOption {
+                                service_type: ServiceType::QTranslate,
                                 uid: folder_name.clone(),
                                 name: folder_name,
                                 use_proxy: false,
-                                command: Some("QTRANSLATE".to_string()),
+                                command: None,
                                 path: None,
                                 dict_path: None,
                                 emulation: None,

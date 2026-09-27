@@ -20,7 +20,6 @@
      * Be careful and only use CLI apps from sources you personally trust.
      *
      * ----------QTranslate Services----------
-     * The "QTRANSLATE" value of the "command" field is reserved for QTranslate services.
      * To load QTranslate services, move the "Services" folder to .\extensions\qtranslate
      * Service folder names are used as uids - only letters, numbers, spaces, and underscores 
      * are allowed.
@@ -29,8 +28,7 @@
      * To configure a service (and enable it when "qtranslate_autoload" is disabled),
      * add an object to the array following the "QTExample" template.
      * 
-     * Setting the "command" or "dict_path" fields for items with the following uids will override 
-     * their built-in services: 
+     * Built-in services: 
      * - "tr_google"        - "dict_google"            - "prnn_wiki"
      * - "tr_google2"       - "dict_wiktionary_en"     - "prnn_google"
      * - "tr_deepl"
@@ -66,6 +64,7 @@
             //"use_proxy": true
         },
         {
+            "service_type": "sidecar",
             "uid": "tr_bergamot",
             "name": "Bergamot",
             "command": "deno",
@@ -87,9 +86,9 @@
          * --------------------------------------
          */
         {
+            "service_type": "openai",
             "uid": "tr_gemma4_31b",
             "name": "gemma4",
-            "command": "OPENAI",
             "openai_url": "https://ollama.com/v1",
             "openai_api_key": "",
             "openai_model": "gemma4:31b",
@@ -102,9 +101,9 @@
 
         // --- EXAMPLES ---
         /*{
+            "service_type": "openai",
             "uid": "tr_nova_micro_v1",
             "name": "Amazon Nova",
-            "command": "OPENAI",
             "openai_url": "https://gen.pollinations.ai/v1",
             "openai_api_key": "", // Get api key: https://enter.pollinations.ai/
             "openai_model": "amazon/nova-micro-v1",
@@ -113,9 +112,9 @@
             //"use_proxy": false
         },*/
         /*{
+            "service_type": "openai",
             "uid": "tr_gpt_6_astra",
             "name": "GPT-6 Astra",
-            "command": "OPENAI",
             "openai_url": "https://gen.pollinations.ai/v1",
             "openai_api_key": "", // Get api key: https://enter.pollinations.ai/
             "openai_model": "openai/gpt-6-astra",
@@ -125,13 +124,14 @@
         },*/
 
         /*{
+            "service_type": "qtranslate",
             "uid": "QTExample",
             "name": "QT example",
-            "command": "QTRANSLATE",
             //"emulation": "Chrome137",
             //"use_proxy": false
         },*/
         /*{
+            "service_type": "sidecar",
             "uid": "tr_js_example",
             "name": "JS example",
             "command": "deno",
@@ -143,6 +143,7 @@
             "reload_if_lang_changed": false
         },*/
         /*{
+            "service_type": "sidecar",
             "uid": "tr_c_example",
             "name": "C example",
             "command": ".\\extensions\\tr_c_example\\app",
@@ -176,6 +177,7 @@
 
         // --- DSL(LINGVO) OFFLINE DICTIONARIES ---
         /*{
+            "service_type": "dsldict",
             "uid": "dict_example_dsl",
             "name": "Example dict",
             "dict_path": "dictionaries\\example.dsl"
@@ -191,6 +193,7 @@
      */ 
     "tts_services": [
         {
+            "service_type": "sidecar",
             "uid": "tts_kokoro",
             "name": "Kokoro",
             "command": "deno",
@@ -220,9 +223,9 @@
          * --------------------------------------
          */
         {
+            "service_type": "openai",
             "uid": "tts_easyvoice",
             "name": "easyvoice",
-            "command": "OPENAI",
             "voices": ["af_heart", "af_bella"],
             "speed": 1.0,
             "openai_url": "https://easyvoice.ae/api/v1",
@@ -259,9 +262,9 @@
          * --------------------------------------
          */
         {
+            "service_type": "openai",
             "uid": "tts_fish_openrouter",
             "name": "fish audio (openrouter)",
-            "command": "OPENAI",
             "voices": ["fb43143e46f44cc6ad7d06230215bab6", "e3cd384158934cc9a01029cd7d278634"],
             "speed": 1.0,
             "openai_url": "https://openrouter.ai/api/v1",
@@ -273,9 +276,9 @@
         },
 
         /*{
+            "service_type": "openai",
             "uid": "tts_flux",
             "name": "flux",
-            "command": "OPENAI",
             "voices": ["flux-alexis-en"],
             "speed": 1.0,
             "openai_url": "https://openrouter.ai/api/v1",
