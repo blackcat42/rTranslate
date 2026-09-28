@@ -158,7 +158,7 @@ impl TranslPopupView {
         let btn_n = GLOBAL_SETTINGS.translators.len();
         for qwe in GLOBAL_SETTINGS.translators.iter() {
             let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
-            let icon_path = if let Some(cmd) = &qwe.command && cmd == "QTRANSLATE" {
+            let icon_path = if qwe.service_type == crate::settings::ServiceType::QTranslate {
                 format!(r"extensions/qtranslate/Services/{}/Service.ico", qwe.uid)
             } else {
                 format!(r"icons/{}.ico", qwe.uid)

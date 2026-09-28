@@ -110,22 +110,40 @@ impl Translator for OA {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                     is_processing.store(true, Ordering::SeqCst);
-                    let transl_result = send_tr_request(
-                        &uid,
-                        app_sender, 
-                        kill_rx, 
-                        text.clone(), 
-                        src_lang.clone(), 
-                        target_lang.clone(), 
-                        is_lang_detected, 
-                        use_proxy, 
-                        emulation, 
-                        &base_url, 
-                        &api_key, 
-                        &model, 
-                        &prompt,
-                        cookies
-                    );
+                    let transl_result = if stream { 
+                        send_tr_request_stream(
+                            &uid,
+                            app_sender, 
+                            kill_rx, 
+                            text.clone(), 
+                            src_lang.clone(), 
+                            target_lang.clone(), 
+                            is_lang_detected, 
+                            use_proxy, 
+                            emulation, 
+                            &base_url, 
+                            &api_key, 
+                            &model, 
+                            &prompt,
+                            cookies
+                        )
+                    } else {
+                        send_tr_request(
+                            &uid,
+                            app_sender, 
+                            text.clone(), 
+                            src_lang.clone(), 
+                            target_lang.clone(), 
+                            is_lang_detected, 
+                            use_proxy, 
+                            emulation, 
+                            &base_url, 
+                            &api_key, 
+                            &model, 
+                            &prompt,
+                            cookies
+                        )
+                    };
                     is_processing.store(false, Ordering::SeqCst);
                     match transl_result {
                         Ok(t_text) => {
@@ -163,13 +181,13 @@ impl Translator for OA {
 
 
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Message {
     role: String,
     content: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ChatRequest {
     model: String,
     messages: Vec<Message>,
@@ -191,8 +209,16 @@ struct ChunkDelta {
     content: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct ChatCompletionResponse {
+    choices: Vec<Choice>,
+}
+#[derive(Debug, Deserialize)]
+struct Choice {
+    message: Message,
+}
 
-fn send_tr_request(
+fn send_tr_request_stream(
     srvc_uid: &str,
     app_sender: fltk::app::Sender<AppEvent>, 
     kill_rec: std::sync::mpsc::Receiver<()>, 
@@ -289,6 +315,88 @@ fn send_tr_request(
             }
         }
     }
+
+    dprintln!("{}", result);
+    let (detected_lang, result) = extract_detected_lang(result);
+    let src_lang = if let Some(lang) = detected_lang && src_lang_ref == "auto" {
+        dprintln!("DETECTED_LANG tag found");
+        Lang::from_str(&lang).unwrap_or(src_lang)
+    } else {
+        src_lang
+    };
+    Ok((result, src_lang))
+}
+
+fn send_tr_request(
+    srvc_uid: &str,
+    app_sender: fltk::app::Sender<AppEvent>, 
+    selected_text: String, 
+    src_lang: Lang, 
+    target_lang: Lang, 
+    is_lang_detected: bool, 
+    proxy: bool, 
+    emulation: Option<String>, 
+    base_url: &str, 
+    api_key: &str, 
+    model: &str, 
+    prompt: &str,
+    cookies: bool
+) -> Result<(String, Lang)> {
+
+    let src_lang_ref = if is_lang_detected {
+        src_lang.as_ref()
+    } else {
+        "auto"
+    };
+    app_sender.send(AppEvent::SetWaitingWithStream(false));
+
+    let prompt = prompt
+        .replace("\r\n", "\n")
+        .replace("<RT_TARGET_LANG>", target_lang.name())
+        .replace("<RT_TEXT>", &selected_text);
+
+    dprintln!("{}", &prompt);
+
+    let body = ChatRequest {
+        model: model.to_string(),
+        messages: vec![Message {
+            role: "user".to_string(),
+            content: prompt,
+        }],
+        stream: false,
+    };
+    let body = serde_json::to_string(&body)?;
+
+
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("Authorization".into(), format!("Bearer {}", api_key));
+    headers.insert("Content-Type".into(), "application/json".into());
+    headers.insert("Accept".into(), "text/event-stream".into());
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36".into());
+
+    let mut client = rt_request::Client::builder()
+        .default_headers(headers)
+        .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_stream_request_timeout))
+        .proxy(proxy);
+    if let Some(e) = emulation {
+        client = client.emulation(e);
+    }
+    if cookies {
+        let cookie_path = format!(
+            "cookies/{}_{}.txt", 
+            srvc_uid, 
+            twox_hash::XxHash32::oneshot(42, base_url.as_bytes())
+        );
+        client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
+        client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
+    }
+    let client = client.build()?;
+
+    let result = client.post(format!("{}/chat/completions", base_url)).body(&body).send()?.text()?;
+    let result: ChatCompletionResponse = serde_json::from_str(&result)?;
+    
+    // let value: Value = serde_json::from_str(result.as_str())?;
+    let result = result.choices.first().ok_or(anyhow!("err"))?.message.content.clone();
 
     dprintln!("{}", result);
     let (detected_lang, result) = extract_detected_lang(result);
