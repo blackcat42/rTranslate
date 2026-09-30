@@ -135,3 +135,42 @@ impl IconExt for Button {
     }
 }
 
+
+
+pub trait AutoHeightExt {
+    fn adjust_height_in_flex(&mut self);
+}
+
+impl<T: DisplayExt> AutoHeightExt for T {
+    fn adjust_height_in_flex(&mut self) {
+        let text: String = if let Some(buffer) = self.buffer() {
+            buffer.text()
+        } else {
+            "".to_string()
+        };
+
+        let char_count = text.chars().count() as i32;
+        
+        //let current_font = self.text_font();
+        let current_size = self.text_size();
+        let avg_char_width = current_size as f32 / 1.5;
+        let line_height = current_size + 5;
+        
+        let chars_per_line = i32::max(1, (self.w() - 25) / avg_char_width as i32);
+        let total_lines = (char_count + chars_per_line - 1) / chars_per_line;
+        let final_height = total_lines * line_height + 15;
+
+        if let Some(parent) = self.parent() {
+            if let Some(mut flex) = fltk::group::Flex::from_dyn_widget(&parent) {
+                if final_height > flex.h() / 3 {
+                    flex.fixed(self, 0);
+                } else if final_height < 50 {
+                    flex.fixed(self, 50);
+                } else {
+                    flex.fixed(self, final_height);
+                }
+                
+            }
+        }
+    }
+}

@@ -33,6 +33,7 @@ use crate::types::{
 
 //use crate::utils::bbcode::{dsl_parse};
 use crate::utils::helpers::ui_scale;
+use crate::utils::widgets::AutoHeightExt;
 /*use crate::utils::helpers::{
     borderless_win_handler, 
     borderless_win_frame_handler
@@ -108,9 +109,10 @@ impl AppView {
 
         let mut main_win = MainWinView::new(app_sender);
         let dict_popup = DictPopupView::new(app_sender, main_win.window.clone(), tooltip_win.clone(), tooltip_text.clone());
-        let transl_popup = TranslPopupView::new(app_sender, main_win.window.clone(), dict_popup.win_popup_dict.clone(), tooltip_win.clone(), tooltip_text.clone());
+        let mut transl_popup = TranslPopupView::new(app_sender, main_win.window.clone(), dict_popup.win_popup_dict.clone(), tooltip_win.clone(), tooltip_text.clone());
         
 
+        transl_popup.txt_src_popup.set_buffer(src_buf.clone());
         main_win.main_src_txt.set_buffer(src_buf.clone());
         main_win.txt_main.set_buffer(translation_buf.clone());
         main_win.txt_dict_main.set_buffer(dict_buf.clone());
@@ -266,6 +268,7 @@ impl AppView {
         } else if src_text != self.transl_popup.src {
             return;
         }
+        self.transl_popup.txt_src_popup.adjust_height_in_flex();
 
         if let Some(ref uid) = tr_uid && let Some(ref name) = translator {
             self.set_translator(name, uid);
@@ -481,6 +484,17 @@ impl AppView {
         app::awake();
     }
 
+    pub fn set_split_view(&mut self, flag: bool) {
+        if flag {
+            self.transl_popup.txt_src_popup.show();
+            self.transl_popup.flex_textarea.show();
+        } else {
+            self.transl_popup.txt_src_popup.hide();
+            self.transl_popup.flex_textarea.hide();
+        }
+        self.transl_popup.split_view_button.set(flag);
+        self.recalc_layout(self.transl_popup.win_popup.clone());
+    }
     pub fn set_src_lang(&mut self, from: Lang) {
         if let Some(item) = self.main_win.lang_choice_from.find_item(from.name()) {
             self.main_win.lang_choice_from.set_item(&item);

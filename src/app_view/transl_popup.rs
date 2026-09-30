@@ -41,9 +41,12 @@ use super::t;
 pub struct TranslPopupView {
     pub translator_buttons: HashMap<String, fltk::button::RadioButton>,
     pub fav_button: button::Button,
+    pub split_view_button: button::Button,
     pub txt_popup: text::TextDisplay,
+    pub txt_src_popup: text::TextEditor,
+    pub flex_textarea: group::Flex,
     pub title_frame: Frame,
-    pub src: String, //todo: use src_buf?
+    pub src: String, //todo: use app_state.src_text
     pub win_popup: DoubleWindow,
     pub stop_button: button::Button,
 }
@@ -106,6 +109,11 @@ impl TranslPopupView {
             qsettings_button.set_image(Some(image));
             qsettings_button.set_align(fltk::enums::Align::Center | fltk::enums::Align::ImageBackdrop);
         }*/
+
+        let _space_btn = Frame::default();
+        let mut split_view_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        split_view_button.set_png_icon("split_h");
+        
         let mut dict_button = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
         dict_button.set_png_icon("dict");
         //dict_button.set_tooltip(t!(send_to_dict));
@@ -119,6 +127,8 @@ impl TranslPopupView {
         flex_titlebar.fixed(&close_button, ui_scale(18));
         flex_titlebar.fixed(&stop_button, ui_scale(18));
         flex_titlebar.fixed(&title_frame, ui_scale(1));
+        flex_titlebar.fixed(&_space_btn, ui_scale(2));
+        flex_titlebar.fixed(&split_view_button, ui_scale(18));
         flex_titlebar.fixed(&fav_button, ui_scale(18));
         flex_titlebar.fixed(&refresh_button, ui_scale(18));
         flex_titlebar.fixed(&lng_menu_button_wrapper, ui_scale(18));
@@ -137,7 +147,32 @@ impl TranslPopupView {
         flex.set_spacing(ui_scale(7));
 
         /////TEXTAREA
-        
+        //let mut txt_src_popup_wrapper = group::Flex::default().column();
+        let mut txt_src = text::TextEditor::default();
+        txt_src.set_text_size(GLOBAL_SETTINGS.text_font_size);
+        //txt_src.set_color(text_bg_color_popup);
+        txt_src.set_frame(fltk::enums::FrameType::FlatBox);
+        txt_src.wrap_mode(text::WrapMode::AtBounds, 0);
+
+        let mut flex_textarea = group::Flex::default().row();
+        flex_textarea.set_margins(0, 0, 0, 0);
+        flex_textarea.set_spacing(ui_scale(7));
+        //flex_textarea.set_align(fltk::enums::Align::Center | fltk::enums::Align::Inside);
+
+        let _space_l = Frame::default();
+        let mut translate_button = button::Button::new(ui_scale(0), ui_scale(0), ui_scale(18), ui_scale(18), "").with_label(t!(translate));
+        translate_button.set_callback({
+                let s = app_sender;
+                move |_b| {
+                    s.send(AppEvent::Translate(false, false, true));
+                }
+        });
+        let _space_r = Frame::default();
+
+        flex_textarea.fixed(&translate_button, ui_scale(75));
+        flex_textarea.end();
+        flex.fixed(&flex_textarea, ui_scale(25));
+        //txt_src_popup_wrapper.end();
 
         let mut txt = text::TextDisplay::default();
         txt.set_text_size(GLOBAL_SETTINGS.text_font_size);
@@ -191,6 +226,7 @@ impl TranslPopupView {
         flex_buttons_wrapper.end();
         
         flex.fixed(&flex2, ui_scale(31));
+        
         flex2.end();
         /////-----END FLEX INNER (TRANSLATION BUTTONS)-----/////
         //flex2.auto_layout();
@@ -352,6 +388,13 @@ impl TranslPopupView {
                 s.send(AppEvent::TerminateAll);
             }
         });
+
+        split_view_button.set_callback({
+            let s = app_sender;
+            move |b| {
+                s.send(AppEvent::SetSplitView(!b.is_set(), false));
+            }
+        });
         
         fav_button.set_callback({
             let s = app_sender;
@@ -419,10 +462,13 @@ impl TranslPopupView {
 
 		TranslPopupView {
 			txt_popup: txt,
+            txt_src_popup: txt_src,
+            flex_textarea,
 			title_frame,
             win_popup,
             translator_buttons,
             fav_button,
+            split_view_button,
             stop_button,
             src: "".to_string(),
 		}

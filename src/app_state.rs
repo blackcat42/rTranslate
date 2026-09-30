@@ -53,6 +53,9 @@ pub struct AppState {
     pub selected_src: Lang,
     pub selected_target: Lang,
 
+    pub split_view: bool,
+    pub split_view_global: bool,
+
     pub translators: HashMap<String, Box<dyn Translator>>,
     pub dictionaries: HashMap<String, Box<dyn Dictionary>>,
     pub tts_services: HashMap<String, Box<dyn TTService>>,
@@ -89,6 +92,8 @@ impl AppState {
             selected_prnn_source: "".to_string(),
             selected_src: Lang::from_str(GLOBAL_SETTINGS.pinned_src_languages.first().unwrap_or(&"en".to_string())).unwrap_or(Lang::En),
             selected_target: Lang::from_str(GLOBAL_SETTINGS.pinned_target_languages.first().unwrap_or(&"ru".to_string())).unwrap_or(Lang::Ru),
+            split_view: true,
+            split_view_global: false,
 
             db: conn,
             src_preprocessing_regex,

@@ -69,6 +69,7 @@ pub enum AppEvent {
 
     SetSrcLang(Lang),
     SetTargetLang(Lang),
+    SetSplitView(bool, bool),
     SetTranslator(String),
     SetDict(String),
     SetTTSEngine(String, String),
@@ -392,6 +393,7 @@ pub trait Translator {
     fn is_processing(&self) -> bool;
     fn get_uid(&self) -> &str;
     fn get_name(&self) -> &str;
+    fn get_opts(&self) -> crate::settings::TranslatorOption;
 }
 
 #[allow(dead_code)]

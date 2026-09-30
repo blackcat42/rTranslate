@@ -26,6 +26,7 @@
     "prnn_cached": "Pronunciations (cached)",
     "tts_cached": "TTS (cached)",
 
+    "translate": "Translate",
     "translate_with": "Translate with",
     "dictionary": "Dictionary",
     "tts_engine_voice": "TTS (engine-voice)",

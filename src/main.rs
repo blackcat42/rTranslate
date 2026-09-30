@@ -595,10 +595,27 @@ fn main() {
                         //TODO: update views
                         app_view.set_target_lang(lng);
                     }
+                    AppEvent::SetSplitView(flag, force) => {
+                        if !force {
+                            app_state.split_view = flag;
+                            app_state.split_view_global = flag;
+                        } else {
+                            app_state.split_view = flag;
+                        }
+                        app_view.set_split_view(app_state.split_view);
+                    }
                     AppEvent::SetTranslator(translator) => {
                         app_state.selected_translator = translator.clone();
                         if let Some(tr_struct) = app_state.translators.get(translator.as_str()) {
                             let tr_name = tr_struct.get_name();
+                            let force_split_view = tr_struct.get_opts().force_split_view;
+                            if force_split_view {
+                                app_state.split_view = true;
+                                app_view.set_split_view(true);
+                            } else {
+                                app_state.split_view = app_state.split_view_global;
+                                app_view.set_split_view(app_state.split_view_global);
+                            }
                             app_view.set_translator(tr_name, translator.as_str());
                         }
                     }
@@ -710,7 +727,7 @@ fn main() {
                             }
                         }
                     }
-                    AppEvent::TranslateText(text, mut is_dict) => {
+                    AppEvent::TranslateText(text, mut is_dict) => 'translate_text_arm: {
                         if GLOBAL_SETTINGS.single_word_to_dict 
                            && !is_dict 
                            && text.trim().unicode_words().count() == 1 {
@@ -721,7 +738,9 @@ fn main() {
                         } else {
                             app_view.show_popup(is_dict, true);
                             //app_view.clear_ui(is_dict); //clear status, title and translation buffer
-
+                            if app_state.split_view {
+                                 break 'translate_text_arm;
+                            }
                             if !is_dict {
                                 if let Err(tr_error) = app_state.translate(false, false) {
                                     app_sender.send(AppEvent::SetReady(Some(tr_error.to_string()), false));
@@ -733,8 +752,13 @@ fn main() {
                             }
                         }
                     }
-                    AppEvent::Translate(fail_if_not_exist, force, check_buf) => 'translate_arm: {
+                    AppEvent::Translate(mut fail_if_not_exist, force, check_buf) => 'translate_arm: {
                         //app_view.clear_ui(false);
+                        dbg!(app_state.split_view);
+                        dbg!(check_buf);
+                        if app_state.split_view && !check_buf {
+                            fail_if_not_exist = true;
+                        }
                         if check_buf && (app_view.src_buf.text() != app_view.transl_popup.src)
                             && let Err(set_src_error) = app_state.set_src_text(&app_view.src_buf.text(), false) {
                                 app_view.set_status(set_src_error.to_string().as_str(), true, false);

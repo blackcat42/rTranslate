@@ -42,6 +42,9 @@ impl Translator for GT {
     fn get_name(&self) -> &str {
         &self.options.name
     }
+    fn get_opts(&self) -> TranslatorOption {
+        self.options.clone()
+    }
 
     fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
 

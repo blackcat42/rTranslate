@@ -36,6 +36,7 @@ pub struct Locale {
     pub prnn_cached: String,
     pub tts_cached: String,
 
+    pub translate: String,
     pub translate_with: String,
     pub dictionary: String,
     pub tts_engine_voice: String,
@@ -74,6 +75,7 @@ impl Default for Locale {
             dictionary_entry: "Dictionary entry".to_string(),
             prnn_cached: "Pronunciations (cached)".to_string(),
             tts_cached: "TTS (cached)".to_string(),
+            translate: "Translate".to_string(),
             translate_with: "Translate with".to_string(),
             dictionary: "Dictionary".to_string(),
             tts_engine_voice: "TTS (engine-voice)".to_string(),

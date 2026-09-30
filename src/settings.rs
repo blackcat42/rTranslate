@@ -148,6 +148,8 @@ pub struct TranslatorOption {
     pub markdown: bool,
     #[serde(default = "default_as_false")]
     pub cookies: bool,
+    #[serde(default = "default_as_false")]
+    pub force_split_view: bool,
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DictOption {
@@ -270,6 +272,7 @@ pub mod app_settings {
                                 api_key_url: "".to_string(),
                                 markdown: false,
                                 cookies: false,
+                                force_split_view: false,
                             };
                             
                             if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {
