@@ -94,10 +94,10 @@ impl DictPopupView {
         //lng_menu_button_wrapper_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button_dict = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
-        let mut prnn_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
-        prnn_button_dict.set_png_icon("audio");
-        //prnn_button_dict.set_tooltip(t!(pronunciation));
-        prnn_button_dict.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(pronunciation));
+        let mut prnn_button_dict_wrapper = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        prnn_button_dict_wrapper.set_png_icon("audio");
+        let mut prnn_button_dict = fltk::menu::MenuButton::default();
+        //prnn_button_dict_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(pronunciation));
 
         
         let mut open_button_dict = button::Button::new(ui_scale(51), ui_scale(5), ui_scale(18), ui_scale(18), "");
@@ -109,7 +109,7 @@ impl DictPopupView {
         flex_titlebar_dict.fixed(&title_frame_dict, ui_scale(1));
         flex_titlebar_dict.fixed(&fav_button_dict, ui_scale(18));
         flex_titlebar_dict.fixed(&lng_menu_button_wrapper_dict, ui_scale(18));
-        flex_titlebar_dict.fixed(&prnn_button_dict, ui_scale(18));
+        flex_titlebar_dict.fixed(&prnn_button_dict_wrapper, ui_scale(18));
         flex_titlebar_dict.fixed(&refresh_button_dict, ui_scale(18));
         flex_titlebar_dict.fixed(&open_button_dict, ui_scale(18));
 
@@ -275,6 +275,36 @@ impl DictPopupView {
             }
         });
 
+        for src in GLOBAL_SETTINGS.prnn_services.iter() {
+            let name = (*src.name).to_string();
+            prnn_button_dict.add(
+                &name,
+                fltk::enums::Shortcut::None,
+                fltk::menu::MenuFlag::Normal,
+                {
+                    let s = app_sender;
+                    move |_b| {
+                        s.send(AppEvent::SetPRNNEngine(src.uid.clone()));
+                        s.send(AppEvent::PRNNString(false, Some(src.uid.clone())));
+                    }
+                },
+            );
+        }
+        prnn_button_dict.hide();
+        prnn_button_dict_wrapper.set_callback({
+            let s = app_sender;
+            move |b| {
+                if GLOBAL_SETTINGS.prnn_button_dropdown {
+                    if let Some(item) = prnn_button_dict.menu()
+                    && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+                        selected.do_callback(&prnn_button_dict); 
+                    }
+                } else {
+                    s.send(AppEvent::PRNNString(false, None));
+                }
+            }
+        });
+        
 
         win_popup_dict.hotspot(&close_button_dict);
 		win_popup_dict.show();
@@ -311,12 +341,6 @@ impl DictPopupView {
             let s = app_sender;
             move |_| {
                 s.send(AppEvent::ToggleFav(true));
-            }
-        });
-		prnn_button_dict.set_callback({
-            let s = app_sender;
-            move |_| {
-                s.send(AppEvent::PRNNString(false));
             }
         });
 

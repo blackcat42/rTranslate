@@ -9,6 +9,7 @@ use crate::utils::helpers::{
 //SETTINGS
 fn default_as_true() -> bool { true }
 fn default_as_false() -> bool { false } //explicit is better
+fn default_as_one() -> i32 { 1 }
 fn default_as_minus_one() -> i32 { -1 }
 fn default_as_float_one() -> f32 { 1.0 }
 
@@ -105,6 +106,14 @@ pub struct Settings {
     pub enable_fltk_dpi_scaling: bool,
 
     pub ui_scaling: f32,
+
+    #[serde(default = "default_as_true")]
+    pub tts_button_dropdown: bool,
+    #[serde(default = "default_as_true")]
+    pub prnn_button_dropdown: bool,
+
+    #[serde(default = "default_as_one")]
+    pub copy_button_action: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]

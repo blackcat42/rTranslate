@@ -58,7 +58,7 @@ pub struct AppView {
     pub dict_popup: DictPopupView,
     pub src_buf: text::TextBuffer,
     pub src_dict_buf: text::TextBuffer,
-    translation_buf: text::TextBuffer,
+    pub translation_buf: text::TextBuffer,
     translation_buf_h: text::TextBuffer,
     dict_buf: text::TextBuffer,
     dict_buf_h: text::TextBuffer,

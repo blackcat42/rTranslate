@@ -44,6 +44,7 @@ pub struct Locale {
 
     //POPUP WINDOW
     pub close: String,
+    pub copy: String,
     //"add_to_fav", 
     //"remove_from_fav",
     pub refresh: String,
@@ -60,6 +61,7 @@ impl Default for Locale {
             show_popup_dict: "Show dict. popup window".to_string(),
             settings: "Settings".to_string(),
             exit: "Exit".to_string(),
+            copy: "Copy".to_string(),
             from: "From".to_string(),
             to: "To".to_string(),
             translate_refresh: "Translate / Refresh".to_string(),

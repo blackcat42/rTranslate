@@ -83,6 +83,8 @@
          * gemma4:31b; gpt-oss:120b; gpt-oss:20b; 
          * nemotron-3-nano:30b; nemotron-3-super; 
          * nemotron-3-ultra
+         *
+         * Use "force_split_view" to avoid accidentally spending tokens
          * --------------------------------------
          */
         {
@@ -97,6 +99,7 @@
             //"use_proxy": false,
             "api_key_requied": true,
             "api_key_url": "https://signin.ollama.com/",
+            "force_split_view": true,
         },
 
         // --- EXAMPLES ---
@@ -410,7 +413,9 @@
     "text_bg_color_main": "#FFFFFF",
     "popup_opacity": 1.0, //0.0-1.0
     "no_tooltips": false,
-    
+    "tts_button_dropdown": true,
+    "prnn_button_dropdown": false,
+    "copy_button_action": 1, //0: hide; 1: copy; 2: copy and close; 3: copy and replace; 4: copy, replace, close
 
 
     /*

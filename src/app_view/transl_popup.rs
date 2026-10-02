@@ -74,6 +74,26 @@ impl TranslPopupView {
         close_button.set_png_icon("close");
         //close_button.set_tooltip(t!(close));
         close_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(close));
+        
+        if GLOBAL_SETTINGS.copy_button_action != 0 {
+            let mut copy_button = button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
+            copy_button.set_png_icon("copy");
+            //close_button.set_tooltip(t!(close));
+            copy_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(copy));
+            flex_titlebar.fixed(&copy_button, ui_scale(18));
+            copy_button.set_callback({
+                let s = app_sender;
+                let mut win_popup = win_popup.clone();
+                move |_| {
+                    if GLOBAL_SETTINGS.copy_button_action == 2 || GLOBAL_SETTINGS.copy_button_action == 4 {
+                        win_popup.hide();
+                    }
+                    s.send(AppEvent::Copy(false));
+                    //s.send(AppEvent::CopyAndReplace(false));
+                }
+            });
+        }
+        
 
         let mut stop_button = button::Button::new(ui_scale(5), ui_scale(5), ui_scale(18), ui_scale(18), "");
         stop_button.set_png_icon("stop");
@@ -100,10 +120,13 @@ impl TranslPopupView {
         //lng_menu_button_wrapper.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(lang));
         let mut lng_menu_button = fltk::menu::MenuButton::default();//.with_type(fltk::menu::MenuButtonType::Popup3);
 
-        let mut tts_button = button::Button::new(ui_scale(28), ui_scale(5), ui_scale(18), ui_scale(18), "");
-        tts_button.set_png_icon("audio");
+        let mut tts_menu_button_wrapper = button::Button::new(ui_scale(28), ui_scale(5), ui_scale(18), ui_scale(18), "");
+        tts_menu_button_wrapper.set_png_icon("audio");
+        let mut tts_button = fltk::menu::MenuButton::default();
+        //tts_button.set_png_icon("audio");
         //tts_button.set_tooltip(t!(tts));
-        tts_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(tts));
+        //tts_button.with_overlay_tooltip(&tooltip_win, &tooltip_text, t!(tts));
+        
         /*let mut qsettings_button = button::Button::new(51, 5, 18, 18, "");
         if let Ok(image) = PngImage::load(working_dir.join(r"icons\settings.png").to_str().unwrap_or("")) {
             qsettings_button.set_image(Some(image));
@@ -132,7 +155,7 @@ impl TranslPopupView {
         flex_titlebar.fixed(&fav_button, ui_scale(18));
         flex_titlebar.fixed(&refresh_button, ui_scale(18));
         flex_titlebar.fixed(&lng_menu_button_wrapper, ui_scale(18));
-        flex_titlebar.fixed(&tts_button, ui_scale(18));
+        flex_titlebar.fixed(&tts_menu_button_wrapper, ui_scale(18));
         flex_titlebar.fixed(&dict_button, ui_scale(18));
         //flex_titlebar.fixed(&qsettings_button, 18);
         flex_titlebar.fixed(&open_button, ui_scale(18));
@@ -338,23 +361,50 @@ impl TranslPopupView {
                     selected.do_callback(&lng_menu_button); 
             }
         });
+
+
+
+        for srvc in GLOBAL_SETTINGS.tts_services.iter() {
+            for tts_voice in srvc.voices.iter() {
+                let name = format!("{}-{}", &*srvc.name, tts_voice);
+                tts_button.add(
+                    &name,
+                    fltk::enums::Shortcut::None,
+                    fltk::menu::MenuFlag::Normal,
+                    {
+                        let s = app_sender;
+                        move |_b| {
+                            s.send(AppEvent::SetTTSEngine(srvc.uid.clone(), tts_voice.clone()));
+                            s.send(AppEvent::TTString(Some(srvc.uid.clone()), Some(tts_voice.clone())));
+                        }
+                    },
+                );
+            }
+        }
+        tts_button.hide();
+        tts_menu_button_wrapper.set_callback({
+            let s = app_sender;
+            move |b| {
+                if GLOBAL_SETTINGS.tts_button_dropdown {
+                    if let Some(item) = tts_button.menu()
+                    && let Some(mut selected) = item.popup(b.x(), b.y() + b.h()) {
+                        selected.do_callback(&tts_button); 
+                    }
+                } else {
+                    s.send(AppEvent::TTString(None, None));
+                }
+            }
+        });
         
 
         win_popup.hotspot(&close_button);
-        
-        //trying to hide popup window at startup...
+        //hide popup window at startup
         win_popup.show();
-        
         win_popup.set_opacity(GLOBAL_SETTINGS.popup_opacity); //This should be called on a shown window
-        
-
-
         win_popup.hide();
-
 
         //IMPL RESIZING/DRAGGING BHVR FOR BORDELESS WINDOW
         let is_inner = Rc::new(RefCell::new(false));
-        
         frame.handle({
             let mut win_popup = win_popup.clone();
             let is_inner = Rc::clone(&is_inner);
@@ -362,8 +412,6 @@ impl TranslPopupView {
                 borderless_win_frame_handler(event, &mut win_popup, &is_inner)
             }
         });
-        
-    
         win_popup.handle({
             //popup borderless window resizing and dragging
             let mut coords = BLWCoords::default();
@@ -373,7 +421,6 @@ impl TranslPopupView {
                 borderless_win_handler(window, event, &mut coords, &is_inner)
             }
         });
-
 
         //WIDGET CALLBACKS
         close_button.set_callback({
@@ -388,30 +435,18 @@ impl TranslPopupView {
                 s.send(AppEvent::TerminateAll);
             }
         });
-
         split_view_button.set_callback({
             let s = app_sender;
             move |b| {
                 s.send(AppEvent::SetSplitView(!b.is_set(), false));
             }
         });
-        
         fav_button.set_callback({
             let s = app_sender;
             move |_| {
                 s.send(AppEvent::ToggleFav(false));
             }
         });
-        
-        
-        tts_button.set_callback({
-            let s = app_sender;
-            move |_| {
-                s.send(AppEvent::TTString());
-            }
-        });
-        
-        
         dict_button.set_callback({
             let win_popup = win_popup.clone();
             let mut win_popup_dict = win_popup_dict.clone();

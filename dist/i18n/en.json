@@ -34,6 +34,7 @@
 
     //POPUP WINDOW
     "close": "Close",
+    "copy": "Copy",
     //"add_to_fav", 
     //"remove_from_fav",
     "refresh": "Refresh",

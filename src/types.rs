@@ -44,10 +44,11 @@ pub enum AppEvent {
     Translate(bool, bool, bool),
     RequestDictEntry(bool, bool, bool),
     SendToDict(),
-    TTString(),
-    PRNNString(bool),
+    TTString(Option<String>, Option<String>),
+    PRNNString(bool, Option<String>),
     TTSave(i64, String, String, String),
     TTSPlay(String),
+    Copy(bool),
 
     SetWaiting(Option<String>, bool),
     SetWaitingWithStream(bool),

@@ -202,7 +202,7 @@ impl MainWinView {
         _col1_row1_tts_but.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::TTString());
+                    s.send(AppEvent::TTString(None, None));
                 }
         });
     
@@ -233,7 +233,7 @@ impl MainWinView {
         _col1_row2_prnn_but.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::PRNNString(true));
+                    s.send(AppEvent::PRNNString(true, None));
                 }
         });
         

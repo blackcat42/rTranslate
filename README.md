@@ -7,8 +7,8 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 - **Instant Translation:** Select text in any application and instantly translate it using a customizable shortcut.
 - **Screen OCR:** Press a customizable hotkey, select any screen area, and extract text instantly using a local offline OCR engine.
 - **Dictionaries:** Google, Lingvo DSL (local, able to work with large (>1 GB) .dsl files), Wiktionary
-- **Translator services:** Google Translate, DeepL, Bergamot (local),
-- **Text-to-Speech (TTS):** Kokoro.js (local)
+- **Translator services:** Google Translate, DeepL, Bergamot (local), and anything with an OpenAI-compatible API
+- **Text-to-Speech (TTS):** Kokoro.js (local), Fish Audio, and anything with an OpenAI-compatible API
 - **Pronunciations:** Google, Wiktionary
 - **Extensions:** Supports extensions running as sidecar processes. QTranslate services also supported.
 - **History & Favorites**
@@ -26,12 +26,8 @@ Yet another replacement for abandoned QuestSoft QTranslate. Lightweight (6-25 MB
 ## Roadmap
 
 - [x] Offline OCR (PaddleOCR)
-- [ ] QTranslate services support
-	- [x] translation
-	- [x] dictionaries
-	- [ ] tts
+- [x] QTranslate services support
 - [x] Wiktionary parser
-- [x] i18n
 - [ ] Double-key shortcuts, mouse mode
 - [x] High-DPI and multi-monitor setups support
 - [x] Windows 7, XP support
@@ -46,7 +42,7 @@ Fully portable. Run install_extensions.bat to download the kokoro and bergamot m
 
 See GitHub Actions workflow.
 
-## Some of the 3rd party content (esp. with required attribution) used in this repo:
+## Some of the 3rd party content used in this repo:
 
 - **bergamot-translate:** github.com/browsermt/bergamot-translator
 - **kokoro-js:** github.com/hexgrad/kokoro

@@ -462,10 +462,12 @@ impl AppState {
         Ok(())
     }
     
-    pub fn run_tts(&mut self) -> Result<()> {
+    pub fn run_tts(&mut self, service: Option<String>, voice: Option<String>) -> Result<()> {
         //let text = self.src_text.clone();
+        let selected_tts_service = service.unwrap_or(self.selected_tts_service.clone());
+        let selected_tts_voice = voice.unwrap_or(self.selected_tts_voice.clone());
         let (text, src_id, _is_fav) = self.insert_src(&self.src_text)?;
-        let tts_file = self.check_tts_cache(src_id, &self.selected_tts_service, &self.selected_tts_voice);
+        let tts_file = self.check_tts_cache(src_id, &selected_tts_service, &selected_tts_voice);
         //15_kkr_af-heart.ogg
 
         match tts_file {
@@ -481,11 +483,11 @@ impl AppState {
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, false));
-                if let Some(engine) = self.tts_services.get_mut(self.selected_tts_service.clone().as_str()) {
+                if let Some(engine) = self.tts_services.get_mut(&selected_tts_service) {
                     let _ = engine.generate(
                         text.clone(), 
                         src_id, 
-                        self.selected_tts_voice.clone()
+                        selected_tts_voice
                     );
                 } else {
                     dprintln!("error");
@@ -532,11 +534,12 @@ impl AppState {
         }
     }
 
-    pub fn run_prnn(&mut self, index: i32, force: bool) -> Result<()> {
+    pub fn run_prnn(&mut self, index: i32, force: bool, selected_prnn_source: Option<String>) -> Result<()> {
         //let text = self.src_text_dict.clone();
+        let selected_prnn_source = selected_prnn_source.unwrap_or(self.selected_prnn_source.clone());
         let (text, src_id, _is_fav) = self.insert_src(&self.src_text_dict)?;
         let tts_file = if !force {
-            self.check_prnn_cache(src_id, &self.selected_prnn_source, index)
+            self.check_prnn_cache(src_id, &selected_prnn_source, index)
         } else {
             Err(anyhow!("forced"))
         };
@@ -557,7 +560,7 @@ impl AppState {
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, true));
                 let detected_lang = self.get_last_detected_lang(src_id);
-                if let Some(engine) = self.prnn_services.get_mut(self.selected_prnn_source.clone().as_str()) {
+                if let Some(engine) = self.prnn_services.get_mut(selected_prnn_source.clone().as_str()) {
                     let lang =  if let Some(lng) = detected_lang {
                         lng
                     } else if self.selected_src.as_ref() == "auto" {

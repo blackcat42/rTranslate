@@ -795,8 +795,8 @@ fn main() {
                         }
                     }
 
-                    AppEvent::TTString() => {
-                        let _ = app_state.run_tts();
+                    AppEvent::TTString(s, v) => {
+                        let _ = app_state.run_tts(s, v);
                     }
 
                     AppEvent::OCRInit => {
@@ -815,9 +815,9 @@ fn main() {
                         screen_ocr.set_ocr_results(s);
                     }
 
-                    AppEvent::PRNNString(force) => {
+                    AppEvent::PRNNString(force, source) => {
                         app_view.dict_popup.prnn_index += 1;
-                        if let Err(error) = app_state.run_prnn(app_view.dict_popup.prnn_index, force) {
+                        if let Err(error) = app_state.run_prnn(app_view.dict_popup.prnn_index, force, source) {
                             app_sender.send(AppEvent::SetReady(Some(error.to_string()), true));
                         }
                     }
@@ -866,6 +866,12 @@ fn main() {
                     AppEvent::AppendToStreamBuf(chunk) => {
                         dprintln!("{:?}", chunk);
                         app_view.append_to_stream_buf(&chunk);
+                    }
+                    AppEvent::Copy(is_dict) => {
+                        if !is_dict {
+                            let transl_text = app_view.translation_buf.text();
+                            app::copy(&transl_text);
+                        }
                     }
                 }
             } else {
