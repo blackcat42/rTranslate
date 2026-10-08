@@ -43,7 +43,7 @@ impl TTService for GTTS {
     fn get_name(&self) -> &str {
         &self.options.name
     }
-    fn generate(&self, text: String, src_id: i64, voice: String) -> Result<()> {
+    fn generate(&self, text: String, src_id: i64, voice: String, lang: crate::types::Lang) -> Result<()> {
         if self.is_running.load(Ordering::Relaxed) {
             self.s.send(AppEvent::Message("tts service is still running".into()));
             return Err(anyhow!("tts service is still running"));
@@ -57,8 +57,8 @@ impl TTService for GTTS {
         } else {
             "".to_string()
         };
-        let url = format!("https://translate.google.com/translate_tts?ie=UTF-8&tl={}&client=gtx{}", "en", tk);
-        //TODO: LNG DETECT!!! (from db)
+        let lang = lang.as_ref();
+        let url = format!("https://translate.google.com/translate_tts?ie=UTF-8&tl={}&client=gtx{}", lang, tk);
 
         let working_dir = env::current_dir().unwrap();
         let filename = format!("{src_id}_{engine_uid}.mp3");

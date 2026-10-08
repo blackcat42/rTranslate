@@ -386,8 +386,7 @@ pub trait Translator {
         src_id: i64, 
         selected_text: String, //TODO get this from db if exist
         src_lang: Lang,
-        target_lang: Lang,
-        is_lang_detected: bool
+        target_lang: Lang
     ) -> ();
     //fn translate_sync(&mut self, text: String) -> String;
     fn terminate(&mut self) -> ();
@@ -412,7 +411,7 @@ pub trait Dictionary {
     fn get_name(&self) -> &str;
 }
 pub trait TTService {
-    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<()>;
+    fn generate(&self, text: String, src_id: i64, speaker_uid: String, lang: Lang) -> Result<()>;
     fn get_name(&self) -> &str;
 }
 

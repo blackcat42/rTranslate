@@ -159,6 +159,9 @@ pub struct TranslatorOption {
     pub cookies: bool,
     #[serde(default = "default_as_false")]
     pub force_split_view: bool,
+
+    #[serde(default = "default_as_true")]
+    pub supports_language_detection: bool,
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DictOption {
@@ -282,6 +285,8 @@ pub mod app_settings {
                                 markdown: false,
                                 cookies: false,
                                 force_split_view: false,
+
+                                supports_language_detection: true,
                             };
                             
                             if !settings.translators.iter().any(|item| item.uid == new_tr.uid) {

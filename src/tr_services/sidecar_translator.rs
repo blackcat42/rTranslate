@@ -88,7 +88,7 @@ impl Translator for ST {
         self.options.clone()
     }
     
-    fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang, _is_lang_detected: bool) {
+    fn translate(&mut self, src_id: i64, selected_text: String, src_lang: Lang, target_lang: Lang) {
         dprintln!("new src or target lang: {}", (self.src_lang != src_lang || self.target_lang != target_lang));
         dprintln!("old lng: {} new lng: {}", self.src_lang.as_ref(), src_lang.as_ref());
 

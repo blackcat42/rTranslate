@@ -47,7 +47,7 @@ impl TTService for NTTS {
     fn get_name(&self) -> &str {
         &self.options.name
     }
-    fn generate(&self, text: String, src_id: i64, speaker_uid: String) -> Result<()> {
+    fn generate(&self, text: String, src_id: i64, speaker_uid: String, _lang: crate::types::Lang) -> Result<()> {
         if self.is_running.load(Ordering::SeqCst) {
             self.s.send(AppEvent::Message("tts service is still running".into()));
             //self.s.send(AppEvent::SetStatus("error: tts service is still running".into(), false, false));

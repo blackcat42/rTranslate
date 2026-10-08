@@ -81,7 +81,7 @@ impl Translator for OA {
         self.options.clone()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             if self.options.openai_api_key.is_empty() && self.options.api_key_requied {
@@ -121,7 +121,6 @@ impl Translator for OA {
                             text.clone(), 
                             src_lang.clone(), 
                             target_lang.clone(), 
-                            is_lang_detected, 
                             use_proxy, 
                             emulation, 
                             &base_url, 
@@ -137,7 +136,6 @@ impl Translator for OA {
                             text.clone(), 
                             src_lang.clone(), 
                             target_lang.clone(), 
-                            is_lang_detected, 
                             use_proxy, 
                             emulation, 
                             &base_url, 
@@ -228,7 +226,6 @@ fn send_tr_request_stream(
     selected_text: String, 
     src_lang: Lang, 
     target_lang: Lang, 
-    is_lang_detected: bool, 
     proxy: bool, 
     emulation: Option<String>, 
     base_url: &str, 
@@ -238,7 +235,7 @@ fn send_tr_request_stream(
     cookies: bool
 ) -> Result<(String, Lang)> {
 
-    let src_lang_ref = if is_lang_detected {
+    let src_lang_ref = if src_lang != Lang::Auto {
         src_lang.as_ref()
     } else {
         "auto"
@@ -336,7 +333,6 @@ fn send_tr_request(
     selected_text: String, 
     src_lang: Lang, 
     target_lang: Lang, 
-    is_lang_detected: bool, 
     proxy: bool, 
     emulation: Option<String>, 
     base_url: &str, 
@@ -346,7 +342,7 @@ fn send_tr_request(
     cookies: bool
 ) -> Result<(String, Lang)> {
 
-    let src_lang_ref = if is_lang_detected {
+    let src_lang_ref = if src_lang != Lang::Auto {
         src_lang.as_ref()
     } else {
         "auto"

@@ -70,7 +70,7 @@ impl TTService for OATTS {
     fn get_name(&self) -> &str {
         &self.options.name
     }
-    fn generate(&self, text: String, src_id: i64, voice: String) -> Result<()> {
+    fn generate(&self, text: String, src_id: i64, voice: String, _lang: crate::types::Lang) -> Result<()> {
         if self.is_running.load(Ordering::Relaxed) {
             self.s.send(AppEvent::Message("tts service is still running".into()));
             //self.s.send(AppEvent::SetStatus("error: tts service is still running".into(), false, false));

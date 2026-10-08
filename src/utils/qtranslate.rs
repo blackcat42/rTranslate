@@ -29,12 +29,11 @@ pub fn send_tr_request(
     selected_text: String, 
     src_lang: Lang, 
     target_lang: Lang, 
-    is_lang_detected: bool, 
     proxy: bool, 
     emulation: Option<String>, 
     cookies: bool
 ) -> Result<(String, Lang)> {
-    send_request(1, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation, cookies)
+    send_request(1, srvc_id, selected_text, src_lang, target_lang, proxy, emulation, cookies)
 }
 
 pub fn send_dict_request(
@@ -46,8 +45,8 @@ pub fn send_dict_request(
     emulation: Option<String>, 
     cookies: bool
 ) -> Result<(String, Lang)> {
-    let is_lang_detected = true; //TODO
-    send_request(8, srvc_id, selected_text, src_lang, target_lang, is_lang_detected, proxy, emulation, cookies)
+    //let is_lang_detected = true; //TODO
+    send_request(8, srvc_id, selected_text, src_lang, target_lang, proxy, emulation, cookies)
 }
 
 fn send_request(
@@ -56,7 +55,6 @@ fn send_request(
     selected_text: String, 
     src_lang: Lang, 
     target_lang: Lang, 
-    _is_lang_detected: bool, 
     proxy: bool, 
     emulation: Option<String>, 
     cookies: bool

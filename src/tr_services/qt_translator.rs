@@ -38,7 +38,7 @@ impl Translator for QT {
         self.options.clone()
     }
 
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -52,7 +52,7 @@ impl Translator for QT {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                                         
-                    let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation, cookies);
+                    let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), use_proxy, emulation, cookies);
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!

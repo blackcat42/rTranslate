@@ -44,7 +44,7 @@ impl Translator for GT2 {
         self.options.clone()
     }
     
-    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool) {
+    fn translate(&mut self, src_id: i64, text: String, src_lang: Lang, target_lang: Lang) {
 
         if !self.is_running.load(Ordering::SeqCst) {
             thread::spawn({
@@ -58,7 +58,7 @@ impl Translator for GT2 {
                 move || {
                     is_running.store(true, Ordering::SeqCst);
                                         
-                    let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), is_lang_detected, use_proxy, emulation, cookies);
+                    let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), use_proxy, emulation, cookies);
                     match transl_result {
                         Ok(t_text) => {
                             //dprintln!("lng: {}", t_text.1.unwrap_or("".to_string())); //TODO!
@@ -97,10 +97,10 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target_lang: Lang, is_lang_detected: bool, proxy: bool, emulation: Option<String>, cookies: bool) -> Result<(String, Lang)> {
+fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: Option<String>, cookies: bool) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
-    let src_lang_ref = if is_lang_detected {
+    let src_lang_ref = if src_lang != Lang::Auto {
         src_lang.as_ref()
     } else {
         "auto"

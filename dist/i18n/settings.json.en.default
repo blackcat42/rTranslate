@@ -73,7 +73,8 @@
                 "--deny-net",
                 "app.cjs"
             ],
-            "reload_if_lang_changed": true
+            "reload_if_lang_changed": true,
+            "supports_language_detection": false,
         },
 
 

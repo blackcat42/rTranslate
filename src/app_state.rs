@@ -274,7 +274,6 @@ impl AppState {
 
         self.app_sender.send(AppEvent::ClearUi(false));
 
-        //let lang_detect = isolang::Language::from_639_3(lang_detect_result.three_letter_code()).unwrap().to_639_1().unwrap();
         if !fail_if_not_exist {
             self.app_sender.send(AppEvent::SetWaiting(Some("translate".to_string()), false));
         }
@@ -282,28 +281,34 @@ impl AppState {
         if selected_text.chars().count() < GLOBAL_SETTINGS.source_text_min_length {
             return Err(anyhow!("source text is too short"));
         }
-        //let (selected_text, src_id, is_fav) = self.insert_src(selected_text.as_str())?; //TODO: remove this call; id and is_fav to self props
 
-        let mut src_lang = self.selected_src.clone();
         let mut target_lang = self.selected_target.clone();
 
-        let mut is_lang_detected = true;
-        if src_lang == Lang::Auto {
-            //DETECT LANGUAGE
-            let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
-            //dprintln!("{:?}", info.lang().code()); 
-            //dprintln!("{:?}", info.is_reliable());
-            if info.is_reliable() {
-                src_lang = Lang::from_str(info.lang().code()).unwrap_or(Lang::En);
-                
-                let qwe = format!("Language detected as {}", info.lang().eng_name());
-                self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, false));
-                is_lang_detected = true;
-            } else {
-                is_lang_detected = false;
-                //TODO!: if not forced, check cache for any existing translation; get last entry
+        //let mut is_lang_detected = false;
+        let mut supports_language_detection = true;
 
+        if let Some(tr) = self.translators.get(&self.selected_translator) {
+            supports_language_detection = tr.get_opts().supports_language_detection;
+        }
+
+        let src_lang = if self.selected_src == Lang::Auto && !supports_language_detection {
+            let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
+            if info.is_reliable() {                
+                //let qwe = format!("Language detected as {}", info.lang().eng_name());
+                //self.app_sender.send(AppEvent::SetStatus(qwe.into_boxed_str(), false, false));
+                Lang::from_str(info.lang().code()).unwrap_or(Lang::En)
+            } else if !force {
+                //if not forced, check cache for any existing translation; get last entry
+                if let Some(lng) = self.get_last_detected_lang(self.src_id) {
+                    lng
+                } else if self.selected_src.as_ref() == "auto" {
+                    Lang::En
+                } else {
+                    self.selected_src.clone()
+                }
                 //self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language".into(), false, false));
+            } else {
+                self.selected_src.clone()
             }
 
             /*if selected_text.chars().count() > 55 {
@@ -316,7 +321,9 @@ impl AppState {
             } else {
                 self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language; previously selected lang-pair was used".into()));
             }*/
-        }
+        } else {
+            self.selected_src.clone()
+        };
 
         if src_lang == target_lang && GLOBAL_SETTINGS.switch_target_lang {
             target_lang = if let Some(value) = GLOBAL_SETTINGS.pinned_src_languages.iter().find(|&s| s != "auto") {
@@ -366,8 +373,7 @@ impl AppState {
                         self.src_id, 
                         selected_text, 
                         src_lang.clone(), 
-                        target_lang.clone(),
-                        is_lang_detected
+                        target_lang.clone()
                     );
                 } else {
                     //self.app_sender.send(AppEvent::SetStatus("selected translation service is not exist".into(), true));
@@ -483,11 +489,20 @@ impl AppState {
 
                 //self.set_waiting();
                 self.app_sender.send(AppEvent::SetWaiting(None, false));
+                let detected_lang = self.get_last_detected_lang(src_id);
+                let lang =  if let Some(lng) = detected_lang {
+                    lng
+                } else if self.selected_src.as_ref() == "auto" {
+                    Lang::En
+                } else {
+                    self.selected_src.clone()
+                };
                 if let Some(engine) = self.tts_services.get_mut(&selected_tts_service) {
                     let _ = engine.generate(
                         text.clone(), 
                         src_id, 
-                        selected_tts_voice
+                        selected_tts_voice,
+                        lang
                     );
                 } else {
                     dprintln!("error");
