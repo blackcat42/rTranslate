@@ -63,6 +63,7 @@ mod tts_services;
 use tts_services::nodejs_tts;
 use tts_services::openai_tts;
 use tts_services::fish_tts;
+use tts_services::google_tts;
 
 mod types;
 mod app_state;
@@ -337,6 +338,9 @@ fn main() {
             .map(|d| Box::new(d) as Box<dyn types::TTService>)
         } else if value.service_type == ServiceType::Native && value.uid == "tts_fish" {
             fish_tts::FTTS::new(app_sender, value.clone())
+            .map(|d| Box::new(d) as Box<dyn types::TTService>)
+        } else if value.service_type == ServiceType::Native && value.uid == "tts_google" {
+            google_tts::GTTS::new(app_sender, value.clone())
             .map(|d| Box::new(d) as Box<dyn types::TTService>)
         } else {
             Err(anyhow!("err"))

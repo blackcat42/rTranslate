@@ -196,6 +196,12 @@
      */ 
     "tts_services": [
         {
+            "service_type": "native",
+            "uid": "tts_google",
+            "name": "Google",
+            "voices": ["default"]
+        },
+        {
             "service_type": "sidecar",
             "uid": "tts_kokoro",
             "name": "Kokoro",
