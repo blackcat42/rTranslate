@@ -7,9 +7,10 @@ use fltk::{
 };
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::sync::{OnceLock};
+use std::sync::{OnceLock, LazyLock};
 
 use anyhow::{anyhow, Result};
+use regex::Regex;
 
 use crate::types::{
     BLWCoords
@@ -35,6 +36,10 @@ pub fn is_win7_or_greater() -> bool {
         }
     })
 }
+
+pub static RE_UID: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[\w ]+$").unwrap()
+});
 
 pub fn app_message(e: &str) {
     let pos = screen_center();

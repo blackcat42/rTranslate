@@ -12,6 +12,7 @@ use anyhow::Result;
 use strum_macros::EnumIter;
 //use strum::IntoEnumIterator;
 use crate::utils::screen_ocr::CropSegment;
+use crate::settings::Settings;
 //use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
@@ -57,6 +58,7 @@ pub enum AppEvent {
     SetReady(Option<String>, bool),
     SetStatus(Box<str>, bool, bool),
     Message(Box<str>),
+    WriteSettingsAndRestart(Box<Settings>),
     
     //TODO:
     UpdateUi(UIState, bool),

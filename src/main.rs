@@ -20,7 +20,7 @@ use std::ffi::OsString;
 use anyhow::{anyhow, Result};
 
 //use serde::{Deserialize, Serialize};
-use regex::Regex;
+//use regex::Regex;
 
 use get_selected_text::get_selected_text; //todo: high ram usage
 
@@ -42,28 +42,9 @@ use rusqlite::{params, params_from_iter, Connection};
 use tray_item::{IconSource, TrayItem};
 
 mod tr_services;
-use tr_services::sidecar_translator;
-use tr_services::qt_translator;
-use tr_services::openai_translator;
-use tr_services::google_translate;
-use tr_services::google_translate2;
-use tr_services::deepl_translate;
-
 mod dict_services;
-use dict_services::wiktionary_en;
-use dict_services::google_dict;
-use dict_services::user_dict;
-use dict_services::qt_dict;
-
 mod prnn_services;
-use prnn_services::prnn_wiki;
-use prnn_services::prnn_google;
-
 mod tts_services;
-use tts_services::nodejs_tts;
-use tts_services::openai_tts;
-use tts_services::fish_tts;
-use tts_services::google_tts;
 
 mod types;
 mod app_state;
@@ -82,11 +63,11 @@ use utils::helpers::{
     app_message, 
     //screen_center
 };
-
+use crate::utils::helpers::RE_UID;
 mod settings;
 use settings::{Settings, UIConfig};
 
-use crate::settings::ServiceType;
+//use crate::settings::ServiceType;
 
 static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
     if !std::path::Path::new("./settings.json").exists() {
@@ -224,176 +205,25 @@ fn main() {
     });
 
     //APP STATE
-    let re_uid = Regex::new(r"^[\w ]+$").unwrap();
-    for value in GLOBAL_SETTINGS.translators.iter() {
-        if !re_uid.is_match(&value.uid) {
-            app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
-            continue;
-        }
-        let t: Result<Box<dyn types::Translator>> = match value.service_type {
-            ServiceType::Native => {
-                if value.uid == "tr_google" {
-                    google_translate::GT::new(app_sender, value.clone())
-                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
-                } else if value.uid == "tr_google2" {
-                    google_translate2::GT2::new(app_sender, value.clone())
-                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
-                } else if value.uid == "tr_deepl" {
-                    deepl_translate::DL::new(app_sender, value.clone())
-                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
-                } else {
-                    Err(anyhow!("err"))
-                }
-            },
-            ServiceType::Sidecar => {
-                if let Some(command) = &value.command 
-                && value.service_type == ServiceType::Sidecar
-                && command.chars().count() > 0 {
-                    sidecar_translator::ST::new(app_sender, value.clone())
-                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
-                } else {
-                    Err(anyhow!("err"))
-                }
-            },
-            ServiceType::OpenAI => {
-                if value.openai_url.is_some() && value.openai_model.is_some() {
-                    openai_translator::OA::new(app_sender, working_dir.clone(), value.clone())
-                    .map(|t| Box::new(t) as Box<dyn types::Translator>)
-                } else {
-                    Err(anyhow!("err"))
-                }
-            },
-            ServiceType::QTranslate => {
-                qt_translator::QT::new(app_sender, value.clone()).map(|t| Box::new(t) as Box<dyn types::Translator>)
-            },
-            ServiceType::DSLDict => Err(anyhow!("err")),
-        };
-        match t {
-            Ok(t) => {
-                app_state.translators.insert(value.uid.clone(), t);
-            }
-            Err(e) => {
-                app_message(&format!("{}", e));
-            }
-        }
-    }
-    //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
-
-    for value in GLOBAL_SETTINGS.dictionaries.iter() {
-        if !re_uid.is_match(&value.uid) {
-            app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
-            continue;
-        }
-        let d: Result<Box<dyn types::Dictionary>> = match value.service_type {
-            ServiceType::Native => {
-                if value.uid == "dict_wiktionary_en" {
-                    wiktionary_en::WDEn::new(app_sender, value.clone())
-                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
-                } else if value.uid == "dict_google" {
-                    google_dict::GD::new(app_sender, value.clone())
-                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
-                } else {
-                    Err(anyhow!("err"))
-                }
-            },
-            ServiceType::QTranslate => {
-                qt_dict::QTDict::new(app_sender, value.clone())
-                .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
-            },
-            ServiceType::DSLDict => {
-                if value.dict_path.is_some() {
-                    user_dict::DSLDict::new(app_sender, value.clone())
-                    .map(|d| Box::new(d) as Box<dyn types::Dictionary>)
-                } else {
-                    Err(anyhow!("err"))
-                }
-            },
-            _ => {
-                Err(anyhow!("err"))
-            }
-        };
-        
-        match d {
-            Ok(d) => {
-                app_state.dictionaries.insert(value.uid.clone(), d);
-            }
-            Err(e) => {
-                app_message(&format!("{}", e));
-            }
-        }
-    }
-    //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
-
-    for value in GLOBAL_SETTINGS.tts_services.iter() {
-        if !re_uid.is_match(&value.uid) {
-            app_message("settings.json: Failed to parse uid");
-            panic!("Error");
-        }
-
-        let tts: Result<Box<dyn types::TTService>> = if value.service_type == ServiceType::OpenAI {
-            openai_tts::OATTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>)
-        } else if value.service_type == ServiceType::Sidecar && value.command.is_some() {
-            nodejs_tts::NTTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>)
-        } else if value.service_type == ServiceType::Native && value.uid == "tts_fish" {
-            fish_tts::FTTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>)
-        } else if value.service_type == ServiceType::Native && value.uid == "tts_google" {
-            google_tts::GTTS::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::TTService>)
-        } else {
-            Err(anyhow!("err"))
-        };
-        match tts {
-            Ok(tts) => {
-                app_state.tts_services.insert(value.uid.clone(), tts);
-            }
-            Err(e) => {
-                app_message(&format!("{}", e));
-            }
-        }
-    }
     
-    for value in GLOBAL_SETTINGS.prnn_services.iter() {
-        /*if let Some(path) = &value.path && path.chars().count() > 0 {
-            //
-        } else*/ 
-        let prnn: Result<Box<dyn types::PRNNService>> = if value.uid == "prnn_wiki" {
-            prnn_wiki::WP::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::PRNNService>)
-        } else if value.uid == "prnn_google" {
-            prnn_google::GP::new(app_sender, value.clone())
-            .map(|d| Box::new(d) as Box<dyn types::PRNNService>)
-        } else {
-            Err(anyhow!("err"))
-        };
-        match prnn {
-            Ok(prnn) => {
-                app_state.prnn_services.insert(value.uid.clone(), prnn);
-            }
-            Err(e) => {
-                app_message(&format!("{}", e));
-            }
-        }
-    }
+    app_state.init_services();
 
     let _ = app_state.update_history_browser();
     let _ = app_state.update_fav_browser();
 
 
-    if re_uid.is_match(&UICONFIG.selected_src) {
+    if RE_UID.is_match(&UICONFIG.selected_src) {
         app_view.set_src_lang( types::Lang::from_str(&UICONFIG.selected_src).unwrap_or(types::Lang::En) );
     } else {
         app_view.set_src_lang( app_state.selected_src.clone() );
     }
-    if re_uid.is_match(&UICONFIG.selected_target) {
+    if RE_UID.is_match(&UICONFIG.selected_target) {
         app_view.set_target_lang( types::Lang::from_str(&UICONFIG.selected_target).unwrap_or(types::Lang::Ru) );
     } else {
         app_view.set_target_lang( app_state.selected_target.clone() );
     }
 
-    if re_uid.is_match(&UICONFIG.selected_translator) {
+    if RE_UID.is_match(&UICONFIG.selected_translator) {
         app_sender.send(AppEvent::SetTranslator(UICONFIG.selected_translator.clone()));
     } else {
         app_sender.send(AppEvent::SetTranslator(
@@ -404,7 +234,7 @@ fn main() {
         ));
     }
     
-    if re_uid.is_match(&UICONFIG.selected_dict) {
+    if RE_UID.is_match(&UICONFIG.selected_dict) {
         app_sender.send(AppEvent::SetDict(UICONFIG.selected_dict.clone()));
     } else {
         app_sender.send(AppEvent::SetDict(
@@ -415,7 +245,7 @@ fn main() {
         ));
     }
 
-    if re_uid.is_match(&UICONFIG.selected_tts_service) && re_uid.is_match(&UICONFIG.selected_tts_voice) {
+    if RE_UID.is_match(&UICONFIG.selected_tts_service) && RE_UID.is_match(&UICONFIG.selected_tts_voice) {
         app_sender.send(AppEvent::SetTTSEngine(
             UICONFIG.selected_tts_service.clone(),
             UICONFIG.selected_tts_voice.clone()
@@ -435,7 +265,7 @@ fn main() {
             }).clone()
         ));
     }
-    if re_uid.is_match(&UICONFIG.selected_prnn_service) {
+    if RE_UID.is_match(&UICONFIG.selected_prnn_service) {
         app_sender.send(AppEvent::SetPRNNEngine(UICONFIG.selected_prnn_service.clone()));
     } else {
         app_sender.send(AppEvent::SetPRNNEngine(
@@ -697,7 +527,8 @@ fn main() {
                                 app_view.show_popup(true, false);
                             }
                             TrayEvent::Settings => {
-                                open_settings();
+                                app_view.settings_win.open();
+                                //open_settings();
                             }
                             TrayEvent::Exit => {
                                 app::quit();
@@ -877,6 +708,16 @@ fn main() {
                             app::copy(&transl_text);
                         }
                     }
+                    AppEvent::WriteSettingsAndRestart(s) => {
+                        settings::app_settings::write(*s);
+                        //restart
+                        drop(instance); 
+                        std::process::Command::new(env::current_exe().unwrap())
+                            .args(env::args().skip(1))
+                            .spawn()
+                            .expect("err");
+                        std::process::exit(0);
+                    }
                 }
             } else {
                 /*if ev != fltk::enums::Event::Move && ev != fltk::enums::Event::Drag {
@@ -891,37 +732,29 @@ fn main() {
     // app.run().unwrap();
 
     //write config before exit
-    if std::path::Path::new("ui_config.json").exists() {
-        let mut config = UICONFIG.clone();
-        config.selected_translator = app_state.selected_translator.clone();
-        config.selected_dict = app_state.selected_dict.clone();
-        config.selected_tts_service = app_state.selected_tts_service.clone();
-        config.selected_tts_voice = app_state.selected_tts_voice.clone();
-        config.selected_prnn_service = app_state.selected_prnn_source.clone();
+    
+    let mut config = UICONFIG.clone();
+    config.selected_translator = app_state.selected_translator.clone();
+    config.selected_dict = app_state.selected_dict.clone();
+    config.selected_tts_service = app_state.selected_tts_service.clone();
+    config.selected_tts_voice = app_state.selected_tts_voice.clone();
+    config.selected_prnn_service = app_state.selected_prnn_source.clone();
 
-        config.selected_src = app_state.selected_src.as_ref().to_string();
-        config.selected_target = app_state.selected_target.as_ref().to_string();
+    config.selected_src = app_state.selected_src.as_ref().to_string();
+    config.selected_target = app_state.selected_target.as_ref().to_string();
 
-        config.main_window_w = app_view.main_win.window.width();
-        config.main_window_h = app_view.main_win.window.height();
-        //TODO?: app_view.main_win.maximize_active();
+    config.main_window_w = app_view.main_win.window.width();
+    config.main_window_h = app_view.main_win.window.height();
+    //TODO?: app_view.main_win.maximize_active();
 
-        config.popup_w = app_view.transl_popup.win_popup.width();
-        config.popup_h = app_view.transl_popup.win_popup.height();
-        config.popup_dict_w = app_view.dict_popup.win_popup_dict.width();
-        config.popup_dict_h = app_view.dict_popup.win_popup_dict.height();
+    config.popup_w = app_view.transl_popup.win_popup.width();
+    config.popup_h = app_view.transl_popup.win_popup.height();
+    config.popup_dict_w = app_view.dict_popup.win_popup_dict.width();
+    config.popup_dict_h = app_view.dict_popup.win_popup_dict.height();
 
-        let ui_config = serde_json::to_string(&config).unwrap_or_else(|e| {
-            app_message("Failed to serialize UICONFIG");
-            panic!("Error: {}", e);
-        });
-        std::fs::write("ui_config.json", ui_config).unwrap_or_else(|e| {
-            app_message("Failed to write ui_config.json");
-            panic!("Error: {}", e);
-        });
-    }    
+    settings::ui_config::write(config);
+
     dprintln!("exit");
-
 }
 
 

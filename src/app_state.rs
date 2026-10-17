@@ -32,10 +32,36 @@ use crate::types::{
     TranslResult,
     DictResult
 };
+use crate::settings::ServiceType;
+
+
+use super::tr_services::sidecar_translator;
+use super::tr_services::qt_translator;
+use super::tr_services::openai_translator;
+use super::tr_services::google_translate;
+use super::tr_services::google_translate2;
+use super::tr_services::deepl_translate;
+
+
+use super::dict_services::wiktionary_en;
+use super::dict_services::google_dict;
+use super::dict_services::user_dict;
+use super::dict_services::qt_dict;
+
+
+use super::prnn_services::prnn_wiki;
+use super::prnn_services::prnn_google;
+
+
+use super::tts_services::nodejs_tts;
+use super::tts_services::openai_tts;
+use super::tts_services::fish_tts;
+use super::tts_services::google_tts;
 
 use super::GLOBAL_SETTINGS;
 
 use crate::utils::helpers::app_message;
+use crate::utils::helpers::RE_UID;
 
 pub struct AppState {
     pub app_sender: fltk::app::Sender<AppEvent>,
@@ -102,6 +128,171 @@ impl AppState {
             dictionaries: HashMap::new(),
             tts_services: HashMap::new(),
             prnn_services: HashMap::new(),
+        }
+    }
+
+    pub fn init_services(&mut self) {
+        self.translators.clear();
+        self.dictionaries.clear();
+        self.tts_services.clear();
+        self.prnn_services.clear();
+
+        let working_dir = std::env::current_dir().unwrap_or_else(|e| {
+            app_message("current_dir");
+            panic!("Error: {}", e);
+        });
+    
+        for value in GLOBAL_SETTINGS.translators.iter() {
+            if !RE_UID.is_match(&value.uid) {
+                app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
+                continue;
+            }
+            let t: Result<Box<dyn Translator>> = match value.service_type {
+                ServiceType::Native => {
+                    if value.uid == "tr_google" {
+                        google_translate::GT::new(self.app_sender, value.clone())
+                        .map(|t| Box::new(t) as Box<dyn Translator>)
+                    } else if value.uid == "tr_google2" {
+                        google_translate2::GT2::new(self.app_sender, value.clone())
+                        .map(|t| Box::new(t) as Box<dyn Translator>)
+                    } else if value.uid == "tr_deepl" {
+                        deepl_translate::DL::new(self.app_sender, value.clone())
+                        .map(|t| Box::new(t) as Box<dyn Translator>)
+                    } else {
+                        Err(anyhow!("err"))
+                    }
+                },
+                ServiceType::Sidecar => {
+                    if let Some(command) = &value.command 
+                    && value.service_type == ServiceType::Sidecar
+                    && command.chars().count() > 0 {
+                        sidecar_translator::ST::new(self.app_sender, value.clone())
+                        .map(|t| Box::new(t) as Box<dyn Translator>)
+                    } else {
+                        Err(anyhow!("err"))
+                    }
+                },
+                ServiceType::OpenAI => {
+                    if value.openai_url.is_some() && value.openai_model.is_some() {
+                        openai_translator::OA::new(self.app_sender, working_dir.clone(), value.clone())
+                        .map(|t| Box::new(t) as Box<dyn Translator>)
+                    } else {
+                        Err(anyhow!("err"))
+                    }
+                },
+                ServiceType::QTranslate => {
+                    qt_translator::QT::new(self.app_sender, value.clone()).map(|t| Box::new(t) as Box<dyn Translator>)
+                },
+                ServiceType::DSLDict => Err(anyhow!("err")),
+            };
+            match t {
+                Ok(t) => {
+                    self.translators.insert(value.uid.clone(), t);
+                }
+                Err(e) => {
+                    app_message(&format!("{}", e));
+                }
+            }
+        }
+        //app_state.translators.entry(String::from("tr_google")).or_insert_with(|| Box::new(google_translate::GT::new(app_sender)));
+
+        for value in GLOBAL_SETTINGS.dictionaries.iter() {
+            if !RE_UID.is_match(&value.uid) {
+                app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
+                continue;
+            }
+            let d: Result<Box<dyn Dictionary>> = match value.service_type {
+                ServiceType::Native => {
+                    if value.uid == "dict_wiktionary_en" {
+                        wiktionary_en::WDEn::new(self.app_sender, value.clone())
+                        .map(|d| Box::new(d) as Box<dyn Dictionary>)
+                    } else if value.uid == "dict_google" {
+                        google_dict::GD::new(self.app_sender, value.clone())
+                        .map(|d| Box::new(d) as Box<dyn Dictionary>)
+                    } else {
+                        Err(anyhow!("err"))
+                    }
+                },
+                ServiceType::QTranslate => {
+                    qt_dict::QTDict::new(self.app_sender, value.clone())
+                    .map(|d| Box::new(d) as Box<dyn Dictionary>)
+                },
+                ServiceType::DSLDict => {
+                    if value.dict_path.is_some() {
+                        user_dict::DSLDict::new(self.app_sender, value.clone())
+                        .map(|d| Box::new(d) as Box<dyn Dictionary>)
+                    } else {
+                        Err(anyhow!("err"))
+                    }
+                },
+                _ => {
+                    Err(anyhow!("err"))
+                }
+            };
+            
+            match d {
+                Ok(d) => {
+                    self.dictionaries.insert(value.uid.clone(), d);
+                }
+                Err(e) => {
+                    app_message(&format!("{}", e));
+                }
+            }
+        }
+        //app_state.dictionaries.entry(String::from("dict_wiktionary_en")).or_insert_with(|| Box::new(wiktionary_en::WDEn::new(app_sender)));
+
+        for value in GLOBAL_SETTINGS.tts_services.iter() {
+            if !RE_UID.is_match(&value.uid) {
+                app_message("settings.json: Failed to parse uid");
+                panic!("Error");
+            }
+
+            let tts: Result<Box<dyn TTService>> = if value.service_type == ServiceType::OpenAI {
+                openai_tts::OATTS::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn TTService>)
+            } else if value.service_type == ServiceType::Sidecar && value.command.is_some() {
+                nodejs_tts::NTTS::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn TTService>)
+            } else if value.service_type == ServiceType::Native && value.uid == "tts_fish" {
+                fish_tts::FTTS::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn TTService>)
+            } else if value.service_type == ServiceType::Native && value.uid == "tts_google" {
+                google_tts::GTTS::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn TTService>)
+            } else {
+                Err(anyhow!("err"))
+            };
+            match tts {
+                Ok(tts) => {
+                    self.tts_services.insert(value.uid.clone(), tts);
+                }
+                Err(e) => {
+                    app_message(&format!("{}", e));
+                }
+            }
+        }
+        
+        for value in GLOBAL_SETTINGS.prnn_services.iter() {
+            /*if let Some(path) = &value.path && path.chars().count() > 0 {
+                //
+            } else*/ 
+            let prnn: Result<Box<dyn PRNNService>> = if value.uid == "prnn_wiki" {
+                prnn_wiki::WP::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn PRNNService>)
+            } else if value.uid == "prnn_google" {
+                prnn_google::GP::new(self.app_sender, value.clone())
+                .map(|d| Box::new(d) as Box<dyn PRNNService>)
+            } else {
+                Err(anyhow!("err"))
+            };
+            match prnn {
+                Ok(prnn) => {
+                    self.prnn_services.insert(value.uid.clone(), prnn);
+                }
+                Err(e) => {
+                    app_message(&format!("{}", e));
+                }
+            }
         }
     }
 

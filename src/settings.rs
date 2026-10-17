@@ -337,6 +337,19 @@ pub mod app_settings {
         }
         settings
     }
+
+    pub fn write(s: Settings) {
+        if std::path::Path::new("./settings.json").exists() {
+            let settings = serde_json::to_string(&s).unwrap_or_else(|e| {
+                app_message("Failed to serialize GLOBAL_SETTINGS");
+                panic!("Error: {}", e);
+            });
+            std::fs::write("./settings.json", settings).unwrap_or_else(|e| {
+                app_message("Failed to write settings.json");
+                panic!("Error: {}", e);
+            });
+        }
+    }
 }
 
 pub mod ui_config {
@@ -382,5 +395,18 @@ pub mod ui_config {
             panic!("Error: {}", e);
         });
         ui_config
+    }
+
+    pub fn write(config: UIConfig) {
+        if std::path::Path::new("./ui_config.json").exists() {
+            let ui_config = serde_json::to_string(&config).unwrap_or_else(|e| {
+                app_message("Failed to serialize UICONFIG");
+                panic!("Error: {}", e);
+            });
+            std::fs::write("./ui_config.json", ui_config).unwrap_or_else(|e| {
+                app_message("Failed to write ui_config.json");
+                panic!("Error: {}", e);
+            });
+        }    
     }
 }
