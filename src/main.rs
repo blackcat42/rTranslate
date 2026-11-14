@@ -15,7 +15,7 @@ use std::fs::File;
 use std::io::BufReader;
 //use std::rc::Rc;
 //use std::cell::RefCell;
-use std::ffi::OsString;
+//use std::ffi::OsString;
 
 use anyhow::{anyhow, Result};
 
@@ -74,11 +74,11 @@ static GLOBAL_SETTINGS: LazyLock<Settings> = LazyLock::new(|| {
         let locale = get_locale().unwrap_or_else(|| "en-US".to_string());
         let locale: String = locale.chars().take(2).collect();
         dprintln!("{}", locale);
-        let mut default_settings_file ="./i18n/settings.json.en.default".to_string();
-        if !std::path::Path::new(&default_settings_file).exists() {
-            default_settings_file = "./i18n/settings.json.en.default".to_string();
-            //TODO: impl default for struct
-        }
+        let default_settings_file ="./settings.default.json5".to_string();
+        // if !std::path::Path::new(&default_settings_file).exists() {
+        //     default_settings_file = "./i18n/settings.json.en.default".to_string();
+        //     //TODO: impl default for struct
+        // }
 
         std::fs::copy(default_settings_file, "./settings.json").unwrap_or_else(|e| {
             app_message("Failed to open settings.json");
@@ -282,7 +282,8 @@ fn main() {
         app_message("GlobalHotKeyManager");
         panic!("Error: {}", e);
     });
-    let tr_hotkey_id: Option<u32> = if let Some(translate_hotkey) = &GLOBAL_SETTINGS.translate_hotkey {
+    let translate_hotkey = &GLOBAL_SETTINGS.translate_hotkey;
+    let tr_hotkey_id: Option<u32> = if !translate_hotkey.is_empty() {
         if let Ok(hotkey) = translate_hotkey.parse::<HotKey>() {
             let _ = manager.register(hotkey);
             Some(hotkey.id())
@@ -293,10 +294,11 @@ fn main() {
     } else {
         None
     };
-    let dict_hotkey_id: Option<u32> = if let Some(dict_hotkey) = &GLOBAL_SETTINGS.dict_hotkey {
-        if let Ok(hotkey_dict) = dict_hotkey.parse::<HotKey>() {
-            let _ = manager.register(hotkey_dict);
-            Some(hotkey_dict.id())
+    let dict_hotkey = &GLOBAL_SETTINGS.dict_hotkey;
+    let dict_hotkey_id: Option<u32> = if !dict_hotkey.is_empty() {
+        if let Ok(hotkey) = dict_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey);
+            Some(hotkey.id())
         } else {
             app_message("Failed to parse dict hotkey");
             None
@@ -304,10 +306,11 @@ fn main() {
     } else {
         None
     };
-    let ocr_hotkey_id: Option<u32> = if let Some(ocr_hotkey) = &GLOBAL_SETTINGS.ocr_hotkey {
-        if let Ok(ocr_hotkey) = ocr_hotkey.parse::<HotKey>() {
-            let _ = manager.register(ocr_hotkey);
-            Some(ocr_hotkey.id())
+    let ocr_hotkey = &GLOBAL_SETTINGS.ocr_hotkey;
+    let ocr_hotkey_id: Option<u32> = if !ocr_hotkey.is_empty() {
+        if let Ok(hotkey) = ocr_hotkey.parse::<HotKey>() {
+            let _ = manager.register(hotkey);
+            Some(hotkey.id())
         } else {
             app_message("Failed to parse ocr hotkey");
             None
@@ -512,7 +515,23 @@ fn main() {
                             app_message(&text);
                         }                             
                     }
-
+                    AppEvent::CloseSettings => {
+                        if let Some(ref mut s) = app_view.settings_win {
+                            s.window.hide();
+                            app::delete_widget(s.window.clone());
+                        }
+                        app_view.settings_win = None;
+                    }
+                    AppEvent::BackupSettings => {
+                        match settings::app_settings::make_backup() {
+                            Ok(_) => {
+                                app_message("backup file created");
+                            }
+                            Err(e) => {
+                                app_message(&e.to_string());
+                            }
+                        }
+                    }
                     AppEvent::TrayMenuEvent(tray_event) => {
                         dprintln!("{:?}", tray_event);
                         match tray_event {
@@ -527,8 +546,12 @@ fn main() {
                                 app_view.show_popup(true, false);
                             }
                             TrayEvent::Settings => {
-                                app_view.settings_win.open();
-                                //open_settings();
+                                if let Some(ref mut s) = app_view.settings_win {
+                                    utils::widgets::TaskbarExt::show_with_taskbar(&mut s.window);
+                                } else {
+                                    let settings_win = crate::app_view::settings_win::SettingsWinView::new(app_sender);
+                                    app_view.settings_win = Some(settings_win);
+                                }
                             }
                             TrayEvent::Exit => {
                                 app::quit();
@@ -709,14 +732,16 @@ fn main() {
                         }
                     }
                     AppEvent::WriteSettingsAndRestart(s) => {
-                        settings::app_settings::write(*s);
+                        //settings::app_settings::write(s);
                         //restart
-                        drop(instance); 
-                        std::process::Command::new(env::current_exe().unwrap())
-                            .args(env::args().skip(1))
-                            .spawn()
-                            .expect("err");
-                        std::process::exit(0);
+                        if settings::app_settings::write(*s).is_ok() {
+                            drop(instance); 
+                            std::process::Command::new(env::current_exe().unwrap())
+                                .args(env::args().skip(1))
+                                .spawn()
+                                .expect("err");
+                            std::process::exit(0);
+                        }
                     }
                 }
             } else {
@@ -759,21 +784,21 @@ fn main() {
 
 
 
-fn open_settings() {
-    let path = std::path::Path::new("settings.json");
-    if !path.exists() {
-        return
-    }
+// fn open_settings() {
+//     let path = std::path::Path::new("settings.json");
+//     if !path.exists() {
+//         return
+//     }
 
-    #[cfg(target_os = "windows")]
-    std::process::Command::new("cmd").args([OsString::from("/C"), OsString::from("start"), path.to_path_buf().into_os_string()]).spawn().ok();
+//     #[cfg(target_os = "windows")]
+//     std::process::Command::new("cmd").args([OsString::from("/C"), OsString::from("start"), path.to_path_buf().into_os_string()]).spawn().ok();
 
-    #[cfg(target_os = "macos")]
-    std::process::Command::new("open").arg(path.to_path_buf().into_os_string()).spawn().ok();
+//     #[cfg(target_os = "macos")]
+//     std::process::Command::new("open").arg(path.to_path_buf().into_os_string()).spawn().ok();
 
-    #[cfg(target_os = "linux")]
-    std::process::Command::new("xdg-open").arg(path.to_path_buf().into_os_string()).spawn().ok();
-}
+//     #[cfg(target_os = "linux")]
+//     std::process::Command::new("xdg-open").arg(path.to_path_buf().into_os_string()).spawn().ok();
+// }
 
 
 fn clear_history(conn: &Option<Connection>) -> Result<()> {

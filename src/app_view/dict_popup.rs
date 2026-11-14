@@ -143,6 +143,9 @@ impl DictPopupView {
 
         let mut dict_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
         for qwe in GLOBAL_SETTINGS.dictionaries.iter() {
+            if !qwe.enabled {
+                continue;
+            }
             let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
             let icon_path = format!(r"icons/{}.ico", qwe.uid);
             dprintln!("{}", icon_path);
@@ -276,6 +279,9 @@ impl DictPopupView {
         });
 
         for src in GLOBAL_SETTINGS.prnn_services.iter() {
+            if !src.enabled {
+                continue;
+            }
             let name = (*src.name).to_string();
             prnn_button_dict.add(
                 &name,

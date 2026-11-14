@@ -97,7 +97,7 @@ impl Translator for GT2 {
 }
 
 
-fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: Option<String>, cookies: bool) -> Result<(String, Lang)> {
+fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: String, cookies: bool) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if src_lang != Lang::Auto {
@@ -121,41 +121,36 @@ fn send_tr_request(srvc_uid: &str, selected_text: String, src_lang: Lang, target
     headers.insert("Host".into(), "translate-pa.googleapis.com".into());
     headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36".into());
     let api_key = GLOBAL_SETTINGS.google_translate_api_key.clone();
-    let result = match api_key {
-        Some(api_key) => {
-            headers.insert("X-Goog-API-Key".into(), api_key.clone());
-            headers.insert("Content-Type".into(), "application/json+protobuf".into());
+    let result = if !api_key.is_empty() {
+        headers.insert("X-Goog-API-Key".into(), api_key.clone());
+        headers.insert("Content-Type".into(), "application/json+protobuf".into());
 
-            let mut client = rt_request::Client::builder()
-                //.emulation("Chrome137")
-                .default_headers(headers)
-                .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
-                .proxy(proxy);
-            if let Some(e) = emulation {
-                client = client.emulation(e);
-            }
-            if cookies {
-                let cookie_path = format!(
-                    "cookies/{}_{}.txt", 
-                    srvc_uid, 
-                    twox_hash::XxHash32::oneshot(42, "https://translate-pa.googleapis.com".as_bytes())
-                );
-                client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
-                client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
-            }
-            let client = client.build()?;
-
-            let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version("HTTP_11").body(req_body).send()?.text()?;
-
-            dprintln!("{}", resp);
-            Ok(resp)
+        let mut client = rt_request::Client::builder()
+            //.emulation("Chrome137")
+            .default_headers(headers)
+            .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
+            .proxy(proxy);
+        if !emulation.is_empty() {
+            client = client.emulation(emulation);
         }
-        None => {
-            Err(anyhow!("No api key found. Please check settings.json : \"google_translate_api_key\""))
+        if cookies {
+            let cookie_path = format!(
+                "cookies/{}_{}.txt", 
+                srvc_uid, 
+                twox_hash::XxHash32::oneshot(42, "https://translate-pa.googleapis.com".as_bytes())
+            );
+            client = client.netscape_cookies_send(std::path::PathBuf::from_slash(&cookie_path));
+            client = client.netscape_cookies_write(std::path::PathBuf::from_slash(&cookie_path));
         }
+        let client = client.build()?;
+
+        let resp = client.post("https://translate-pa.googleapis.com/v1/translateHtml").version("HTTP_11").body(req_body).send()?.text()?;
+
+        dprintln!("{}", resp);
+        Ok(resp)
+    } else {
+        Err(anyhow!("No api key found. Please check settings.json : \"google_translate_api_key\""))
     };
-        
-
 
     match result {
         Ok(json_data) => {

@@ -59,6 +59,8 @@ pub enum AppEvent {
     SetStatus(Box<str>, bool, bool),
     Message(Box<str>),
     WriteSettingsAndRestart(Box<Settings>),
+    CloseSettings,
+    BackupSettings,
     
     //TODO:
     UpdateUi(UIState, bool),

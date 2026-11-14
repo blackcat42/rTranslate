@@ -32,9 +32,9 @@ impl FTTS {
         s: fltk::app::Sender<AppEvent>, 
         options: TTServiceOption
     ) -> Result<Self> {
-        if let Some(model) = &options.openai_model {
-            let response_format = if let Some(f) = &options.openai_response_format {
-                f
+        if options.openai_model.chars().count() > 0 {
+            let response_format = if options.openai_response_format.chars().count() > 0 {
+                &options.openai_response_format
             } else {
                 "mp3"
             };
@@ -42,7 +42,7 @@ impl FTTS {
             Ok(Self { 
                 is_running, 
                 s,  
-                model: model.clone(), 
+                model: options.openai_model.clone(), 
                 response_format: response_format.to_string(), 
                 options
                 //api_key_url: "https://fish.audio".to_string()
@@ -107,8 +107,8 @@ impl TTService for FTTS {
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_request_timeout))
             .gzip(true)
             .proxy(self.options.use_proxy);
-        if let Some(e) = &self.options.emulation {
-            client = client.emulation(e);
+        if self.options.emulation.chars().count() > 0 {
+            client = client.emulation(&self.options.emulation);
         }
         let client = client.build()?;
 

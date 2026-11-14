@@ -293,19 +293,23 @@ fn make_request_with_ureq(request: Client) -> Result<Response<ureq::Body>> {
 	query: Option<Vec<(String, String)>>,*/
 
 	let mut proxy = None;
-	if request.use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-		let parts: Vec<&str> = proxy_settings.url.split("://").collect();
-	    let protocol = parts[0];
-	    let port = parts[1];
-	    let mut formatted_proxy = format!("{}://{}", protocol, port);
-       
-        if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-        	formatted_proxy = format!("{}://{}:{}@{}", protocol, username, password, port);
-    	}
+	if request.use_proxy {
+		if GLOBAL_SETTINGS.proxy.url.chars().count() > 0 {
+			let parts: Vec<&str> = GLOBAL_SETTINGS.proxy.url.split("://").collect();
+			let protocol = parts[0];
+			let port = parts[1];
+			let mut formatted_proxy = format!("{}://{}", protocol, port);
+		
+			if GLOBAL_SETTINGS.proxy.username.chars().count() > 0 && GLOBAL_SETTINGS.proxy.password.chars().count() > 0 {
+				formatted_proxy = format!("{}://{}:{}@{}", protocol, GLOBAL_SETTINGS.proxy.username, GLOBAL_SETTINGS.proxy.password, port);
+			}
 
-    	let ureq_proxy = ureq::Proxy::new(&formatted_proxy)?;
-    	proxy = Some(ureq_proxy);
-    }
+			let ureq_proxy = ureq::Proxy::new(&formatted_proxy)?;
+			proxy = Some(ureq_proxy);
+		} else {
+			return Err(anyhow!("proxy is not configured"));
+		}
+	}
 
     let config = ureq::Agent::config_builder()
         .timeout_global(request.timeout)
@@ -475,12 +479,18 @@ fn run_wreq_cli<T>(request: Client) -> Result<Response<T>> {
     	arg_d = Some(format!("-d \"{}\"", data));
     }*/
 
-	if request.use_proxy && let Some(proxy_settings) = &GLOBAL_SETTINGS.proxy {
-        arg_proxy = Some(format!("--proxy={}", proxy_settings.url.clone()));
-        if let Some(username) = &proxy_settings.username && let Some(password) = &proxy_settings.password {
-        	arg_U = Some(format!("-U {username}:{password}"))
-    	}        
-    }
+	if request.use_proxy {
+		if GLOBAL_SETTINGS.proxy.url.chars().count() > 0 {
+			arg_proxy = Some(format!("--proxy={}", GLOBAL_SETTINGS.proxy.url));
+			let username = &GLOBAL_SETTINGS.proxy.username;
+			let password = &GLOBAL_SETTINGS.proxy.password;
+			if username.chars().count() > 0 && password.chars().count() > 0 {
+				arg_U = Some(format!("-U {username}:{password}"))
+			}
+		} else {
+			return Err(anyhow!("proxy is not configured"));
+		}
+	}
 
     if let Some(default_headers) = request.default_headers {
     	args_H = Some(

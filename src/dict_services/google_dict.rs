@@ -108,7 +108,7 @@ impl Dictionary for GD {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: Option<String>) -> Result<String> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: String) -> Result<String> {
     //let mut response = "".to_string();
     let src_lang = src_lang.as_ref();
     let target_lang = target_lang.as_ref();
@@ -149,8 +149,8 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
         .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
         .default_headers(headers)
         .proxy(proxy);
-    if let Some(e) = emulation {
-        client = client.emulation(e);
+    if emulation.chars().count() > 0 {
+        client = client.emulation(emulation);
     }
     let client = client.build()?;
     

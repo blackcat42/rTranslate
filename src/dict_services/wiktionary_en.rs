@@ -180,7 +180,7 @@ impl Dictionary for WDEn {
 }
 
 #[allow(unused_variables)]
-fn send_tr_request(selected_text: String, proxy: bool, emulation: Option<String>) -> Result<String> {
+fn send_tr_request(selected_text: String, proxy: bool, emulation: String) -> Result<String> {
     //let req_string = "https://en.wiktionary.org/w/index.php?action=raw".to_string();
     let req_string = format!("https://en.wiktionary.org/wiki/{}", selected_text.to_lowercase());
 
@@ -191,8 +191,8 @@ fn send_tr_request(selected_text: String, proxy: bool, emulation: Option<String>
         .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
         .default_headers(headers)
         .proxy(proxy);
-    if let Some(e) = emulation {
-        client = client.emulation(e);
+    if emulation.chars().count() > 0 {
+        client = client.emulation(emulation);
     }
     let client = client.build()?;
     

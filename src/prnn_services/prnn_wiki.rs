@@ -89,7 +89,7 @@ struct MediaItem {
     type: String
 }*/
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, _src_id: i64, proxy: bool, emulation: Option<String>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: Lang, _src_id: i64, proxy: bool, emulation: String) -> Result<Vec<String>> {
     
     //let req_string = format!("https://en.wiktionary.org/api/rest_v1/page/media-list/{}", selected_text.to_lowercase());
 
@@ -110,8 +110,8 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
             //.cookie_store(true)
             .gzip(true).proxy(proxy);
-        if let Some(e) = emulation {
-            client = client.emulation(e);
+        if emulation.chars().count() > 0 {
+            client = client.emulation(emulation);
         }
         let client = client.build()?;
 

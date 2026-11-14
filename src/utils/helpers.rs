@@ -1,3 +1,4 @@
+use debug_print::{debug_println as dprintln};
 use fltk::{
     app,
     dialog,
@@ -5,6 +6,7 @@ use fltk::{
     window::DoubleWindow,
     enums,
 };
+use std::io::Write;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::sync::{OnceLock, LazyLock};
@@ -56,6 +58,18 @@ pub fn screen_center() -> (i32, i32) {
 
 pub fn ui_scale(size: i32) -> i32 {
     (size as f32 * GLOBAL_SETTINGS.ui_scaling) as i32
+}
+
+pub fn parse_hex_to_rgb(hex: &str) -> Result<(u8, u8, u8), &'static str> {
+    let hex = hex.trim().trim_start_matches('#');
+    if hex.len() != 6 {
+        return Err("hex.len() != 6");
+    }
+
+    let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "R")?;
+    let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "G")?;
+    let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "B")?;
+    Ok((r, g, b))
 }
 
 
@@ -255,4 +269,35 @@ pub fn extract_detected_lang(mut text: String) -> (Option<String>, String) {
     text.replace_range(start..=end, "");
 
     (Some(language), text)
+}
+
+pub fn date_from_duration(d: std::time::Duration) -> (i64, u32, u32) {        
+    let days = (d.as_secs() / 86400) as i64;
+    let z = days + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = (z - era * 146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = (yoe as i64) + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = y + if m <= 2 { 1 } else { 0 };
+    (year, m as u32, d as u32)
+}
+
+pub fn try_copy_exclusive(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
+    dprintln!("{}", src.to_string_lossy());
+    dprintln!("{}", dst.to_string_lossy());
+    //return Ok(());
+    match std::fs::OpenOptions::new().write(true).create_new(true).open(dst) {
+        Ok(mut dst_file) => {
+            let mut src_file = std::fs::File::open(src)?;
+            std::io::copy(&mut src_file, &mut dst_file)?;
+            dst_file.flush()?;
+            Ok(())
+        }
+        Err(e) => Err(e.into()),
+    }
 }

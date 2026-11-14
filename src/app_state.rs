@@ -93,8 +93,8 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>, conn: Option<Connection>) -> Self {
-        let src_preprocessing_regex = if let Some(re_str_find) = &GLOBAL_SETTINGS.re_str_find 
-            && !re_str_find.is_empty() {
+        let re_str_find = &GLOBAL_SETTINGS.re_str_find;
+        let src_preprocessing_regex = if !re_str_find.is_empty() {
                 let re = Regex::new(re_str_find);
                 let re = re.unwrap_or_else(|e| {
                     let error_str = format!("settings.json re_str_find error: {}", e);
@@ -147,6 +147,9 @@ impl AppState {
                 app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
                 continue;
             }
+            if !value.enabled {
+                continue;
+            }
             let t: Result<Box<dyn Translator>> = match value.service_type {
                 ServiceType::Native => {
                     if value.uid == "tr_google" {
@@ -163,9 +166,8 @@ impl AppState {
                     }
                 },
                 ServiceType::Sidecar => {
-                    if let Some(command) = &value.command 
-                    && value.service_type == ServiceType::Sidecar
-                    && command.chars().count() > 0 {
+                    if value.service_type == ServiceType::Sidecar
+                    && !value.command.is_empty() {
                         sidecar_translator::ST::new(self.app_sender, value.clone())
                         .map(|t| Box::new(t) as Box<dyn Translator>)
                     } else {
@@ -173,7 +175,7 @@ impl AppState {
                     }
                 },
                 ServiceType::OpenAI => {
-                    if value.openai_url.is_some() && value.openai_model.is_some() {
+                    if !value.openai_url.is_empty() && !value.openai_model.is_empty() {
                         openai_translator::OA::new(self.app_sender, working_dir.clone(), value.clone())
                         .map(|t| Box::new(t) as Box<dyn Translator>)
                     } else {
@@ -201,6 +203,9 @@ impl AppState {
                 app_message(&format!("settings.json: Failed to parse uid({})", value.uid));
                 continue;
             }
+            if !value.enabled {
+                continue;
+            }
             let d: Result<Box<dyn Dictionary>> = match value.service_type {
                 ServiceType::Native => {
                     if value.uid == "dict_wiktionary_en" {
@@ -218,7 +223,7 @@ impl AppState {
                     .map(|d| Box::new(d) as Box<dyn Dictionary>)
                 },
                 ServiceType::DSLDict => {
-                    if value.dict_path.is_some() {
+                    if !value.dict_path.is_empty() {
                         user_dict::DSLDict::new(self.app_sender, value.clone())
                         .map(|d| Box::new(d) as Box<dyn Dictionary>)
                     } else {
@@ -246,11 +251,14 @@ impl AppState {
                 app_message("settings.json: Failed to parse uid");
                 panic!("Error");
             }
+            if !value.enabled {
+                continue;
+            }
 
             let tts: Result<Box<dyn TTService>> = if value.service_type == ServiceType::OpenAI {
                 openai_tts::OATTS::new(self.app_sender, value.clone())
                 .map(|d| Box::new(d) as Box<dyn TTService>)
-            } else if value.service_type == ServiceType::Sidecar && value.command.is_some() {
+            } else if value.service_type == ServiceType::Sidecar && !value.command.is_empty() {
                 nodejs_tts::NTTS::new(self.app_sender, value.clone())
                 .map(|d| Box::new(d) as Box<dyn TTService>)
             } else if value.service_type == ServiceType::Native && value.uid == "tts_fish" {
@@ -276,6 +284,13 @@ impl AppState {
             /*if let Some(path) = &value.path && path.chars().count() > 0 {
                 //
             } else*/ 
+             if !RE_UID.is_match(&value.uid) {
+                app_message("settings.json: Failed to parse uid");
+                panic!("Error");
+            }
+            if !value.enabled {
+                continue;
+            }
             let prnn: Result<Box<dyn PRNNService>> = if value.uid == "prnn_wiki" {
                 prnn_wiki::WP::new(self.app_sender, value.clone())
                 .map(|d| Box::new(d) as Box<dyn PRNNService>)
@@ -1030,8 +1045,9 @@ impl AppState {
         //remove hardcoded line-breaks
         let request_limit = GLOBAL_SETTINGS.source_text_max_length; //TODO: chunking, statusbar
 
+        let re_str_replace = &GLOBAL_SETTINGS.re_str_replace;
         let text = if let Some(re) = &self.src_preprocessing_regex 
-            && let Some(re_str_replace) = &GLOBAL_SETTINGS.re_str_replace {
+            && !re_str_replace.is_empty() {
                 re.replace_all(&text, re_str_replace).to_string()
         } else {
             text

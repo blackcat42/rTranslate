@@ -32,11 +32,10 @@ impl NTTS {
     pub fn new(s: fltk::app::Sender<AppEvent>, options: TTServiceOption) -> Result<Self> {
         //let (tx, rx) = mpsc::channel::<(String, i64)>();
         //let shared_receiver = Arc::new(Mutex::new(rx));
-        if let Some(command) = &options.command 
-        && command.chars().count() > 0
-        && let Some(args) = &options.args {
+        if options.command.chars().count() > 0
+        && !options.args.is_empty() {
             let is_running = Arc::new(AtomicBool::new(false));
-            Ok(Self { is_running, s, command: command.clone(), args: args.clone(), options})
+            Ok(Self { is_running, s, command: options.command.clone(), args: options.args.clone(), options})
         } else {
             Err(anyhow!("error: "))
         }

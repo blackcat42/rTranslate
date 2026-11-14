@@ -213,8 +213,11 @@ impl TranslPopupView {
         let flex_buttons = group::Flex::default().row();
 
         let mut translator_buttons: HashMap<String, fltk::button::RadioButton> = HashMap::new();
-        let btn_n = GLOBAL_SETTINGS.translators.len();
+        let btn_n = GLOBAL_SETTINGS.translators.iter().filter(|s| s.enabled).count();
         for qwe in GLOBAL_SETTINGS.translators.iter() {
+            if !qwe.enabled {
+                continue;
+            }
             let mut button = button::RadioButton::new(0, 0, ui_scale(180), ui_scale(25), &*qwe.name);
             let icon_path = if qwe.service_type == crate::settings::ServiceType::QTranslate {
                 format!(r"extensions/qtranslate/Services/{}/Service.ico", qwe.uid)
@@ -365,6 +368,9 @@ impl TranslPopupView {
 
 
         for srvc in GLOBAL_SETTINGS.tts_services.iter() {
+            if !srvc.enabled {
+                continue;
+            }
             for tts_voice in srvc.voices.iter() {
                 let name = format!("{}-{}", &*srvc.name, tts_voice);
                 tts_button.add(

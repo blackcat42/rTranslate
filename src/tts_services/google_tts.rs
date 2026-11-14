@@ -75,8 +75,8 @@ impl TTService for GTTS {
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_request_timeout))
             .gzip(true)
             .proxy(self.options.use_proxy);
-        if let Some(e) = &self.options.emulation {
-            client = client.emulation(e);
+        if self.options.emulation.chars().count() > 0 {
+            client = client.emulation(&self.options.emulation);
         }
         let client = client.build()?;
 

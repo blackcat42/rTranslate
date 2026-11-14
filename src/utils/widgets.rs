@@ -174,3 +174,27 @@ impl<T: DisplayExt> AutoHeightExt for T {
         }
     }
 }
+
+
+
+use fltk::window::Window;
+use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    GetWindowLongW, SetWindowLongW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
+};
+
+pub trait TaskbarExt {
+    fn show_with_taskbar(&mut self);
+}
+
+impl TaskbarExt for Window {
+    fn show_with_taskbar(&mut self) {
+        self.show();
+        let hwnd = self.raw_handle() as HWND;
+        unsafe {
+            let mut style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+            style &= !(WS_EX_TOOLWINDOW as i32);
+            SetWindowLongW(hwnd, GWL_EXSTYLE, style | (WS_EX_APPWINDOW as i32));
+        }
+    }
+}

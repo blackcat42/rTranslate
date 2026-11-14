@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 //use sys_locale::get_locale;
 use super::GLOBAL_SETTINGS;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 pub struct Locale {
     //TRAY MENU
     pub screen_ocr: String,
@@ -52,44 +52,116 @@ pub struct Locale {
     pub tts: String,
     //"send_to_dict",
     pub open_main_win: String,
+
+
+    pub s_make_backup_file: String,
+    pub s_save_and_restart: String,
+    pub s_cancel: String,
+    pub s_services_added: String,
+    pub s_delete_service: String,
+    pub s_enabled: String,
+    pub s_use_proxy: String,
+    pub s_type: String,
+
+    pub s_force_split_view: String,
+    pub s_markdown: String,
+    pub s_supports_language_detection: String,
+    pub s_api_key_requied: String,
+    pub s_reload_if_lang_changed: String,
+
+    pub s_c1: String,
+
+    pub s_c2: String,
+
+    pub s_c3: String,
+
+    pub s_general: String,
+    pub s_misc: String,
+    pub s_qtranslate_autoload: String,
+    pub s_use_google_token: String,
+    pub s_add_service_c: String,
+    pub s_proxy: String,
+    pub s_use_proxy_global: String,
+    pub s_enable_fltk_dpi: String,
+    pub s_enable_fltk_dpi_scaling_c: String,
+    pub s_ui_scaling: String,
+    pub s_ui_scaling_c: String,
+    pub s_text_bg_color_main: String,
+    pub s_popup_opacity: String,
+    pub s_no_toolips: String,
+    pub s_copy_button_action_c: String,
+    pub s_tab_general_hotkeys: String,
+    //"": "Translate",
+    //"": "Dictionary",
+    pub s_single_word_to_dict: String,
+    pub s_languages: String,
+    pub s_pinned_src_languages: String,
+    pub s_pinned_target_languages: String,
+    pub s_switch_target_lang: String,
+    pub s_switch_target_lang_c: String,
+    pub s_eng_accents: String,
+    pub s_eng_accents_all: String,
+    pub s_lang_allowed_values: String,
+    pub s_ext_service_unload_timeout: String,
+    pub s_http_throttling: String,
+    pub s_http_request_timeout: String,
+    pub s_openai_api_request_timeout: String,
+    pub s_openai_api_stream_request_timeout: String,
+    pub s_source_text_max_length: String,
+    pub s_source_text_max_length_c: String,
+    pub s_source_text_min_length: String,
+    pub s_dict_request_max_length: String,
+    pub s_history_max_entries: String,
+    pub s_history_max_entries_c: String,
+    pub s_tab_general_preproc: String,
+    pub s_preprocessing_re_str_find: String,
+    pub s_preprocessing_re_str_find_c: String,
+    pub s_preprocessing_re_str_replace: String,
+
+    pub s_ocr_note: String,
+    //"": "",
+    
 }
-impl Default for Locale {
-    fn default() -> Self {
-        Self {
-            screen_ocr: "Screen OCR".to_string(),
-            show_popup: "Show popup window".to_string(),
-            show_popup_dict: "Show dict. popup window".to_string(),
-            settings: "Settings".to_string(),
-            exit: "Exit".to_string(),
-            copy: "Copy".to_string(),
-            from: "From".to_string(),
-            to: "To".to_string(),
-            translate_refresh: "Translate / Refresh".to_string(),
-            send_to_dict: "Send to dictionary".to_string(),
-            play: "Play".to_string(),
-            download: "Download".to_string(),
-            add_to_fav: "Add to favorites".to_string(),
-            remove_from_fav: "Remove from fav.".to_string(),
-            recent_history: "Recent history".to_string(),
-            favorites: "Favorites".to_string(),
-            source_text: "Source (editable)".to_string(),
-            translation: "Translation".to_string(),
-            dictionary_entry: "Dictionary entry".to_string(),
-            prnn_cached: "Pronunciations (cached)".to_string(),
-            tts_cached: "TTS (cached)".to_string(),
-            translate: "Translate".to_string(),
-            translate_with: "Translate with".to_string(),
-            dictionary: "Dictionary".to_string(),
-            tts_engine_voice: "TTS (engine-voice)".to_string(),
-            pronunciation: "Pronunciation".to_string(),
-            close: "Close".to_string(),
-            refresh: "Refresh".to_string(),
-            lang: "Languages".to_string(),
-            tts: "TTS".to_string(),
-            open_main_win: "Open main window".to_string(),
-        }
-    }
-}
+
+//TODO: keys as default values macro
+
+// impl Default for Locale {
+//     fn default() -> Self {
+//         Self {
+//             screen_ocr: "Screen OCR".to_string(),
+//             show_popup: "Show popup window".to_string(),
+//             show_popup_dict: "Show dict. popup window".to_string(),
+//             settings: "Settings".to_string(),
+//             exit: "Exit".to_string(),
+//             copy: "Copy".to_string(),
+//             from: "From".to_string(),
+//             to: "To".to_string(),
+//             translate_refresh: "Translate / Refresh".to_string(),
+//             send_to_dict: "Send to dictionary".to_string(),
+//             play: "Play".to_string(),
+//             download: "Download".to_string(),
+//             add_to_fav: "Add to favorites".to_string(),
+//             remove_from_fav: "Remove from fav.".to_string(),
+//             recent_history: "Recent history".to_string(),
+//             favorites: "Favorites".to_string(),
+//             source_text: "Source (editable)".to_string(),
+//             translation: "Translation".to_string(),
+//             dictionary_entry: "Dictionary entry".to_string(),
+//             prnn_cached: "Pronunciations (cached)".to_string(),
+//             tts_cached: "TTS (cached)".to_string(),
+//             translate: "Translate".to_string(),
+//             translate_with: "Translate with".to_string(),
+//             dictionary: "Dictionary".to_string(),
+//             tts_engine_voice: "TTS (engine-voice)".to_string(),
+//             pronunciation: "Pronunciation".to_string(),
+//             close: "Close".to_string(),
+//             refresh: "Refresh".to_string(),
+//             lang: "Languages".to_string(),
+//             tts: "TTS".to_string(),
+//             open_main_win: "Open main window".to_string(),
+//         }
+//     }
+// }
 
 
 pub static LOCALIZATION: LazyLock<Locale> = LazyLock::new(|| {
@@ -121,5 +193,17 @@ pub static LOCALIZATION: LazyLock<Locale> = LazyLock::new(|| {
 macro_rules! t {
     ($key:ident) => {
         &$crate::utils::i18n::LOCALIZATION.$key
+    };
+}
+#[macro_export]
+macro_rules! t_s1 {
+    ($key:ident) => {
+        &(" ".to_string() + &$crate::utils::i18n::LOCALIZATION.$key)
+    };
+}
+#[macro_export]
+macro_rules! t_s2 {
+    ($key:ident) => {
+        &("  ".to_string() + &$crate::utils::i18n::LOCALIZATION.$key)
     };
 }

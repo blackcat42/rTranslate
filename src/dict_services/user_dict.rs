@@ -35,14 +35,14 @@ pub struct DSLDict {
 
 impl DSLDict {
     pub fn new(app_sender: fltk::app::Sender<AppEvent>, options: DictOption) -> Result<Self> {
-        if let Some(dict_path) = &options.dict_path && dict_path.chars().count() > 0 {
+        if options.dict_path.chars().count() > 0 {
             let re_uid = Regex::new(r"^\w+$").unwrap();
             if !re_uid.is_match(&options.uid) {
                 app_message("settings.json: Failed to parse uid");
                 panic!("settings.json: Failed to parse uid");
             } 
             let is_running = Arc::new(AtomicBool::new(false));
-            Ok(Self {is_running, app_sender, dict_path: dict_path.clone(), options})
+            Ok(Self {is_running, app_sender, dict_path: options.dict_path.clone(), options})
         } else {
             Err(anyhow!("error: "))
         }

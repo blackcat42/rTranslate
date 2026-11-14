@@ -33,26 +33,21 @@ impl OA {
     ) -> Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
         let is_processing = Arc::new(AtomicBool::new(false));
-        let prompt = if let Some(f) = &options.openai_prompt {
-            let contents = std::fs::read_to_string(working_dir.join(f));
-            if let Ok(ref c) = contents {
-                c.to_string()
-            } else {
-                "Translate to <TARGET_LANG>: ".to_string()
-            }
+        let prompt = if let Ok(ref c) = std::fs::read_to_string(working_dir.join(&options.openai_prompt)) {
+            c.to_string()
         } else {
             "Translate to <TARGET_LANG>: ".to_string()
         };
 
-        if let Some(model) = &options.openai_model
-        && let Some(base_url) = &options.openai_url {
+        if options.openai_model.chars().count() > 0
+        && options.openai_url.chars().count() > 0 {
             Ok(Self {
                 is_running, 
                 is_processing, 
                 app_sender, 
                 kill_sender: None, 
-                base_url: base_url.clone(),  
-                model: model.clone(), 
+                base_url: options.openai_url.clone(),  
+                model: options.openai_model.clone(), 
                 prompt,
                 options
             })
@@ -227,7 +222,7 @@ fn send_tr_request_stream(
     src_lang: Lang, 
     target_lang: Lang, 
     proxy: bool, 
-    emulation: Option<String>, 
+    emulation: String, 
     base_url: &str, 
     api_key: &str, 
     model: &str, 
@@ -273,8 +268,8 @@ fn send_tr_request_stream(
         .default_headers(headers)
         .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_stream_request_timeout))
         .proxy(proxy);
-    if let Some(e) = emulation {
-        client = client.emulation(e);
+    if emulation.chars().count() > 0 {
+        client = client.emulation(emulation);
     }
     if cookies {
         let cookie_path = format!(
@@ -334,7 +329,7 @@ fn send_tr_request(
     src_lang: Lang, 
     target_lang: Lang, 
     proxy: bool, 
-    emulation: Option<String>, 
+    emulation: String, 
     base_url: &str, 
     api_key: &str, 
     model: &str, 
@@ -377,8 +372,8 @@ fn send_tr_request(
         .default_headers(headers)
         .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_stream_request_timeout))
         .proxy(proxy);
-    if let Some(e) = emulation {
-        client = client.emulation(e);
+    if emulation.chars().count() > 0 {
+        client = client.emulation(emulation);
     }
     if cookies {
         let cookie_path = format!(

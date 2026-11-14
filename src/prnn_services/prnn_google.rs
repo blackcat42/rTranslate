@@ -80,7 +80,7 @@ impl PRNNService for GP {
 }
 
 
-fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, _src_id: i64, proxy: bool, emulation: Option<String>) -> Result<Vec<String>> {
+fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: String, src_lang: &str, _src_id: i64, proxy: bool, emulation: String) -> Result<Vec<String>> {
 
     let selected_text = selected_text.to_lowercase();
     let first_two_chars: String = selected_text.chars().take(2).collect();
@@ -121,8 +121,8 @@ fn send_pr_request(app_sender: fltk::app::Sender<AppEvent>, selected_text: Strin
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
             .gzip(true)
             .proxy(proxy);
-        if let Some(e) = emulation {
-            client = client.emulation(e);
+        if emulation.chars().count() > 0 {
+            client = client.emulation(emulation);
         }
         let client = client.build()?;
 

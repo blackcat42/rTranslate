@@ -42,10 +42,8 @@ pub struct ST {
 impl ST {
     pub fn new(s: fltk::app::Sender<AppEvent>, options: TranslatorOption) -> Result<Self> {
 
-        if let Some(command) = &options.command 
-        && command.chars().count() > 0
-        && let Some(args) = &options.args 
-        && let Some(reload_if_lang_changed) = &options.reload_if_lang_changed {
+        if options.command.chars().count() > 0
+        && !options.args.is_empty() {
             let (tx, rx) = mpsc::channel::<Option<(String, i64, Lang, Lang)>>();
             let shared_receiver = Arc::new(Mutex::new(rx));
             let is_running = Arc::new(AtomicBool::new(false));
@@ -60,11 +58,11 @@ impl ST {
                 current_src_id, 
                 current_src_text, 
                 s, 
-                command: command.clone(), 
-                args: args.clone(), 
+                command: options.command.clone(), 
+                args: options.args.clone(), 
                 src_lang, 
                 target_lang, 
-                reload_if_lang_changed: *reload_if_lang_changed,
+                reload_if_lang_changed: options.reload_if_lang_changed,
                 options
             })
         } else {

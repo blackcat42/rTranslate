@@ -43,6 +43,7 @@ use crate::utils::widgets::TooltipExt;*/
 use super::GLOBAL_SETTINGS;
 use super::UICONFIG;
 use super::t;
+use super::t_s1;
 
 mod dict_popup;
 use dict_popup::{DictPopupView};
@@ -50,10 +51,13 @@ mod transl_popup;
 use transl_popup::{TranslPopupView};
 mod main_win;
 use main_win::{MainWinView};
+pub mod settings_win;
+use settings_win::SettingsWinView;
 
 pub struct AppView {
     //app_sender: fltk::app::Sender<AppEvent>,
     pub main_win: MainWinView,
+    pub settings_win: Option<SettingsWinView>,
     pub transl_popup: TranslPopupView,
     pub dict_popup: DictPopupView,
     pub src_buf: text::TextBuffer,
@@ -108,6 +112,7 @@ impl AppView {
         tooltip_win.hide();
 
         let mut main_win = MainWinView::new(app_sender);
+        let settings_win = None;
         let dict_popup = DictPopupView::new(app_sender, main_win.window.clone(), tooltip_win.clone(), tooltip_text.clone());
         let mut transl_popup = TranslPopupView::new(app_sender, main_win.window.clone(), dict_popup.win_popup_dict.clone(), tooltip_win.clone(), tooltip_text.clone());
         
@@ -124,6 +129,7 @@ impl AppView {
             dict_popup,
             transl_popup,
             main_win,
+            settings_win,
             src_buf,
             dict_buf,
             dict_buf_h,

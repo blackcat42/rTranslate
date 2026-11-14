@@ -33,20 +33,20 @@ impl OATTS {
         s: fltk::app::Sender<AppEvent>, 
         options: TTServiceOption
     ) -> Result<Self> {
-        let response_format = if let Some(f) = &options.openai_response_format {
-            f
+        let response_format = if options.openai_response_format.chars().count() > 0 {
+            &options.openai_response_format
         } else {
             "mp3"
         };
 
-        if let Some(base_url) = &options.openai_url 
-        && let Some(model) = &options.openai_model {
+        if options.openai_url.chars().count() > 0
+        && options.openai_model.chars().count() > 0 {
             let is_running = Arc::new(AtomicBool::new(false));
             Ok(Self { 
                 is_running,
                 s,
-                base_url: base_url.clone(),
-                model: model.clone(),
+                base_url: options.openai_url.clone(),
+                model: options.openai_model.clone(),
                 response_format: response_format.to_string(),
                 options
             })
@@ -114,8 +114,8 @@ impl TTService for OATTS {
             .timeout(Duration::from_secs(GLOBAL_SETTINGS.openai_api_request_timeout))
             .gzip(true)
             .proxy(self.options.use_proxy);
-        if let Some(e) = &self.options.emulation {
-            client = client.emulation(e);
+        if self.options.emulation.chars().count() > 0 {
+            client = client.emulation(&self.options.emulation);
         }
         let client = client.build()?;
 

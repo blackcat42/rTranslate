@@ -117,6 +117,9 @@ impl MainWinView {
         let mut transl_choice = fltk::menu::Choice::default().with_size(ui_scale(30), ui_scale(10)).with_label(t!(translate_with)).with_align(fltk::enums::Align::TopLeft);
 
         for transl_ch in GLOBAL_SETTINGS.translators.iter() {
+            if !transl_ch.enabled {
+                continue;
+            }
             transl_choice.add(
                 &transl_ch.name,
                 fltk::enums::Shortcut::None,
@@ -148,6 +151,9 @@ impl MainWinView {
         let mut dict_choice = fltk::menu::Choice::default().with_size(ui_scale(30), ui_scale(10)).with_label(t!(dictionary)).with_align(fltk::enums::Align::TopLeft);
 
         for dict_ch in GLOBAL_SETTINGS.dictionaries.iter() {
+            if !dict_ch.enabled {
+                continue;
+            }
             dict_choice.add(
                 &dict_ch.name,
                 fltk::enums::Shortcut::None,
@@ -178,6 +184,9 @@ impl MainWinView {
         let mut tts_choice = fltk::menu::Choice::default().with_size(ui_scale(50), ui_scale(10)).with_label(t!(tts_engine_voice)).with_align(fltk::enums::Align::TopLeft);
 
         for srvc in GLOBAL_SETTINGS.tts_services.iter() {
+            if !srvc.enabled {
+                continue;
+            }
             for tts_voice in srvc.voices.iter() {
                 let name = format!("{}-{}", &*srvc.name, tts_voice);
                 tts_choice.add(
@@ -210,6 +219,9 @@ impl MainWinView {
         let mut prnn_choice = fltk::menu::Choice::default().with_size(ui_scale(50), ui_scale(10)).with_label(t!(pronunciation)).with_align(fltk::enums::Align::TopLeft);
 
         for qwe in GLOBAL_SETTINGS.prnn_services.iter() {
+            if !qwe.enabled {
+                continue;
+            }
             let name = (*qwe.name).to_string();
             prnn_choice.add(
                 &name,

@@ -42,6 +42,10 @@ Fully portable. Run install_extensions.bat to download the kokoro and bergamot m
 
 See GitHub Actions workflow.
 
+## AI/LLM Policy
+
+The use of LLMs in this project is strictly limited. No AI is used to generate architecture or core features, and over 80-90% of the codebase is manually written. Any AI-generated code is reviewed, tested, and rewritten as needed.
+
 ## Some of the 3rd party content used in this repo:
 
 - **bergamot-translate:** github.com/browsermt/bergamot-translator

@@ -99,7 +99,7 @@ impl Translator for GT {
 }
 
 
-fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: Option<String>) -> Result<(String, Lang)> {
+fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, proxy: bool, emulation: String) -> Result<(String, Lang)> {
     let mut response = "".to_string();
 
     let src_lang_ref = if src_lang != Lang::Auto {
@@ -126,8 +126,8 @@ fn send_tr_request(selected_text: String, src_lang: Lang, target_lang: Lang, pro
         .timeout(Duration::from_secs(GLOBAL_SETTINGS.http_request_timeout))
         .default_headers(headers)
         .proxy(proxy);
-    if let Some(e) = emulation {
-        client = client.emulation(e);
+    if emulation.chars().count() > 0 {
+        client = client.emulation(emulation);
     }
     let client = client.build()?;
     

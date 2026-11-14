@@ -47,11 +47,15 @@ impl Translator for QT {
                 let name = self.get_name().to_string();
                 let uid = self.get_uid().to_string();
                 let use_proxy = self.options.use_proxy;
-                let emulation = self.options.emulation.clone();
+                let emulation = if self.options.emulation.chars().count() > 0 {
+                    Some(self.options.emulation.clone())
+                } else {
+                    None
+                };
                 let cookies = self.options.cookies; 
                 move || {
                     is_running.store(true, Ordering::SeqCst);
-                                        
+
                     let transl_result = send_tr_request(&uid, text.clone(), src_lang.clone(), target_lang.clone(), use_proxy, emulation, cookies);
                     match transl_result {
                         Ok(t_text) => {
