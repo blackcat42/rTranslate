@@ -574,18 +574,28 @@ fn main() {
                             } else {
                                 break 'hotkey_arm;
                             }
-                            match get_selected_text() {
-                                Ok(selected_text) => {
-                                    app_sender.send(AppEvent::TranslateText(selected_text, is_dict));
-                                },
-                                Err(_) => {
-                                    app_view.set_status("An error occurred while getting the selected text", true, false);
-                                    dprintln!("An error occurred while getting the selected text");
+                            if let Some(w) = app::focus() {
+                                if let Some(display) = fltk::text::TextDisplay::from_dyn_widget(&w)
+                                && let Some(buffer) = display.buffer() {
+                                    let selected = buffer.selection_text();
+                                    if !selected.is_empty() {
+                                        app_sender.send(AppEvent::TranslateText(selected, is_dict, false));
+                                    }
+                                }
+                            } else {
+                                match get_selected_text() {
+                                    Ok(selected_text) => {
+                                        app_sender.send(AppEvent::TranslateText(selected_text, is_dict, true));
+                                    },
+                                    Err(_) => {
+                                        app_view.set_status("An error occurred while getting the selected text", true, false);
+                                        dprintln!("An error occurred while getting the selected text");
+                                    }
                                 }
                             }
                         }
                     }
-                    AppEvent::TranslateText(text, mut is_dict) => 'translate_text_arm: {
+                    AppEvent::TranslateText(text, mut is_dict, hotspot) => 'translate_text_arm: {
                         if GLOBAL_SETTINGS.single_word_to_dict 
                            && !is_dict 
                            && text.trim().unicode_words().count() == 1 {
@@ -594,7 +604,7 @@ fn main() {
                         if let Err(set_src_error) = app_state.set_src_text(&text, is_dict) {
                             app_view.set_status(set_src_error.to_string().as_str(), true, is_dict);
                         } else {
-                            app_view.show_popup(is_dict, true);
+                            app_view.show_popup(is_dict, hotspot);
                             //app_view.clear_ui(is_dict); //clear status, title and translation buffer
                             if app_state.split_view {
                                  break 'translate_text_arm;

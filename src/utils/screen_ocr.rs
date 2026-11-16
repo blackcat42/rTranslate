@@ -204,7 +204,7 @@ impl ScreenOCR {
         btn_translate.set_callback({
             let ocr_text_buf = ocr_text_buf.clone();
             move |_| {
-                app_sender.send(AppEvent::TranslateText(ocr_text_buf.text(), false));
+                app_sender.send(AppEvent::TranslateText(ocr_text_buf.text(), false, true));
             }
         });
         btn_exit.set_callback({

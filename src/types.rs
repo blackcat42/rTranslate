@@ -41,7 +41,7 @@ pub enum AppEvent {
     PRNNSave((i64, String, String)),
     ToggleFav(bool),
 
-    TranslateText(String, bool),
+    TranslateText(String, bool, bool),
     Translate(bool, bool, bool),
     RequestDictEntry(bool, bool, bool),
     SendToDict(),
