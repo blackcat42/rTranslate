@@ -187,7 +187,7 @@ impl TranslPopupView {
         translate_button.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::Translate(false, false, true));
+                    s.send(AppEvent::TranslateExistingText(false, false, true));
                 }
         });
         let _space_r = Frame::default();
@@ -241,7 +241,7 @@ impl TranslPopupView {
                 let s = app_sender;
                 move |_b| {
                     s.send(AppEvent::SetTranslator(qwe.uid.clone()));
-                    s.send(AppEvent::Translate(false, false, false));
+                    s.send(AppEvent::TranslateExistingText(false, false, false));
                 }
             });
             translator_buttons.insert(qwe.uid.clone(), button);
@@ -291,7 +291,7 @@ impl TranslPopupView {
                     let lng = lng.clone();
                     move |_b| {
                         s.send(AppEvent::SetSrcLang(lng.clone()));
-                        s.send(AppEvent::Translate(false, false, false));
+                        s.send(AppEvent::TranslateExistingText(false, false, false));
                     }
                 },
             );
@@ -308,7 +308,7 @@ impl TranslPopupView {
                     let lng = lng.clone();
                     move |_b| {
                         s.send(AppEvent::SetSrcLang(lng.clone()));
-                        s.send(AppEvent::Translate(false, false, false));
+                        s.send(AppEvent::TranslateExistingText(false, false, false));
                     }
                 },
             );
@@ -334,7 +334,7 @@ impl TranslPopupView {
                     let lng = lng.clone();
                     move |_b| {
                         s.send(AppEvent::SetTargetLang(lng.clone()));
-                        s.send(AppEvent::Translate(false, false, false));
+                        s.send(AppEvent::TranslateExistingText(false, false, false));
                     }
                 },
             );
@@ -350,7 +350,7 @@ impl TranslPopupView {
                     let lng = lng.clone();
                     move |_b| {
                         s.send(AppEvent::SetTargetLang(lng.clone()));
-                        s.send(AppEvent::Translate(false, false, false));
+                        s.send(AppEvent::TranslateExistingText(false, false, false));
                     }
                 },
             );
@@ -469,7 +469,7 @@ impl TranslPopupView {
         refresh_button.set_callback({
             let s = app_sender;
             move |_button| {
-                s.send(AppEvent::Translate(false, true, false));
+                s.send(AppEvent::TranslateExistingText(false, true, false));
             }
         });
         

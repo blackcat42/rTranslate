@@ -620,7 +620,8 @@ fn main() {
                             }
                         }
                     }
-                    AppEvent::Translate(mut fail_if_not_exist, force, check_buf) => 'translate_arm: {
+                    AppEvent::TranslateExistingText(mut fail_if_not_exist, force, check_buf) => 'translate_arm: {
+                        //if triggered by translatebutton near to TextEditor: check_buf == true
                         //app_view.clear_ui(false);
                         dbg!(app_state.split_view);
                         dbg!(check_buf);

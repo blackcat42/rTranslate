@@ -497,7 +497,7 @@ impl AppState {
             supports_language_detection = tr.get_opts().supports_language_detection;
         }
 
-        let src_lang = if self.selected_src == Lang::Auto && !supports_language_detection {
+        let lng_detected = {
             let info = whatlang::detect(selected_text.as_str()).ok_or(anyhow!("whatlang error"))?;
             if info.is_reliable() {                
                 //let qwe = format!("Language detected as {}", info.lang().eng_name());
@@ -527,11 +527,16 @@ impl AppState {
             } else {
                 self.app_sender.send(AppEvent::SetStatus("selected text is too short to detect the language; previously selected lang-pair was used".into()));
             }*/
+        };
+        
+
+        let src_lang = if self.selected_src == Lang::Auto && !supports_language_detection {
+            lng_detected.clone()
         } else {
             self.selected_src.clone()
         };
 
-        if src_lang == target_lang && GLOBAL_SETTINGS.switch_target_lang {
+        if lng_detected != Lang::Auto && lng_detected == target_lang && GLOBAL_SETTINGS.switch_target_lang {
             target_lang = if let Some(value) = GLOBAL_SETTINGS.pinned_src_languages.iter().find(|&s| s != "auto") {
                 Lang::from_str(value).unwrap_or(Lang::En)
             } else {

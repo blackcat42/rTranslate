@@ -42,7 +42,7 @@ pub enum AppEvent {
     ToggleFav(bool),
 
     TranslateText(String, bool, bool),
-    Translate(bool, bool, bool),
+    TranslateExistingText(bool, bool, bool),
     RequestDictEntry(bool, bool, bool),
     SendToDict(),
     TTString(Option<String>, Option<String>),

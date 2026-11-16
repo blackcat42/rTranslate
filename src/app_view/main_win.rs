@@ -86,7 +86,7 @@ impl MainWinView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetSrcLang(lng.clone()));
-                        s.send(AppEvent::Translate(true, false, false));
+                        s.send(AppEvent::TranslateExistingText(true, false, false));
                     }
                 },
             ); 
@@ -102,7 +102,7 @@ impl MainWinView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetTargetLang(lng.clone()));
-                        s.send(AppEvent::Translate(true, false, false));
+                        s.send(AppEvent::TranslateExistingText(true, false, false));
                     }
                 },
             );
@@ -128,7 +128,7 @@ impl MainWinView {
                     let s = app_sender;
                     move |_b| {
                         s.send(AppEvent::SetTranslator(transl_ch.uid.clone()));
-                        s.send(AppEvent::Translate(true, false, false));
+                        s.send(AppEvent::TranslateExistingText(true, false, false));
                     }
                 },
             );
@@ -138,7 +138,7 @@ impl MainWinView {
         run_transl_btn_main.set_callback({
                 let s = app_sender;
                 move |_b| {
-                    s.send(AppEvent::Translate(false, true, true));
+                    s.send(AppEvent::TranslateExistingText(false, true, true));
                 }
         });
         col_left_row_tr.fixed(&run_transl_btn_main, ui_scale(150));
