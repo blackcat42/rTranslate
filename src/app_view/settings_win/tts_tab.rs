@@ -42,6 +42,7 @@ pub struct TTSTab {
     input_api_key_url: Input,
     input_openai_model: Input,
     input_openai_response_format: Input,
+    input_openai_extra: Input,
 
     input_emulation: Input,
     input_use_proxy: fltk::button::CheckButton,
@@ -103,6 +104,8 @@ impl TTSTab {
         right_form.fixed(&input_openai_model, 20);
         let input_openai_response_format = Input::default().with_label("[OpenAI] response format:");
         right_form.fixed(&input_openai_response_format, 20);
+        let input_openai_extra = Input::default().with_label("[OpenAI] extra (json):");
+        right_form.fixed(&input_openai_extra, 20);
         let input_speed = Input::default().with_label("[OpenAI] speed:");
         right_form.fixed(&input_speed, 20);
 
@@ -139,6 +142,7 @@ impl TTSTab {
             input_openai_model,
             input_openai_response_format,
             input_speed,
+            input_openai_extra,
             
             right_form,
         }
@@ -164,6 +168,7 @@ impl TTSTab {
             let mut input_openai_api_key = self.input_openai_api_key.clone();
             let mut input_openai_model = self.input_openai_model.clone();
             let mut input_openai_response_format = self.input_openai_response_format.clone();
+            let mut input_openai_extra = self.input_openai_extra.clone();
             let mut input_speed = self.input_speed.clone();
             let mut input_emulation = self.input_emulation.clone();
             let mut input_use_proxy = self.input_use_proxy.clone();
@@ -199,6 +204,7 @@ impl TTSTab {
                     input_openai_api_key.set_value(&item.openai_api_key);
                     input_openai_model.set_value(&item.openai_model);
                     input_openai_response_format.set_value(&item.openai_response_format);
+                    input_openai_extra.set_value(&serde_json::to_string(&item.openai_extra).unwrap_or("".to_string()));
 
                     input_speed.set_value(&item.speed.to_string());
 
@@ -300,7 +306,19 @@ impl TTSTab {
             |item, v| item.openai_response_format = v.to_string(), 
             false
         );
-
+        self.input_openai_extra.set_callback({
+            let data = data_tts.clone();
+            let browser = self.browser.clone();             
+            move |i| {
+                let idx = browser.value();
+                let json = &i.value();
+                if idx > 0 {
+                    let mut items = data.borrow_mut();
+                    let arr_idx = (idx - 1) as usize;
+                    items[arr_idx].openai_extra = serde_json::from_str(json).unwrap_or(serde_json::Map::new());
+                }
+            }
+        });
 
 
         bind_input_clbck(

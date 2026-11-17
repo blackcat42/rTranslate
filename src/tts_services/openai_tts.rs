@@ -7,6 +7,7 @@ use crate::settings::TTServiceOption;
 use std::env;
 use std::io::Write;
 use serde::Serialize;
+use serde_json::{Map, Value};
 use std::fs::File;
 use super::GLOBAL_SETTINGS;
 use std::{time::Duration};
@@ -64,6 +65,8 @@ struct TTSRequest {
     voice: String,
     input: String,
     response_format: String,
+    #[serde(flatten, skip_serializing_if = "Map::is_empty")]
+    extra: Map<String, Value>,
 }
 
 impl TTService for OATTS {
@@ -92,6 +95,7 @@ impl TTService for OATTS {
             voice: voice.clone(),
             input: text,
             response_format: self.response_format.clone(),
+            extra: self.options.openai_extra.clone(),
         };
         let body = serde_json::to_string(&body)?;
 

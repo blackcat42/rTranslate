@@ -11,6 +11,7 @@ use std::io::{BufRead, BufReader};
 use super::GLOBAL_SETTINGS;
 use crate::utils::helpers::extract_detected_lang;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::str::FromStr;
 use crate::utils::rt_request;
 use anyhow::{anyhow, Result};
@@ -24,6 +25,7 @@ pub struct OA {
     base_url: String,
     model: String,
     prompt: String,
+    system_prompt: Option<String>,
     options: TranslatorOption
 }
 
@@ -33,10 +35,20 @@ impl OA {
     ) -> Result<Self> {
         let is_running = Arc::new(AtomicBool::new(false));
         let is_processing = Arc::new(AtomicBool::new(false));
-        let prompt = if let Ok(ref c) = std::fs::read_to_string(working_dir.join(&options.openai_prompt)) {
+
+        let prompt = if !options.openai_prompt.ends_with(".json") 
+        && !options.openai_prompt.ends_with(".json5") 
+        && let Ok(ref c) = std::fs::read_to_string(working_dir.join(&options.openai_prompt)) {
             c.to_string()
         } else {
             "Translate to <TARGET_LANG>: ".to_string()
+        };
+        
+        let system_prompt = if options.openai_prompt.ends_with(".json") 
+        || options.openai_prompt.ends_with(".json5") {
+            std::fs::read_to_string(working_dir.join(&options.openai_prompt)).ok()
+        } else {
+            None
         };
 
         if options.openai_model.chars().count() > 0
@@ -49,6 +61,7 @@ impl OA {
                 base_url: options.openai_url.clone(),  
                 model: options.openai_model.clone(), 
                 prompt,
+                system_prompt,
                 options
             })
         } else {
@@ -102,8 +115,10 @@ impl Translator for OA {
                 let api_key = self.options.openai_api_key.clone();
                 let model = self.model.clone();
                 let prompt = self.prompt.clone();
+                let system_prompt = self.system_prompt.clone();
                 let stream = self.options.stream;
                 let cookies = self.options.cookies;
+                let extra = self.options.openai_extra.clone();
 
                 move || {
                     is_running.store(true, Ordering::SeqCst);
@@ -122,7 +137,9 @@ impl Translator for OA {
                             &api_key, 
                             &model, 
                             &prompt,
-                            cookies
+                            system_prompt,
+                            cookies,
+                            extra
                         )
                     } else {
                         send_tr_request(
@@ -137,7 +154,9 @@ impl Translator for OA {
                             &api_key, 
                             &model, 
                             &prompt,
-                            cookies
+                            system_prompt,
+                            cookies,
+                            extra
                         )
                     };
                     is_processing.store(false, Ordering::SeqCst);
@@ -177,7 +196,7 @@ impl Translator for OA {
 
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Message {
     role: String,
     content: String,
@@ -188,6 +207,8 @@ struct ChatRequest {
     model: String,
     messages: Vec<Message>,
     stream: bool,
+    #[serde(flatten, skip_serializing_if = "Map::is_empty")]
+    extra: Map<String, Value>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -227,7 +248,9 @@ fn send_tr_request_stream(
     api_key: &str, 
     model: &str, 
     prompt: &str,
-    cookies: bool
+    system_prompt: Option<String>,
+    cookies: bool,
+    extra: serde_json::Map<String, Value>
 ) -> Result<(String, Lang)> {
 
     let src_lang_ref = if src_lang != Lang::Auto {
@@ -240,23 +263,44 @@ fn send_tr_request_stream(
     //let src_lang_ref = serde_json::to_string(src_lang_ref)?;
     //let target_lang = serde_json::to_string(target_lang.as_ref())?;
 
-    let prompt = prompt
+    
+
+    //dprintln!("{}", &prompt);
+
+    let messages = if let Some(s_prompt) = system_prompt 
+        && let Ok(s_message) = json5::from_str(
+            s_prompt.replace("\r\n", "\n").replace("<RT_TARGET_LANG>", target_lang.name()).as_str()
+        ) {
+        //let s_prompt = json5::from_str(&s_prompt).ok(); 
+
+        vec![
+            s_message,
+            Message {
+                role: "user".to_string(),
+                content: selected_text.clone(),
+            }
+        ]
+    } else {
+        let prompt = prompt
         .replace("\r\n", "\n")
         .replace("<RT_TARGET_LANG>", target_lang.name())
         .replace("<RT_TEXT>", &selected_text);
-
-    dprintln!("{}", &prompt);
+    
+        vec![Message {
+            role: "user".to_string(),
+            content: prompt,
+        }]
+    };
 
     let body = ChatRequest {
         model: model.to_string(),
-        messages: vec![Message {
-            role: "user".to_string(),
-            content: prompt,
-        }],
+        messages,
         stream: true,
+        extra
     };
     let body = serde_json::to_string(&body)?;
-
+    dbg!(&body);
+    //panic!("");
 
     let mut headers = std::collections::HashMap::new();
     headers.insert("Authorization".into(), format!("Bearer {}", api_key));
@@ -334,7 +378,9 @@ fn send_tr_request(
     api_key: &str, 
     model: &str, 
     prompt: &str,
-    cookies: bool
+    system_prompt: Option<String>,
+    cookies: bool,
+    extra: serde_json::Map<String, Value>
 ) -> Result<(String, Lang)> {
 
     let src_lang_ref = if src_lang != Lang::Auto {
@@ -344,20 +390,37 @@ fn send_tr_request(
     };
     app_sender.send(AppEvent::SetWaitingWithStream(false));
 
-    let prompt = prompt
+    
+
+    //dprintln!("{}", &prompt);
+
+    let messages = if let Some(s_prompt) = system_prompt 
+    && let Ok(s_message) = json5::from_str(
+        s_prompt.replace("\r\n", "\n").replace("<RT_TARGET_LANG>", target_lang.name()).as_str()
+    ) {
+        vec![
+            s_message,
+            Message {
+                role: "user".to_string(),
+                content: selected_text.clone(),
+            }
+        ]
+    } else {
+        let prompt = prompt
         .replace("\r\n", "\n")
         .replace("<RT_TARGET_LANG>", target_lang.name())
         .replace("<RT_TEXT>", &selected_text);
-
-    dprintln!("{}", &prompt);
-
-    let body = ChatRequest {
-        model: model.to_string(),
-        messages: vec![Message {
+    
+        vec![Message {
             role: "user".to_string(),
             content: prompt,
-        }],
+        }]
+    };
+    let body = ChatRequest {
+        model: model.to_string(),
+        messages,
         stream: false,
+        extra
     };
     let body = serde_json::to_string(&body)?;
 

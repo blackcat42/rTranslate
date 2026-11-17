@@ -40,6 +40,7 @@ pub struct TrTab {
     input_api_key_url: Input,
     input_openai_model: Input,
     input_openai_prompt: Input,
+    input_openai_extra: Input,
     input_stream: fltk::button::CheckButton,
     input_cookies: fltk::button::CheckButton,
     input_force_split_view: fltk::button::CheckButton,
@@ -147,6 +148,8 @@ impl TrTab {
             right_form.fixed(&input_openai_prompt, 20);
             let input_stream = fltk::button::CheckButton::default().with_label("Stream output (if supported)");
             right_form.fixed(&input_stream, 20);
+            let input_openai_extra = Input::default().with_label("[OpenAI] extra (json):");
+            right_form.fixed(&input_openai_extra, 20);
 
             let input_command = Input::default().with_label("[Sidecar] Command:");
             right_form.fixed(&input_command, 20);
@@ -189,6 +192,7 @@ impl TrTab {
                 input_openai_api_key,
                 input_openai_model,
                 input_openai_prompt,
+                input_openai_extra,
                 input_stream,
                 input_cookies,
                 input_force_split_view,
@@ -221,6 +225,7 @@ impl TrTab {
                 let mut input_openai_api_key = self.input_openai_api_key.clone();
                 let mut input_openai_model = self.input_openai_model.clone();
                 let mut input_openai_prompt = self.input_openai_prompt.clone();
+                let mut input_openai_extra = self.input_openai_extra.clone();
                 let mut input_stream = self.input_stream.clone();
                 let mut input_cookies = self.input_cookies.clone();
                 let mut input_force_split_view = self.input_force_split_view.clone();
@@ -262,6 +267,7 @@ impl TrTab {
                         input_openai_api_key.set_value(&item.openai_api_key);
                         input_openai_model.set_value(&item.openai_model);
                         input_openai_prompt.set_value(&item.openai_prompt);
+                        input_openai_extra.set_value(&serde_json::to_string(&item.openai_extra).unwrap_or("".to_string()));
 
                         input_command.set_value(&item.command);
                         input_args.set_value(&vec_to_csv(&item.args));
@@ -400,6 +406,19 @@ impl TrTab {
                 |item, v| item.openai_prompt = v.to_string(), 
                 false
             );
+            self.input_openai_extra.set_callback({
+                let data = data_tr.clone();
+                let browser = self.browser.clone();             
+                move |i| {
+                    let idx = browser.value();
+                    let json = &i.value();
+                    if idx > 0 {
+                        let mut items = data.borrow_mut();
+                        let arr_idx = (idx - 1) as usize;
+                        items[arr_idx].openai_extra = serde_json::from_str(json).unwrap_or(serde_json::Map::new());
+                    }
+                }
+            });
 
 
 
@@ -456,6 +475,7 @@ impl TrTab {
                     openai_model: "".to_string(),
                     openai_prompt: "".to_string(),
                     stream: true,
+                    openai_extra: serde_json::Map::new(),
                     api_key_requied: false,
                     api_key_url: "".to_string(),
                     markdown: false,

@@ -264,6 +264,8 @@ pub struct TranslatorOption {
     pub openai_prompt: String,
     #[serde(default = "default_as_true")]
     pub stream: bool,
+    #[serde(default)]
+    pub openai_extra: serde_json::Map<String, serde_json::Value>,
     #[serde(default = "default_as_false")]
     pub api_key_requied: bool,
     #[serde(default)]
@@ -347,6 +349,8 @@ pub struct TTServiceOption {
     pub openai_model: String,
     #[serde(default)]
     pub openai_response_format: String,
+    #[serde(default)]
+    pub openai_extra: serde_json::Map<String, serde_json::Value>,
     #[serde(default = "default_as_false")]
     pub api_key_requied: bool,
     #[serde(default)]
@@ -452,6 +456,7 @@ pub mod app_settings {
                                 openai_model: "".to_string(),
                                 openai_prompt: "".to_string(),
                                 stream: false,
+                                openai_extra: serde_json::Map::new(),
                                 api_key_requied: false,
                                 api_key_url: "".to_string(),
                                 markdown: false,

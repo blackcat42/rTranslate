@@ -77,32 +77,93 @@
             "supports_language_detection": false,
         },
 
-
         /*
          * --------------------------------------
-         * ollama.com Free cloud models: 
-         * gemma4:31b; gpt-oss:120b; gpt-oss:20b; 
-         * nemotron-3-nano:30b; nemotron-3-super; 
-         * nemotron-3-ultra
+         * Free cloud models: 
          *
          * Use "force_split_view" to avoid accidentally spending tokens
          * --------------------------------------
          */
         {
             "service_type": "openai",
-            "uid": "tr_gemma4_31b",
-            "name": "gemma4",
-            "openai_url": "https://ollama.com/v1",
+            "uid": "tr_zai_glm47_flash",
+            "name": "ZAI GLM",
+            "openai_url": "https://api.z.ai/api/paas/v4",
             "openai_api_key": "",
-            "openai_model": "gemma4:31b",
+            "openai_model": "glm-4.7-flash",
             "openai_prompt": ".\\prompts\\default.txt",
             "stream": true,
-            //"use_proxy": false,
-            "api_key_requied": true,
-            "api_key_url": "https://signin.ollama.com/",
+            "cookies": true,
             "force_split_view": true,
+            "api_key_requied": true,
+            "api_key_url": "https://api.z.ai",
+            "openai_extra": {
+                "temperature": 0.3,
+                "thinking": {
+                    "type": "disabled"
+                  },
+            },
         },
-
+        {
+            "service_type": "openai",
+            "uid": "tr_cf_gemma",
+            "name": "CF Gemma",
+            "openai_url": "https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1",
+            "openai_api_key": "",
+            "openai_model": "@cf/google/gemma-4-26b-a4b-it",
+            "openai_prompt": ".\\prompts\\default.txt",
+            "stream": true,
+            "cookies": true,
+            "force_split_view": true,
+            "api_key_requied": true,
+            "api_key_url": "https://api.cloudflare.com",
+            "openai_extra": {
+                "temperature": 0.3,
+            },
+        },
+        {
+            "service_type": "openai",
+            "uid": "tr_rw_zai_glm47_flash",
+            "name": "ZAI Eng Rewrite",
+            "openai_url": "https://api.z.ai/api/paas/v4",
+            "openai_api_key": "",
+            "openai_model": "glm-4.7-flash",
+            "openai_prompt": ".\\prompts\\eng_corrector.txt",
+            "stream": true,
+            "cookies": true,
+            "force_split_view": true,
+            "markdown": true,
+            "supports_language_detection": false,
+            "api_key_requied": true,
+            "api_key_url": "https://api.z.ai",
+            "openai_extra": {
+                "temperature": 0.3,
+                "thinking": {
+                    "type": "disabled"
+                  },
+            },
+        },
+        {
+            "service_type": "openai",
+            "uid": "tr_rw_cf_gemma",
+            "name": "CF_G Eng Rewrite",
+            "openai_url": "https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1",
+            "openai_api_key": "",
+            "openai_model": "@cf/google/gemma-4-26b-a4b-it",
+            "openai_prompt": ".\\prompts\\eng_corrector.txt",
+            "stream": true,
+            "cookies": true,
+            "force_split_view": true,
+            "markdown": true,
+            "supports_language_detection": false,
+            "api_key_requied": true,
+            "api_key_url": "https://api.cloudflare.com",
+            "openai_extra": {
+                "temperature": 0.3,
+            },
+        },
+        
+        
         // --- EXAMPLES ---
         /*{
             "service_type": "openai",
