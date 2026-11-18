@@ -832,7 +832,7 @@ fn clear_history(conn: &Option<Connection>) -> Result<()> {
 
         let mut data_pr = db.prepare(
             "SELECT id FROM src 
-             WHERE src.fav = FALSE ORDER BY id ASC LIMIT :limit"
+             WHERE src.fav = FALSE ORDER BY updated_at ASC LIMIT :limit"
         )?;
 
         let mut ids: Vec<u32> = vec![];

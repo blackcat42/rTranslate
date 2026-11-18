@@ -356,7 +356,7 @@ impl AppState {
 
         if let Some(db) = db_ref {
             let mut data_pr = db.prepare(
-                "SELECT id, text FROM src ORDER BY id DESC LIMIT 50", //TODO: limit from settings
+                "SELECT id, text FROM src ORDER BY updated_at DESC LIMIT 50", //TODO: limit from settings
             )?;
 
             let data = data_pr.query_map([], |row| {
@@ -1007,6 +1007,12 @@ impl AppState {
                 params![src_id, tr_uid, src, target, translation_text],
             )?;
             dprintln!("transl inserted/replaced");
+
+            db.execute(
+                "UPDATE src SET updated_at = unixepoch() WHERE id = ?1",
+                params![src_id],
+            )?;
+            
             Ok(db.last_insert_rowid()) //TODO: RETURNING clause
         } else {
             Ok(0)
@@ -1036,7 +1042,11 @@ impl AppState {
                     params![src_id, dict_uid, text],
                 )?;
             }
-            
+            db.execute(
+                "UPDATE src SET updated_at = unixepoch() WHERE id = ?1",
+                params![src_id],
+            )?;
+                        
             dprintln!("dict inserted/replaced");
             Ok(db.last_insert_rowid())//TODO: RETURNING clause
         } else {
@@ -1210,6 +1220,7 @@ impl AppState {
                     hash INTEGER NOT NULL,
                     fav INTEGER DEFAULT 0,
                     text TEXT NOT NULL,
+                    updated_at INTEGER,
                     comment TEXT
                 )",
                 (),
@@ -1217,6 +1228,18 @@ impl AppState {
 
             db.execute(
                 "CREATE INDEX IF NOT EXISTS src_hash_index ON src (hash)",
+                (),
+            )?;
+
+            let mut stmt = db.prepare("PRAGMA table_info(src)")?;
+            let column_names: Vec<String> = stmt
+                .query_map([], |row| row.get(1))?
+                .collect::<std::result::Result<Vec<String>, _>>()?; //rusqlite::Error
+            if !column_names.iter().any(|name| name == "updated_at") {
+                db.execute("ALTER TABLE src ADD COLUMN updated_at INTEGER", [])?;
+            }
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS src_upd_index ON src (updated_at)",
                 (),
             )?;
 
