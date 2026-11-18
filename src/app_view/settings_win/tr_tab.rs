@@ -8,6 +8,7 @@ use fltk::{
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::{settings::{TranslatorOption}, utils::helpers::ui_scale};
+use crate::utils::helpers::{RE_UID, app_message};
 //use debug_print::{debug_println as dprintln};
 use super::t;
 
@@ -348,7 +349,13 @@ impl TrTab {
                 &mut self.input_uid, 
                 data_tr.clone(), 
                 self.browser.clone(), 
-                |item, v| item.uid = v.to_string(), 
+                |item, v| {
+                    if !RE_UID.is_match(v) {
+                        app_message(&format!("invalid uid({})", v));
+                    } else {
+                        item.uid = v.to_string();
+                    }
+                }, 
                 false
             );
             bind_input_clbck(

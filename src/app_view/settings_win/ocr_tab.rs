@@ -10,16 +10,22 @@ use std::rc::Rc;
 use crate::{settings::{OCRModelOption}, utils::helpers::ui_scale};
 //use debug_print::{debug_println as dprintln};
 use super::t;
+use crate::utils::helpers::{RE_UID, app_message};
 
 use super::bind_input_clbck;
 use super::btn_up_clbck;
 use super::btn_down_clbck;
+use super::delete_service;
+use super::add_service;
 
 pub struct OCRTab {
     pub browser: HoldBrowser,
     btn_up: Button,
     btn_down: Button,
+    btn_add: Button,
+    btn_del: Button,
     input_name: Input,
+    input_uid: Input,
     input_det_model: Input,
     input_rec_model: Input,
     input_charset: Input,
@@ -38,6 +44,10 @@ impl OCRTab {
         btn_flex.fixed(&btn_up, 20);
         let btn_down = Button::default().with_label("↓");
         btn_flex.fixed(&btn_down, 20);
+        let btn_add = Button::default().with_label("+");
+        btn_flex.fixed(&btn_add, 20);
+        let btn_del = Button::default().with_label("DEL");
+        btn_flex.fixed(&btn_del, 20);
         btn_flex.set_margin(ui_scale(5));
         btn_flex.set_pad(ui_scale(5));
         btn_flex.end();
@@ -50,6 +60,8 @@ impl OCRTab {
         right_form.set_pad(10);
         right_form.set_margins(ui_scale(150),ui_scale(25),ui_scale(50),ui_scale(10));
 
+        let input_uid = Input::default().with_label("UID:");
+        right_form.fixed(&input_uid, 20);
         let input_name = Input::default().with_label("Name:");
         right_form.fixed(&input_name, 20);
         let input_det_model = Input::default().with_label("det_model:");
@@ -70,7 +82,10 @@ impl OCRTab {
             browser,
             btn_up,
             btn_down,
+            btn_add,
+            btn_del,
             input_name,
+            input_uid,
             input_det_model,
             input_rec_model,
             input_charset,
@@ -90,7 +105,7 @@ impl OCRTab {
         self.browser.set_callback({
             let data = data_ocr.clone();
             let mut right_form = self.right_form.clone();
-
+            let mut input_uid = self.input_uid.clone();
             let mut input_name = self.input_name.clone();
             let mut input_det_model = self.input_det_model.clone();
             let mut input_rec_model = self.input_rec_model.clone();
@@ -103,7 +118,7 @@ impl OCRTab {
                     right_form.activate();
                     let items = data.borrow();
                     let item = &items[(idx - 1) as usize];
-
+                    input_uid.set_value(&item.uid);
                     input_name.set_value(&item.name);
                     input_det_model.set_value(&item.det_model);
                     input_rec_model.set_value(&item.rec_model);
@@ -143,6 +158,19 @@ impl OCRTab {
             |item, v| item.charset = v.to_string(), 
             true
         );
+        bind_input_clbck(
+            &mut self.input_uid, 
+            data_ocr.clone(), 
+            self.browser.clone(), 
+            |item, v| {
+                if !RE_UID.is_match(v) {
+                    app_message(&format!("invalid uid({})", v));
+                } else {
+                    item.uid = v.to_string();
+                }
+            }, 
+            false
+        );
         
 
         self.btn_up.set_callback({
@@ -157,6 +185,27 @@ impl OCRTab {
             let browser = self.browser.clone();
             move |_| {
                 btn_down_clbck(data.clone(), browser.clone())
+            }
+        });
+        self.btn_add.set_callback({
+            let data = data_ocr.clone();
+            let browser = self.browser.clone();
+            let srvc = crate::settings::OCRModelOption {
+                uid: "0".to_string(),
+                name: "new".to_string(),
+                det_model: "".to_string(),
+                rec_model: "".to_string(),
+                charset: "".to_string(),
+            };
+            move |_| {
+                add_service(srvc.clone(), data.clone(), browser.clone())
+            }
+        });
+        self.btn_del.set_callback({
+            let data = data_ocr.clone();
+            let browser = self.browser.clone();
+            move |_| {
+                delete_service(data.clone(), browser.clone())
             }
         });
         

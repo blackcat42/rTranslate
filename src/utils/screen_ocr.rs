@@ -373,6 +373,7 @@ impl ScreenOCR {
             charset = "ocr_models/ppocr_keys_v6_tiny.txt".to_string();
         }*/
 
+        //TODO! uid
         if let Some(text) = self.choice_ocr_model.choice() {
             let last_match: Option<&OCRModelOption> = GLOBAL_SETTINGS.ocr_models
                 .iter()
@@ -384,7 +385,10 @@ impl ScreenOCR {
                 charset = model.charset.clone();
             }
         } 
-
+        if !working_dir.join(&det_model).is_file() || !working_dir.join(&rec_model).is_file() || !working_dir.join(&charset).is_file() {
+            return Err(anyhow!("model files not found"));
+        }
+        
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         let command = ".\\rt_ocr".to_string();
@@ -493,6 +497,7 @@ impl ScreenOCR {
         let mut rec_model = "ocr_models/PP-OCRv6_small_rec.mnn".to_string();
         let mut charset = "ocr_models/ppocr_keys_v6_small.txt".to_string();
 
+        //TODO: uid
         if let Some(text) = self.choice_ocr_model.choice() {
             let last_match: Option<&OCRModelOption> = GLOBAL_SETTINGS.ocr_models
                 .iter()
@@ -503,7 +508,11 @@ impl ScreenOCR {
                 rec_model = model.rec_model.clone();
                 charset = model.charset.clone();
             }
-        } 
+        }
+
+        if !working_dir.join(&det_model).is_file() || !working_dir.join(&rec_model).is_file() || !working_dir.join(&charset).is_file() {
+            return Err(anyhow!("model files not found"));
+        }
 
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;

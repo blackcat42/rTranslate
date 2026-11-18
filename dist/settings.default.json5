@@ -241,12 +241,12 @@
         },
 
         // --- DSL(LINGVO) OFFLINE DICTIONARIES ---
-        /*{
+        {
             "service_type": "dsldict",
             "uid": "dict_example_dsl",
-            "name": "Example dict",
+            "name": "Example DSL dict",
             "dict_path": "dictionaries\\example.dsl"
-        },*/
+        },
     ],
 
 
@@ -323,6 +323,8 @@
             "openai_api_key": "",
             "openai_model": "s2.1-pro-free",
             "openai_response_format": "mp3",
+            "api_key_requied": true,
+            "api_key_url": "https://fish.audio",
         },
 
         /*
@@ -541,29 +543,33 @@
     "ocr_fullscreen": true,
     "ocr_models": [
         {
+            "uid": "ocr_small",
             "name": "small",
             "det_model": "ocr_models/PP-OCRv6_small_det.mnn",
             "rec_model": "ocr_models/PP-OCRv6_small_rec.mnn",
             "charset":   "ocr_models/ppocr_keys_v6_small.txt"
         },
-        /*{
+        {
+            "uid": "ocr_tiny",
             "name": "tiny (fast)",
             "det_model": "ocr_models/PP-OCRv6_tiny_det.mnn",
             "rec_model": "ocr_models/PP-OCRv6_tiny_rec.mnn",
             "charset":   "ocr_models/ppocr_keys_v6_tiny.txt"
-        },*/
-        /*{
+        },
+        {
+            "uid": "ocr_cyrillic",
             "name": "cyrillic", 
             "det_model": "ocr_models/PP-OCRv5_mobile_det.mnn",
             "rec_model": "ocr_models/cyrillic_PP-OCRv5_mobile_rec_infer.mnn",
             "charset":   "ocr_models/ppocr_keys_cyrillic.txt"
-        },*/
-        /*{
+        },
+        {
+            "uid": "ocr_medium",
             "name": "medium",
             "det_model": "ocr_models/PP-OCRv6_medium_det.mnn",
             "rec_model": "ocr_models/PP-OCRv6_medium_rec.mnn",
             "charset":   "ocr_models/ppocr_keys_v6_medium.txt"
-        },*/
+        },
     ],
 
 }

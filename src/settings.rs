@@ -399,10 +399,19 @@ pub struct ProxyOption {
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct OCRModelOption {
+    pub uid: String,
     pub name: String,
     pub det_model: String,
     pub rec_model: String,
     pub charset: String
+}
+impl Named for OCRModelOption {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn uid(&self) -> &str {
+        &self.uid
+    }
 }
 
 pub mod app_settings {

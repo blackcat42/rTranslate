@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use crate::{settings::{DictOption}, utils::helpers::ui_scale};
 use super::t;
+use crate::utils::helpers::{RE_UID, app_message};
 
 use crate::settings::ServiceType;
 use strum::IntoEnumIterator;
@@ -17,11 +18,14 @@ use super::bind_checkbox_clbck;
 use super::bind_input_clbck;
 use super::btn_up_clbck;
 use super::btn_down_clbck;
-
+use super::delete_service;
+use super::add_service;
 pub struct DictTab {
     pub browser: HoldBrowser,
     btn_up: Button,
     btn_down: Button,
+    btn_add: Button,
+    btn_del: Button,
     
     input_enabled: fltk::button::CheckButton,
     input_name: Input,
@@ -47,6 +51,10 @@ impl DictTab {
         btn_flex.fixed(&btn_up, 20);
         let btn_down = Button::default().with_label("↓");
         btn_flex.fixed(&btn_down, 20);
+        let btn_add = Button::default().with_label("+");
+        btn_flex.fixed(&btn_add, 20);
+        let btn_del = Button::default().with_label("DEL");
+        btn_flex.fixed(&btn_del, 20);
         btn_flex.set_margin(ui_scale(5));
         btn_flex.set_pad(ui_scale(5));
         btn_flex.end();
@@ -90,6 +98,8 @@ impl DictTab {
             browser,
             btn_up,
             btn_down,
+            btn_add,
+            btn_del,
             input_enabled,
             input_name,
             input_uid,
@@ -178,7 +188,13 @@ impl DictTab {
                 &mut self.input_uid, 
                 data_dict.clone(), 
                 self.browser.clone(), 
-                |item, v| item.uid = v.to_string(), 
+                |item, v| {
+                    if !RE_UID.is_match(v) {
+                        app_message(&format!("invalid uid({})", v));
+                    } else {
+                        item.uid = v.to_string();
+                    }
+                }, 
                 false
             );
             bind_input_clbck(
@@ -219,6 +235,33 @@ impl DictTab {
                 let browser = self.browser.clone();
                 move |_| {
                     btn_down_clbck(data.clone(), browser.clone())
+                }
+            });
+
+            self.btn_add.set_callback({
+                let data = data_dict.clone();
+                let browser = self.browser.clone();
+                let srvc = crate::settings::DictOption {
+                    uid: "0".to_string(),
+                    service_type: ServiceType::DSLDict,
+                    name: "new".to_string(),
+                    enabled: true,
+                    use_proxy: false,
+                    command: "".to_string(),
+                    emulation: "".to_string(),
+                    cookies: false,
+                    dict_path: "".to_string(),
+                    path: "".to_string(),                    
+                };
+                move |_| {
+                    add_service(srvc.clone(), data.clone(), browser.clone())
+                }
+            });
+            self.btn_del.set_callback({
+                let data = data_dict.clone();
+                let browser = self.browser.clone();
+                move |_| {
+                    delete_service(data.clone(), browser.clone())
                 }
             });
             

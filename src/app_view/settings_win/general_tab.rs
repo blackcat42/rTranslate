@@ -40,6 +40,7 @@ pub struct GeneralTab {
     ui_text_bg_color_main: Input,
     ui_popup_opacity: fltk::input::FloatInput,
     ui_no_tooltips: fltk::button::CheckButton,
+    ui_tts_button_dropdown: fltk::button::CheckButton,
     ui_prnn_button_dropdown: fltk::button::CheckButton,
     ui_copy_button_action: fltk::input::IntInput,
 
@@ -368,6 +369,7 @@ impl GeneralTab {
                 ui_text_bg_color_main,
                 ui_popup_opacity,
                 ui_no_tooltips,
+                ui_tts_button_dropdown,
                 ui_prnn_button_dropdown,
                 ui_copy_button_action,
 
@@ -480,6 +482,7 @@ impl GeneralTab {
                 self.ui_text_bg_color_main.set_value(&data_all.borrow().text_bg_color_main);
                 self.ui_popup_opacity.set_value(&data_all.borrow().popup_opacity.to_string());
                 self.ui_no_tooltips.set_value(data_all.borrow().no_tooltips);
+                self.ui_tts_button_dropdown.set_value(data_all.borrow().tts_button_dropdown);
                 self.ui_prnn_button_dropdown.set_value(data_all.borrow().prnn_button_dropdown);
                 self.ui_copy_button_action.set_value(&data_all.borrow().copy_button_action.to_string());
 
@@ -542,6 +545,12 @@ impl GeneralTab {
                     let data = data_all.clone();                
                     move |i| {
                         data.borrow_mut().no_tooltips = i.value();                   
+                    }
+                });
+                self.ui_tts_button_dropdown.set_callback({
+                    let data = data_all.clone();                
+                    move |i| {
+                        data.borrow_mut().tts_button_dropdown = i.value();                   
                     }
                 });
                 self.ui_prnn_button_dropdown.set_callback({
@@ -706,7 +715,12 @@ impl GeneralTab {
                 self.preprocessing_re_str_find.set_callback({
                     let data = data_all.clone();
                     move |i| {
-                        data.borrow_mut().translate_hotkey = i.value();                   
+                        let pattern = i.value();
+                        if let Err(e) = fancy_regex::Regex::new(&pattern) {
+                            crate::utils::helpers::app_message(&e.to_string());
+                        } else {
+                            data.borrow_mut().re_str_find = pattern;
+                        }
                     }
                 });
                 self.preprocessing_re_str_replace.set_callback({

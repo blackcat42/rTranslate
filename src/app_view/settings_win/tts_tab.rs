@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::{settings::{TTServiceOption}, utils::helpers::ui_scale};
 //use debug_print::{debug_println as dprintln};
 use super::t;
+use crate::utils::helpers::{RE_UID, app_message};
 
 use crate::settings::ServiceType;
 use strum::IntoEnumIterator;
@@ -20,12 +21,15 @@ use super::vec_to_csv;
 use super::csv_to_vec;
 use super::btn_up_clbck;
 use super::btn_down_clbck;
-
+use super::delete_service;
+use super::add_service;
 
 pub struct TTSTab {
     pub browser: HoldBrowser,
     btn_up: Button,
     btn_down: Button,
+    btn_add: Button,
+    btn_del: Button,
     
     input_enabled: fltk::button::CheckButton,
     input_name: Input,
@@ -62,6 +66,10 @@ impl TTSTab {
         btn_flex.fixed(&btn_up, 20);
         let btn_down = Button::default().with_label("↓");
         btn_flex.fixed(&btn_down, 20);
+        let btn_add = Button::default().with_label("+");
+        btn_flex.fixed(&btn_add, 20);
+        let btn_del = Button::default().with_label("DEL");
+        btn_flex.fixed(&btn_del, 20);
         btn_flex.set_margin(ui_scale(5));
         btn_flex.set_pad(ui_scale(5));
         btn_flex.end();
@@ -124,6 +132,8 @@ impl TTSTab {
             browser,
             btn_up,
             btn_down,
+            btn_add,
+            btn_del,
             input_enabled,
             input_name,
             input_uid,
@@ -248,7 +258,13 @@ impl TTSTab {
             &mut self.input_uid, 
             data_tts.clone(), 
             self.browser.clone(), 
-            |item, v| item.uid = v.to_string(), 
+            |item, v| {
+                if !RE_UID.is_match(v) {
+                    app_message(&format!("invalid uid({})", v));
+                } else {
+                    item.uid = v.to_string();
+                }
+            }, 
             false
         );
         bind_input_clbck(
@@ -374,6 +390,40 @@ impl TTSTab {
             let browser = self.browser.clone();
             move |_| {
                 btn_down_clbck(data.clone(), browser.clone())
+            }
+        });
+
+        self.btn_add.set_callback({
+            let data = data_tts.clone();
+            let browser = self.browser.clone();
+            let srvc = crate::settings::TTServiceOption {
+                uid: "0".to_string(),
+                    service_type: ServiceType::OpenAI,
+                    name: "new".to_string(),
+                    enabled: true,
+                    use_proxy: false,
+                    command: "".to_string(),
+                    args: vec![],
+                    emulation: "".to_string(),
+                    openai_url: "".to_string(),
+                    openai_api_key: "".to_string(),
+                    openai_model: "".to_string(),
+                    openai_extra: serde_json::Map::new(),
+                    api_key_requied: false,
+                    api_key_url: "".to_string(),
+                    voices: vec![],
+                    speed: 1.0,
+                    openai_response_format: "mp3".to_string(),
+            };
+            move |_| {
+                add_service(srvc.clone(), data.clone(), browser.clone())
+            }
+        });
+        self.btn_del.set_callback({
+            let data = data_tts.clone();
+            let browser = self.browser.clone();
+            move |_| {
+                delete_service(data.clone(), browser.clone())
             }
         });
             
